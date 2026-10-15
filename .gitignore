@@ -1,0 +1,16 @@
+# Local environment
+.env
+.env.*
+!.env.example
+.mcp.json
+
+# Python
+__pycache__/
+
+# Node / Next.js
+
+# Runtime data
+tmp/
+
+# Editor / OS
+.vscode/
