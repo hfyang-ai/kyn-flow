@@ -19,6 +19,8 @@ type RepoConnectResult = {
   connected: boolean;
   demo_mode: boolean;
   message: string;
+  sync_status?: string;
+  sync_details?: RepoSyncResult;
 };
 
 type RepoSource = "remote" | "local";
@@ -31,6 +33,9 @@ type RepoSyncResult = {
     pull_requests: number;
     workflow_runs: number;
   };
+  message: string;
+  sources: Record<string, { status: string; count: number; complete: boolean; pages: number }>;
+  errors: string[];
 };
 
 const providers = [
@@ -72,7 +77,7 @@ export default function ReposPage() {
       sync_issues: true,
       sync_pull_requests: true,
       sync_workflow_runs: true,
-      limit: 50
+      limit: null
     });
     setSelectedRepoId(repoId);
     await refreshRepos(repoId);
@@ -100,7 +105,7 @@ export default function ReposPage() {
         token: token || undefined,
         demo_mode: false
       });
-      setResult(JSON.stringify({ connected, background_sync: "scheduled" }, null, 2));
+      setResult(JSON.stringify({ connected, sync: connected.sync_details }, null, 2));
       await refreshRepos(connected.repo_id);
     } catch (error) {
       setResult(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }, null, 2));

@@ -1932,7 +1932,13 @@ export default function DashboardPage() {
           ? `已同步 ${synced.issues ?? 0} 个 Issue、${synced.pull_requests ?? 0} 个 PR、${synced.workflow_runs ?? 0} 条 CI 记录`
           : connected.sync_status === "fallback"
             ? `已使用本地缓存模式连接。${connected.message}`
-            : "已连接仓库";
+            : connected.sync_status === "empty"
+              ? "同步请求成功，但没有 Issue、PR、CI 数据，暂无法评估仓库健康"
+              : connected.sync_status === "partial"
+                ? "初次同步范围有限或部分请求失败，请在仓库页执行完整同步后再评估"
+                : connected.sync_status === "failed"
+                  ? `仓库已连接，但业务数据同步失败。${connected.message}`
+                  : "已连接仓库，业务数据尚未同步";
       const codePathDetail = connected.local_path ? `代码路径：${connected.local_path}` : "代码同步和代码图分析已在后台启动";
       setAddProjectStatus({
         type: "success",
