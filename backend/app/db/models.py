@@ -35,6 +35,7 @@ class Repository(Base):
     default_branch: Mapped[str | None] = mapped_column(String(200), nullable=True)
     github_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     last_sync_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    sync_metadata: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 

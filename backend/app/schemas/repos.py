@@ -33,6 +33,7 @@ class RepoResponse(BaseModel):
     description: str | None = None
     default_branch: str | None = None
     last_sync_at: datetime | None = None
+    sync_metadata: dict | None = None
     updated_at: datetime | None = None
 
     model_config = {"from_attributes": True}
@@ -52,16 +53,20 @@ class RepoConnectResponse(BaseModel):
     message: str
     sync_status: str = "not_started"
     synced: dict[str, int] | None = None
+    sync_details: dict | None = None
 
 
 class RepoSyncRequest(BaseModel):
     sync_issues: bool = True
     sync_pull_requests: bool = True
     sync_workflow_runs: bool = True
-    limit: int = 30
+    limit: int | None = Field(default=None, ge=1, description="Total records per source; null syncs all pages")
 
 
 class RepoSyncResponse(BaseModel):
     repo_id: UUID
     status: str
     synced: dict[str, int]
+    sources: dict[str, dict] = Field(default_factory=dict)
+    errors: list[str] = Field(default_factory=list)
+    message: str = ""

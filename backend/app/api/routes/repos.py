@@ -7,7 +7,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
@@ -255,11 +255,12 @@ async def connect_repo(payload: RepoConnectRequest, background_tasks: Background
             or (
                 "Demo mode only created a local repository record."
                 if effective_demo_mode
-                else "Repository connection verified. Initial Issue/PR/CI sync completed; code checkout and graph analysis started."
+                else f"Repository connection verified. {sync_result.message if sync_result else 'Sync not started.'}"
             )
         ),
         sync_status=sync_result.status if sync_result else ("fallback" if fallback_message else "skipped"),
         synced=sync_result.synced if sync_result else {"issues": 0, "pull_requests": 0, "workflow_runs": 0},
+        sync_details=sync_result.model_dump(mode="json") if sync_result else None,
     )
 
 
@@ -278,12 +279,15 @@ async def sync_repo(
     repo_id: UUID,
     payload: RepoSyncRequest,
     background_tasks: BackgroundTasks,
+    response: Response,
     db: Session = Depends(get_db),
 ) -> RepoSyncResponse:
     repo = db.get(Repository, repo_id)
     if repo is None:
         raise HTTPException(status_code=404, detail="未找到仓库")
     result = await sync_repository(db, repo, payload)
+    if result.status == "failed":
+        response.status_code = 502
     background_tasks.add_task(sync_repository_code_analysis_by_id, repo.id)
     return result
 
@@ -455,7 +459,8 @@ async def sync_status(repo_id: UUID, db: Session = Depends(get_db)) -> dict:
         raise HTTPException(status_code=404, detail="未找到仓库")
     return {
         "repo_id": str(repo.id),
-        "status": "completed" if repo.last_sync_at else "not_started",
+        "status": (repo.sync_metadata or {}).get("status", "unknown" if repo.last_sync_at else "not_started"),
         "last_sync_at": repo.last_sync_at,
-        "message": "最近一次同步已成功完成。" if repo.last_sync_at else "仓库还没有同步过。",
+        "message": (repo.sync_metadata or {}).get("message", "缺少同步状态，请重新同步。" if repo.last_sync_at else "仓库还没有同步过。"),
+        "details": repo.sync_metadata,
     }

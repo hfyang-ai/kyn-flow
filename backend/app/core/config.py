@@ -85,7 +85,7 @@ class Settings(BaseSettings):
     feedback_trace_base_url: str | None = None
     auto_sync_enabled: bool = True
     auto_sync_interval_seconds: int = 300
-    auto_sync_limit: int = 50
+    auto_sync_limit: int | None = None
 
     model_config = SettingsConfigDict(env_file=("../.env", ".env"), env_file_encoding="utf-8", extra="ignore")
 
