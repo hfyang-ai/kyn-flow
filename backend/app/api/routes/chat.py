@@ -32,6 +32,7 @@ from app.services.rag.vector_store import add_document
 from app.schemas.workflow import WorkflowSpec, WorkflowTask, WorkflowTaskResult
 from app.services.skills import SkillRegistry, get_skill_registry
 from app.services.permissions import ensure_demo_user, write_audit_log
+from app.services.repository_health import repository_health_snapshot
 
 router = APIRouter()
 
@@ -320,6 +321,10 @@ def _recommendation_payload(
 
 
 def _repo_health_answer(repo: Repository, issues: list[Issue], prs: list[PullRequest], runs: list[WorkflowRun]) -> str:
+    snapshot = repository_health_snapshot(repo, issues, prs, runs)
+    notice = f"当前仓库：{repo.full_name}\n\n数据说明：{snapshot['message']}"
+    if not snapshot["evidence_count"]:
+        return notice
     open_issues = [item for item in issues if item.state == "open"]
     open_prs = [item for item in prs if item.state == "open"]
     merged_prs = [item for item in prs if item.merged_at]
@@ -330,7 +335,7 @@ def _repo_health_answer(repo: Repository, issues: list[Issue], prs: list[PullReq
     pr_titles = _join_items([f"#{item.number} {item.title}" for item in latest_prs], "没有 PR 记录")
     ci_text = f"已同步 {len(failed_runs)} 次失败 CI 运行" if failed_runs else "还没有同步到失败 CI 运行"
     return (
-        f"当前仓库：{repo.full_name}\n\n"
+        f"{notice}\n\n"
         f"- Issues：{len(open_issues)} 个打开。近期关注：{issue_titles}。\n"
         f"- PRs：{len(open_prs)} 个打开，{len(merged_prs)} 个已合并。近期 PR：{pr_titles}。\n"
         f"- CI：{ci_text}。\n\n"
@@ -699,22 +704,25 @@ def _build_engineering_workflow_runtime(
 
     async def run_repo_health(task: WorkflowTask, spec: WorkflowSpec, workflow_context: dict[str, Any]) -> WorkflowTaskResult:
         answer = _repo_health_answer(repo, issues, prs, runs)
+        snapshot = repository_health_snapshot(repo, issues, prs, runs)
         open_issue_count = len([item for item in issues if item.state == "open"])
         open_pr_count = len([item for item in prs if item.state == "open"])
         return WorkflowTaskResult(
             task_id=task.id,
             agent_name=task.agent_name,
             task_type=task.task_type,
-            status="success",
-            summary=f"{repo.full_name}: {open_issue_count} open issues, {open_pr_count} open PRs, {len(failed_runs)} failed CI runs.",
+            status=snapshot["status"],
+            summary=f"{snapshot['message']} 本地记录：{open_issue_count} 个打开的 Issue，{open_pr_count} 个打开的 PR，{len(failed_runs)} 次失败 CI。",
             output={
+                **snapshot,
                 "answer": answer,
                 "open_issues": open_issue_count,
                 "open_prs": open_pr_count,
                 "failed_ci": len(failed_runs),
             },
-            evidence_count=len(issues) + len(prs) + len(runs),
-            confidence=0.82,
+            evidence_count=snapshot["evidence_count"],
+            confidence=snapshot["confidence"],
+            error=snapshot["message"] if snapshot["status"] == "error" else None,
             citations=[{"type": "repository", "id": str(repo.id), "title": repo.full_name}],
         )
 
@@ -1034,9 +1042,11 @@ def _build_conversation_tools(repo: Repository | None, conversation: Conversatio
         if repo is None:
             return {"route": "unknown", "tool_calls": [], "answer": "当前还没有可用仓库，请先连接仓库。", "citations": []}
         issues, prs, runs = _repo_payload(repo.id, db)
+        snapshot = repository_health_snapshot(repo, issues, prs, runs)
         return {
             "route": "repo_health",
-            "tool_calls": [{"tool_name": "repo_health.generate_summary", "arguments": {"repo_id": str(repo.id)}, "status": "success"}],
+            "tool_calls": [{"tool_name": "repo_health.generate_summary", "arguments": {"repo_id": str(repo.id)}, "status": snapshot["status"]}],
+            "data_status": snapshot["data_status"],
             "answer": _repo_health_answer(repo, issues, prs, runs),
             "citations": [{"type": "repository", "id": str(repo.id), "title": repo.full_name}],
         }
@@ -1164,13 +1174,9 @@ def _build_conversation_tools(repo: Repository | None, conversation: Conversatio
             return await repo_health(input_data, context)
         run = db.query(WorkflowRun).filter(WorkflowRun.repo_id == repo.id, WorkflowRun.conclusion == "failure").order_by(WorkflowRun.created_at.desc()).first()
         if not run:
-            issues, prs, runs = _repo_payload(repo.id, db)
-            return {
-                "route": "repo_health",
-                "tool_calls": [{"tool_name": "repo_health.generate_summary", "arguments": {"repo_id": str(repo.id), "reason": "no_failed_ci"}, "status": "success"}],
-                "answer": _repo_health_answer(repo, issues, prs, runs) + "\n\n说明：这个仓库目前还没有同步到失败 CI 运行。",
-                "citations": [{"type": "repository", "id": str(repo.id), "title": repo.full_name}],
-            }
+            result = await repo_health(input_data, context)
+            result["answer"] += "\n\n说明：本地没有失败 CI 记录，不能据此确认远端 CI 全部通过。"
+            return result
         result = await CIDebugAgent().run({"name": run.name, "status": run.status, "conclusion": run.conclusion, "jobs": run.jobs or [], "logs_text": run.logs_text}, agent_context(context) | {"repo_id": str(repo.id)})
         return {
             "route": "ci_debug",
