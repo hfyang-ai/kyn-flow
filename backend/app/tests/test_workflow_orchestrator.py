@@ -18,8 +18,13 @@ from app.services.agents.workflow_orchestrator import WorkflowOrchestrator
 from app.services.skills import get_skill_registry
 
 
+@pytest.fixture(autouse=True)
+def offline_workflow_models(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(settings, "llm_api_key", None)
+
+
 @pytest.mark.asyncio
-async def test_planner_builds_cross_domain_workflow_for_merge_readiness() -> None:
+async def test_rule_fallback_planner_builds_cross_domain_workflow_for_merge_readiness() -> None:
     result = await PlannerAgent().run(
         {"message": "这个 PR 能不能合并？请做多 agent 协作 review，检查 Issue、PR 和 CI 风险。"},
         {
@@ -39,6 +44,8 @@ async def test_planner_builds_cross_domain_workflow_for_merge_readiness() -> Non
     assert "pr_review" in task_types
     assert "ci_debug" in task_types
     assert result["acceptance_criteria"]
+    assert result["planning"]["mode"] == "rules_fallback"
+    assert result["planning"]["reason"] == "not_configured"
 
 
 @pytest.mark.asyncio
