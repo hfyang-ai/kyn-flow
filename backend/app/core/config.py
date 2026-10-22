@@ -1,3 +1,4 @@
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -72,6 +73,12 @@ class Settings(BaseSettings):
     context_recent_ratio: float = 0.22
     context_tool_ratio: float = 0.10
     workflow_task_timeout_seconds: float = 90.0
+    workflow_model_timeout_seconds: float = 60.0
+    workflow_model_max_input_chars: int = 60000
+    workflow_observer_timeout_seconds: float = Field(default=20.0, gt=0, le=60)
+    workflow_observer_max_output_tokens: int = Field(default=1800, ge=256, le=4096)
+    workflow_synthesis_model_enabled: bool = False
+    workflow_replan_model_enabled: bool = False
     prompt_cache_enabled: bool = True
     prompt_cache_key: str | None = "kynflow-agent-v1"
     prompt_cache_retention: str | None = None

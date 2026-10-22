@@ -17,6 +17,7 @@ from app.services.agents.ci_debug_agent import CIDebugAgent
 from app.services.agents.chat_agent import ChatAgent, encode_sse
 from app.services.agents.issue_agent import IssueAgent
 from app.services.agents.planner_agent import PlannerAgent
+from app.services.agents.workflow_models import execution_label
 from app.services.agents.pr_review_agent import PRReviewAgent
 from app.services.agents.recommendation_agent import RecommendationAgent
 from app.services.agents.report_agent import ReportAgent
@@ -894,6 +895,16 @@ def _build_engineering_workflow_runtime(
     }
 
 
+def _workflow_report_status(report: dict[str, Any]) -> str:
+    metrics = report.get("metrics") or {}
+    if int(metrics.get("error_count") or 0):
+        return "error"
+    findings = (report.get("observation") or {}).get("findings") or []
+    if int(metrics.get("model_fallback_count") or 0) or int(metrics.get("skipped_count") or 0) or any(item.get("severity") in {"warning", "blocker"} for item in findings):
+        return "partial"
+    return "success"
+
+
 def _persist_engineering_workflow(
     db: Session,
     repo: Repository | None,
@@ -914,7 +925,7 @@ def _persist_engineering_workflow(
         observation_json=report.get("observation") or {},
         final_answer=str(report.get("final_answer") or ""),
         metrics=report.get("metrics") or {},
-        status="error" if int((report.get("metrics") or {}).get("error_count") or 0) else "success",
+        status=_workflow_report_status(report),
         completed_at=datetime.now(timezone.utc),
     )
     db.add(workflow)
@@ -1335,7 +1346,7 @@ def _engineering_workflow_response(repo: Repository, workflow_run_id: uuid.UUID,
             {
                 "tool_name": "workflow.run_engineering_review",
                 "arguments": {"repo_id": str(repo.id), "workflow_run_id": str(workflow_run_id)},
-                "status": "success",
+                "status": _workflow_report_status(report),
             },
             *report.get("tool_calls", []),
         ],
@@ -1350,6 +1361,7 @@ def _workflow_plan_answer(spec: WorkflowSpec) -> str:
         "已创建执行计划，确认后我会按这个 WorkflowSpec 执行。",
         "",
         f"目标：{spec.goal}",
+        f"规划来源：{execution_label(spec.planning)}",
         "",
         "任务：",
     ]
@@ -1394,6 +1406,7 @@ async def _conversation_plan(payload: ChatRequest, db: Session) -> dict[str, Any
                 "type": "workflow_spec",
                 "workflow_id": spec.workflow_id,
                 "goal": spec.goal,
+                "planning": spec.planning.model_dump(mode="json") if spec.planning else None,
                 "tasks": [
                     {
                         "id": task.id,

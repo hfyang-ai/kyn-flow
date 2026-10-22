@@ -34,6 +34,12 @@ class WorkflowTask(BaseModel):
     critical: bool = False
 
 
+class WorkflowModelExecution(BaseModel):
+    mode: Literal["llm", "rules", "rules_fallback"]
+    model: str = ""
+    reason: str = ""
+
+
 class WorkflowSpec(BaseModel):
     workflow_id: str = Field(default_factory=_workflow_id)
     goal: str
@@ -43,6 +49,9 @@ class WorkflowSpec(BaseModel):
     max_parallel_tasks: int = Field(default=3, ge=1, le=8)
     requires_human_confirmation: bool = False
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    planning: WorkflowModelExecution | None = None
+    initial_planning: WorkflowModelExecution | None = None
+    merge_readiness: bool = False
 
 
 class WorkflowTaskResult(BaseModel):
@@ -66,6 +75,8 @@ class WorkflowFinding(BaseModel):
     message: str
     task_ids: list[str] = Field(default_factory=list)
     recommendation: str = ""
+    source: Literal["hard_rule", "model"] = "hard_rule"
+    evidence: list[dict[str, str]] = Field(default_factory=list)
 
 
 class WorkflowObservation(BaseModel):
@@ -74,6 +85,7 @@ class WorkflowObservation(BaseModel):
     overall_confidence: float = Field(default=0.0, ge=0, le=1)
     human_review_required: bool = False
     summary: str = ""
+    model_review: WorkflowModelExecution | None = None
 
 
 class WorkflowReport(BaseModel):
@@ -85,3 +97,4 @@ class WorkflowReport(BaseModel):
     citations: list[dict[str, Any]] = Field(default_factory=list)
     metrics: dict[str, Any] = Field(default_factory=dict)
     agent_events: list[dict[str, Any]] = Field(default_factory=list)
+    synthesis: WorkflowModelExecution | None = None

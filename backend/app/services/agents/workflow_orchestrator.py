@@ -52,6 +52,7 @@ class WorkflowOrchestrator(BaseAgent):
         observations: list[WorkflowObservation] = []
         round_records: list[dict[str, Any]] = []
         replan_events: list[dict[str, Any]] = []
+        model_events: list[dict[str, Any]] = []
         max_replans = self._max_replans(context, allow_replan)
 
         for attempt in range(max_replans + 1):
@@ -85,6 +86,11 @@ class WorkflowOrchestrator(BaseAgent):
                 current_spec=current_spec,
                 next_spec=WorkflowSpec.model_validate(next_spec_data),
             )
+            model_events.append({
+                "type": "workflow_model_result", "workflow_id": spec.workflow_id,
+                "phase": "replan", "iteration": attempt + 1,
+                "execution": next_spec.planning.model_dump(mode="json") if next_spec.planning else None,
+            })
             if self._same_task_graph(current_spec, next_spec):
                 break
 
@@ -114,6 +120,12 @@ class WorkflowOrchestrator(BaseAgent):
             },
             context,
         )
+        executions = [
+            spec.planning.model_dump(mode="json") if spec.planning else None,
+            *(item.model_review.model_dump(mode="json") if item.model_review else None for item in observations),
+            *(event["execution"] for event in model_events),
+            synthesis.get("model_execution"),
+        ]
         report = WorkflowReport(
             spec=current_spec,
             task_results=task_results,
@@ -131,8 +143,19 @@ class WorkflowOrchestrator(BaseAgent):
                 "error_count": len([item for item in task_results if item.status == "error"]),
                 "skipped_count": len([item for item in task_results if item.status == "skipped"]),
                 "observer_findings": len(observation.findings),
+                "model_fallback_count": sum(1 for execution in executions if execution and execution.get("mode") == "rules_fallback"),
+                "planner_mode": current_spec.planning.mode if current_spec.planning else "unrecorded",
+                "initial_planner_mode": (spec.initial_planning or spec.planning).mode if spec.initial_planning or spec.planning else "unrecorded",
+                "observer_mode": observation.model_review.mode if observation.model_review else "unrecorded",
+                "synthesis_mode": (synthesis.get("model_execution") or {}).get("mode", "unrecorded"),
+                "synthesis_reason": (synthesis.get("model_execution") or {}).get("reason", ""),
             },
-            agent_events=self._agent_events(round_records, replan_events),
+            agent_events=[
+                *self._agent_events(round_records, replan_events), *model_events,
+                {"type": "workflow_model_result", "workflow_id": spec.workflow_id,
+                 "phase": "synthesis", "execution": synthesis.get("model_execution")},
+            ],
+            synthesis=synthesis.get("model_execution"),
         )
         return report.model_dump(mode="json")
 
@@ -312,6 +335,11 @@ class WorkflowOrchestrator(BaseAgent):
             "missing_safety_review",
             "owner_needs_review",
             "team_profile_missing",
+            "semantic_conflict",
+            "unsupported_conclusion",
+            "missing_context",
+            "missing_ci_evidence",
+            "missing_pr_evidence",
         }
         for finding in observation.findings:
             if finding.finding_type in fixable_findings:
@@ -419,6 +447,7 @@ class WorkflowOrchestrator(BaseAgent):
                     "type": "workflow_spec",
                     "workflow_id": spec.workflow_id,
                     "goal": spec.goal,
+                    "planning": spec.planning.model_dump(mode="json") if spec.planning else None,
                     "iteration": index,
                     "is_replan": index > 0,
                     "tasks": [
@@ -478,6 +507,7 @@ class WorkflowOrchestrator(BaseAgent):
                     "overall_confidence": observation.overall_confidence,
                     "human_review_required": observation.human_review_required,
                     "findings": [finding.model_dump(mode="json") for finding in observation.findings],
+                    "model_review": observation.model_review.model_dump(mode="json") if observation.model_review else None,
                 }
             )
         return events

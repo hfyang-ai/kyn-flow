@@ -9,10 +9,14 @@ from app.services.context_compression import prompt_cache_model_kwargs
 
 
 class LLMClient:
-    def __init__(self) -> None:
+    def __init__(self, *, json_timeout_seconds: float = 60, json_max_tokens: int | None = None,
+                 json_fast_review: bool = False) -> None:
         self.base_url = settings.llm_base_url.rstrip("/")
         self.api_key = settings.llm_api_key
         self.model = settings.llm_model
+        self.json_timeout_seconds = json_timeout_seconds
+        self.json_max_tokens = json_max_tokens
+        self.json_fast_review = json_fast_review
 
     async def chat_json(self, system_prompt: str, user_payload: dict[str, Any]) -> dict[str, Any]:
         if not self.api_key:
@@ -27,7 +31,13 @@ class LLMClient:
             "response_format": {"type": "json_object"},
         }
         payload.update(prompt_cache_model_kwargs())
-        async with httpx.AsyncClient(timeout=60) as client:
+        if self.json_max_tokens is not None:
+            payload["max_tokens"] = self.json_max_tokens
+        if self.json_fast_review:
+            from urllib.parse import urlsplit
+            if urlsplit(self.base_url).hostname == "api.deepseek.com" and self.model.startswith("deepseek"):
+                payload["thinking"] = {"type": "disabled"}
+        async with httpx.AsyncClient(timeout=self.json_timeout_seconds) as client:
             try:
                 response = await client.post(
                     f"{self.base_url}/chat/completions",

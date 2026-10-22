@@ -2,14 +2,23 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.core.config import settings
 from app.schemas.workflow import WorkflowFinding, WorkflowObservation, WorkflowSpec, WorkflowTaskResult
 from app.services.agents.base import BaseAgent
+from app.services.agents.workflow_models import REVIEW_PROMPT, ReviewProposal, fallback_execution, grounded_review, request_workflow_model, review_facts, rules_execution
+from app.services.llm.client import LLMClient
 
 
 class ObserverAgent(BaseAgent):
     name = "observer_agent"
     description = "审查工作流任务输出中的冲突、证据缺口、低置信度和人工确认门槛。"
     available_tools = ["inspect_workflow_outputs"]
+
+    def __init__(self, llm: LLMClient | None = None) -> None:
+        self.llm = llm or LLMClient(
+            json_timeout_seconds=settings.workflow_observer_timeout_seconds,
+            json_max_tokens=settings.workflow_observer_max_output_tokens, json_fast_review=True,
+        )
 
     async def run(self, input_data: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
         spec = WorkflowSpec.model_validate(input_data["spec"])
@@ -22,20 +31,76 @@ class ObserverAgent(BaseAgent):
         findings.extend(self._merge_gate_findings(results))
         findings.extend(self._ownership_findings(results, context))
         findings.extend(self._safety_findings(results, spec))
+        findings.extend(self._coverage_findings(results, spec))
+
+        proposal = None
+        facts = review_facts(results)
+        if findings:
+            execution = rules_execution("hard_findings_first")
+        elif len(facts) < 2:
+            execution = rules_execution("no_comparable_fact_pair")
+        else:
+            proposal, execution = await request_workflow_model(
+                self.llm, REVIEW_PROMPT, {"goal": spec.goal, "fact_catalog": facts}, ReviewProposal,
+                timeout_seconds=settings.workflow_observer_timeout_seconds,
+            )
+            if proposal is not None and not grounded_review(proposal, facts):
+                proposal = None
+                execution = fallback_execution(self.llm, "invalid_fact_reference")
+            if proposal is not None:
+                catalog = {fact["fact_id"]: fact for fact in facts}
+                for finding in proposal.findings:
+                    data = finding.model_dump(exclude={"evidence"})
+                    quotes = [{**catalog[item.fact_id], "quote": item.quote} for item in finding.evidence]
+                    findings.append(WorkflowFinding(**data, source="model", evidence=quotes))
 
         confidence_values = [item.confidence for item in results if item.confidence is not None and item.status == "success"]
         base_confidence = sum(confidence_values) / len(confidence_values) if confidence_values else 0.55
         blocker_penalty = 0.2 * len([item for item in findings if item.severity == "blocker"])
         warning_penalty = 0.05 * len([item for item in findings if item.severity == "warning"])
         overall_confidence = round(max(0.1, min(0.95, base_confidence - blocker_penalty - warning_penalty)), 2)
+        if proposal is not None and proposal.findings:
+            overall_confidence = min(overall_confidence, proposal.overall_confidence)
 
         observation = WorkflowObservation(
             findings=findings,
             overall_confidence=overall_confidence,
-            human_review_required=spec.requires_human_confirmation or any(item.severity == "blocker" for item in findings),
-            summary=self._summary(findings, overall_confidence),
+            human_review_required=(
+                spec.requires_human_confirmation or any(item.severity == "blocker" for item in findings)
+                or execution.mode == "rules_fallback"
+                or bool(proposal and proposal.findings and proposal.human_review_required)
+            ),
+            summary=self._summary(findings, overall_confidence) + (
+                f" 模型局部一致性审查：{proposal.summary}" if proposal is not None else
+                (f" 模型语义审查未完成，需人工复核：{execution.reason}。" if execution.mode == "rules_fallback"
+                 else f" 按规则处理，未追加模型语义审查：{execution.reason}。")
+            ),
+            model_review=execution,
         )
         return observation.model_dump(mode="json")
+
+    def _coverage_findings(self, results: list[WorkflowTaskResult], spec: WorkflowSpec) -> list[WorkflowFinding]:
+        completed = {result.task_id for result in results}
+        missing = [task.id for task in spec.tasks if task.id not in completed]
+        findings = []
+        if missing:
+            findings.append(WorkflowFinding(
+                finding_type="task_missing", severity="blocker", task_ids=missing,
+                message="计划中的部分任务没有返回结果。", recommendation="补齐缺失任务，不能依据不完整执行记录放行。",
+            ))
+        if spec.merge_readiness and not any(result.task_type == "ci_debug" and result.status == "success" for result in results):
+            findings.append(WorkflowFinding(
+                finding_type="missing_ci_evidence", severity="blocker",
+                message="本次需要判断合并或发布就绪度，但没有成功的 CI 检查结果。",
+                recommendation="补齐对应 CI 数据和检查，不能把缺少 CI 证据当作通过。",
+            ))
+        if spec.merge_readiness and not any(result.task_type == "pr_review" and result.status == "success" for result in results):
+            findings.append(WorkflowFinding(
+                finding_type="missing_pr_evidence", severity="blocker",
+                message="本次需要判断合并或发布就绪度，但没有成功的 PR 审查结果。",
+                recommendation="补齐目标 PR 的变更和审查结果，不能仅凭 CI 或仓库概览放行。",
+            ))
+        return findings
 
     def _status_findings(self, results: list[WorkflowTaskResult]) -> list[WorkflowFinding]:
         findings = []
@@ -60,14 +125,26 @@ class ObserverAgent(BaseAgent):
                         recommendation="如果该领域会影响决策，请先连接或同步缺失的仓库信号。",
                     )
                 )
+            elif result.status in {"pending", "running"}:
+                findings.append(WorkflowFinding(
+                    finding_type="task_incomplete", severity="blocker", task_ids=[result.task_id],
+                    message=f"{result.agent_name} 尚未完成。", recommendation="等待该任务完成后重新复核。",
+                ))
         return findings
 
     def _evidence_findings(self, results: list[WorkflowTaskResult]) -> list[WorkflowFinding]:
         findings = []
         for result in results:
-            if result.status != "success" or result.task_type in {"repo_health", "safety_review"}:
+            if result.task_type == "repo_health" and result.output.get("data_sufficient") is False:
+                findings.append(WorkflowFinding(
+                    finding_type="evidence_gap", severity="blocker", task_ids=[result.task_id],
+                    message=str(result.output.get("message") or "仓库数据不足，无法判断整体健康。"),
+                    recommendation="检查同步错误并完成所需数据源的分页同步后，重新评估。",
+                ))
                 continue
-            if result.evidence_count <= 0 and not result.citations:
+            if result.status != "success" or result.task_type == "safety_review":
+                continue
+            if result.evidence_count <= 0 and (result.task_type == "repo_health" or not result.citations):
                 findings.append(
                     WorkflowFinding(
                         finding_type="evidence_gap",
