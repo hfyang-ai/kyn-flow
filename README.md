@@ -16,6 +16,33 @@ Kynflow 是一个面向 GitHub PR / Issue 研发协作的全栈 AI Agent 项目�
 - 生成工程周报。
 - 基础 Eval 覆盖 Issue 分类、PR 覆盖度、RAG 命中率、工具 schema 就绪度和结构化输出校验。
 
+## 多 Agent 模型链路
+
+配置 `LLM_API_KEY`、`LLM_BASE_URL` 和 `LLM_MODEL` 后，初始 Planner 使用模型，Observer 按需做局部语义复核；综合与重规划默认优先采用规则。默认复用 DeepSeek 配置。不要把真实密钥写入源码、测试或发布包。
+
+- Planner 根据用户目标提出结构化任务选择、依赖和补充验收条件，能处理否定和条件表达；服务端校验允许的任务类型、目标可用性、依赖缺失、重复和循环，再绑定当前仓库的 claim。原关键词规划仅作为明确标记的降级路径。
+- 有限 replan 先按规则补齐明确缺口，只允许追加新任务，保留已确认任务与 claim，成功任务不重跑。默认不调用模型；显式开启 `WORKFLOW_REPLAN_MODEL_ENABLED` 后，仅规则没有追加任务时尝试模型补充。重规划仍默认最多一次、上限两次。
+- Observer 先检查硬门禁、任务覆盖、证据缺口与人工确认。规则已发现问题时不再追加模型调用；否则比较已提供事实的具体矛盾，不做无来源的外部真实性审计。每个模型 finding 必须引用两个不同事实及可逐字校验的原文，不能因引用只有定位信息、可选输出为空或证据数不等于引用数就告警。
+- Observer 独立等待上限默认 20 秒、输出上限 1800 tokens；官方 DeepSeek 接口使用非思考模式，其他兼容接口不发送 DeepSeek 专有参数。模型不可用记录在 `model_review`，要求人工复核，不伪装成业务冲突，也不伪装成已完成语义检查。原文引用校验不等于逻辑正确性证明，置信度也不是校准概率。
+- Synthesis 默认以规则保留决策、完整摘要、finding 及五段报告，不额外调用模型。显式开启 `WORKFLOW_SYNTHESIS_MODEL_ENABLED` 才增加受引用和决策代码约束的模型叙述；任何模式都不能授权合并、发布或外部写入。
+- Orchestrator 仍由程序按依赖调度，负责并发、超时、结果收集和重规划次数，不使用模型决定执行机制。
+
+处理来源区分 `llm`（有效模型输出）、`rules`（按策略使用规则，非故障）和 `rules_fallback`（模型失败或不可用）。有意使用规则不会增加 `model_fallback_count`；初始规划与最后重规划的模式分别保存，避免把规则重规划误称为初始规划未用模型。
+
+在 `backend` 目录运行离线回归：
+
+```bash
+python -m pytest app/tests/test_workflow_models.py app/tests/test_workflow_orchestrator.py -q
+```
+
+真实模型测试使用隔离的测试数据，不连接真实 GitHub 仓库、不执行外部写操作，但会产生模型费用。配置自己的 `LLM_*`，并显式设置 `KYNFLOW_RUN_LIVE_LLM=1` 后运行：
+
+```bash
+python -m pytest app/tests/test_workflow_live_models.py -v
+```
+
+这些测试覆盖自然语言规划、语义冲突、规则重规划，以及模型 Planner、真实 PR/CI 分析和规则综合的完整链路。离线 `test_workflow_policy.py` 另覆盖默认策略、引用伪造、超时取消、字段契约与故障时人工复核。它们不等于对任意自然语言或生产仓库的正确性保证。
+
 ## 技术栈
 
 - 后端：Python、FastAPI、Pydantic、SQLAlchemy、PostgreSQL、Milvus、httpx、LangChain。
@@ -73,6 +100,16 @@ npm run dev
 - 后端：http://localhost:8000
 - API 文档：http://localhost:8000/docs
 - 前端：http://localhost:3000
+
+## 仓库同步范围与状态
+
+仓库页的手动同步默认读取 Issue、PR、CI 以及 PR 文件、Review 评论、Job 的全部分页。`POST /api/repos/{repo_id}/sync` 的 `limit` 表示每类主记录的总数上限，省略或传 `null` 为全部分页；达到上限且还有后续记录时会标记为 `partial`。首次接入默认只取少量记录；定时同步默认读取全部分页，也可通过 `AUTO_SYNC_LIMIT` 设置总数上限。所有同步均会报告实际覆盖范围。
+
+同步状态区分 `completed`（所选数据源完整完成）、`empty`（请求成功但为空）、`partial`（数量上限或部分失败）、`failed`（所选主接口全部失败）和 `skipped`（未选择数据源）。响应中的 `sources`、`errors` 和 `/sync-status` 可查看覆盖范围和失败原因；失败时保留已有明细，不更新最近成功同步时间。
+
+仓库健康分析会检查数据是否为空、同步是否完整及是否超过 24 小时。数据不足时明确提示，Observer 阻止据此给出可推进的结论；统计信息不再附带固定置信度。旧数据库缺少可验证的同步记录时，需要重新同步。升级后重启后端，启动流程会自动补充 `repositories.sync_metadata` 字段，保留原有数据。
+
+在 `backend` 目录运行 `python -m pytest app/tests/test_repo_sync_integration.py -q`，可验证真实本地 HTTP 分页、数据库写入、故障处理、健康回答和旧数据库升级。
 
 ## RAG 知识问答系统
 
