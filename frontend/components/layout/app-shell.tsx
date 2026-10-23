@@ -1,13 +1,14 @@
 import Link from "next/link";
 
 const navItems = [
-  { href: "/", label: "Workspace" },
+  { href: "/", label: "Dashboard" },
   { href: "/knowledge", label: "项目知识" },
   { href: "/rag", label: "RAG 工作室" },
   { href: "/repos", label: "Repos" },
   { href: "/action-drafts", label: "Drafts" },
   { href: "/workflow-runs", label: "Runs" },
-  { href: "/workspaces", label: "Reports" },
+  { href: "/workspaces", label: "团队工作区" },
+  { href: "/reports", label: "研发周报" },
   { href: "/code-graph", label: "Code Graph" },
   { href: "/evals", label: "Evals" }
 ];
