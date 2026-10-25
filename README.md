@@ -32,13 +32,13 @@ Kynflow 是一个面向 GitHub PR / Issue 研发协作的全栈 AI Agent 项目�
 在 `backend` 目录运行离线回归：
 
 ```bash
-python -m pytest app/tests/test_workflow_models.py app/tests/test_workflow_orchestrator.py -q
+uv run pytest app/tests/test_workflow_models.py app/tests/test_workflow_orchestrator.py -q
 ```
 
 真实模型测试使用隔离的测试数据，不连接真实 GitHub 仓库、不执行外部写操作，但会产生模型费用。配置自己的 `LLM_*`，并显式设置 `KYNFLOW_RUN_LIVE_LLM=1` 后运行：
 
 ```bash
-python -m pytest app/tests/test_workflow_live_models.py -v
+uv run pytest app/tests/test_workflow_live_models.py -v
 ```
 
 这些测试覆盖自然语言规划、语义冲突、规则重规划，以及模型 Planner、真实 PR/CI 分析和规则综合的完整链路。离线 `test_workflow_policy.py` 另覆盖默认策略、引用伪造、超时取消、字段契约与故障时人工复核。它们不等于对任意自然语言或生产仓库的正确性保证。
@@ -81,10 +81,8 @@ cp .env.example .env
 docker compose up -d postgres etcd minio milvus
 
 cd backend
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload
+uv sync
+uv run uvicorn app.main:app --reload
 ```
 
 另开一个终端：
@@ -109,7 +107,7 @@ npm run dev
 
 仓库健康分析会检查数据是否为空、同步是否完整及是否超过 24 小时。数据不足时明确提示，Observer 阻止据此给出可推进的结论；统计信息不再附带固定置信度。旧数据库缺少可验证的同步记录时，需要重新同步。升级后重启后端，启动流程会自动补充 `repositories.sync_metadata` 字段，保留原有数据。
 
-在 `backend` 目录运行 `python -m pytest app/tests/test_repo_sync_integration.py -q`，可验证真实本地 HTTP 分页、数据库写入、故障处理、健康回答和旧数据库升级。
+在 `backend` 目录运行 `uv run pytest app/tests/test_repo_sync_integration.py -q`，可验证真实本地 HTTP 分页、数据库写入、故障处理、健康回答和旧数据库升级。
 
 ## RAG 知识问答系统
 
@@ -129,7 +127,7 @@ npm run dev
 
 脚本会关闭 Milvus，使用 deterministic embedding 和启发式重排，并停用演示知识库的 `0.8` 分数阈值，避免只有关键词分支时全部候选都被过滤。因此它可以验证页面、上传解析、关系库存储、Hybrid 的关键词分支和引用展示，但向量检索状态会明确显示 `degraded`，不能用来证明完整 RAG 已经跑通。要验证向量召回、混合检索和重建索引，仍需先按“快速开始”启动 PostgreSQL、etcd、MinIO 和 Milvus。
 
-知识库默认选择 `Qwen/Qwen3-Embedding-0.6B` 与 `qwen3-rerank`。安装 `backend/requirements-local-embedding.txt` 后可运行本地 Qwen Embedding；配置 `DASHSCOPE_API_KEY`、`RERANK_BASE_URL` 后可切换百炼 `text-embedding-v4` 与 `qwen3-rerank`。默认 Embedding 依赖缺失时系统会明确报错，不会在生产配置下静默改用另一套向量空间；只有上面的本地演示脚本会显式选择 deterministic embedding。已经配置 `LLM_API_KEY` 时，可用 `.\scripts\start_rag.ps1 -UseConfiguredLLM` 启用模型生成。
+知识库默认选择 `Qwen/Qwen3-Embedding-0.6B` 与 `qwen3-rerank`。执行 `uv sync --group local-embedding` 后可运行本地 Qwen Embedding；配置 `DASHSCOPE_API_KEY`、`RERANK_BASE_URL` 后可切换百炼 `text-embedding-v4` 与 `qwen3-rerank`。默认 Embedding 依赖缺失时系统会明确报错，不会在生产配置下静默改用另一套向量空间；只有上面的本地演示脚本会显式选择 deterministic embedding。已经配置 `LLM_API_KEY` 时，可用 `.\scripts\start_rag.ps1 -UseConfiguredLLM` 启用模型生成。
 
 RAG API：
 

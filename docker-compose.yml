@@ -69,7 +69,29 @@ services:
       - etcd
       - minio
 
+  backend:
+    build:
+      context: ./backend
+    container_name: kynflow-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # 容器网络内覆盖 localhost 为服务名
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-kynflow}:${POSTGRES_PASSWORD:-kynflow}@postgres:5432/${POSTGRES_DB:-kynflow}
+      MILVUS_URI: http://milvus:19530
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - kynflow_backend_data:/app/.data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      milvus:
+        condition: service_started
+
 volumes:
   kynflow_postgres_data:
   kynflow_etcd_data:
   kynflow_minio_data:
+  kynflow_backend_data:
