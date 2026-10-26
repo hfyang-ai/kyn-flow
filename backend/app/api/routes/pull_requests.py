@@ -8,7 +8,16 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import or_
 from sqlalchemy.orm import Session, selectinload
 
-from app.db.models import AnalysisResult, CodeRelation, CodeSymbol, Conversation, Document, PullRequest, Repository, WorkflowRun
+from app.db.models import (
+    AnalysisResult,
+    CodeRelation,
+    CodeSymbol,
+    Conversation,
+    Document,
+    PullRequest,
+    Repository,
+    WorkflowRun,
+)
 from app.db.session import get_db
 from app.schemas.pull_requests import PRAnalysisResponse, PullRequestResponse
 from app.services.agents.pr_review_agent import PRReviewAgent

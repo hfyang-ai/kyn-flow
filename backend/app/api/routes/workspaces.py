@@ -1,4 +1,4 @@
-from datetime import datetime, time, timezone
+from datetime import UTC, datetime, time
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -6,7 +6,12 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Issue, PullRequest, Repository, User, WorkflowRun, Workspace
 from app.db.session import get_db
-from app.schemas.workspaces import MultiRepoReportRequest, MultiRepoReportResponse, WorkspaceCreateRequest, WorkspaceResponse
+from app.schemas.workspaces import (
+    MultiRepoReportRequest,
+    MultiRepoReportResponse,
+    WorkspaceCreateRequest,
+    WorkspaceResponse,
+)
 from app.services.permissions import require_permission, write_audit_log
 from app.services.rag.vector_store import add_document
 
@@ -15,15 +20,15 @@ router = APIRouter()
 
 def _bounds(payload: MultiRepoReportRequest) -> tuple[datetime, datetime]:
     return (
-        datetime.combine(payload.start_date, time.min, tzinfo=timezone.utc),
-        datetime.combine(payload.end_date, time.max, tzinfo=timezone.utc),
+        datetime.combine(payload.start_date, time.min, tzinfo=UTC),
+        datetime.combine(payload.end_date, time.max, tzinfo=UTC),
     )
 
 
 def _normalize(value: datetime | None) -> datetime | None:
     if value is None:
         return None
-    return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+    return value if value.tzinfo else value.replace(tzinfo=UTC)
 
 
 def _in_range(value: datetime | None, start_at: datetime, end_at: datetime) -> bool:
@@ -153,7 +158,7 @@ async def multi_repo_report(
                 "end_date": str(payload.end_date),
                 "workspace_id": str(payload.workspace_id) if payload.workspace_id else None,
                 "repo_count": len(repos),
-                "generated_at": datetime.now(timezone.utc).isoformat(),
+                "generated_at": datetime.now(UTC).isoformat(),
             },
             commit=False,
         )

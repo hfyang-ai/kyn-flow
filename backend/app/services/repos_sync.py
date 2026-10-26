@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 import httpx
@@ -7,17 +7,32 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.security import decrypt_token
-from app.db.models import Issue, PRFile, PRReviewComment, PullRequest, Repository, WorkflowRun
+from app.db.models import (
+    Issue,
+    PRFile,
+    PRReviewComment,
+    PullRequest,
+    Repository,
+    WorkflowRun,
+)
 from app.schemas.repos import RepoSyncRequest, RepoSyncResponse
-from app.services.github.actions import get_workflow_run_logs, list_workflow_run_jobs, list_workflow_runs
+from app.services.github.actions import (
+    get_workflow_run_logs,
+    list_workflow_run_jobs,
+    list_workflow_runs,
+)
 from app.services.github.issues import list_issues
-from app.services.github.pull_requests import list_pull_request_files, list_pull_request_review_comments, list_pull_requests
+from app.services.github.pull_requests import (
+    list_pull_request_files,
+    list_pull_request_review_comments,
+    list_pull_requests,
+)
 
 
 def parse_github_datetime(value: str | None) -> datetime | None:
     if not value:
         return None
-    return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    return datetime.fromisoformat(value)
 
 
 def login_of(user: dict | None) -> str | None:
@@ -174,7 +189,7 @@ async def sync_repository(db: Session, repo: Repository, payload: RepoSyncReques
         status = "partial"
     else:
         status = "completed" if any(synced.values()) else "empty"
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     messages = {
         "completed": "已完成所选数据源的全部分页同步。",
         "empty": "所选数据源请求成功，但未返回记录；不能据此判断仓库健康。",

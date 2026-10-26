@@ -1,9 +1,17 @@
 from typing import Any
 
 from app.services.agents.base import BaseAgent
-from app.services.github.actions import get_workflow_run_logs, list_workflow_run_jobs, list_workflow_runs
+from app.services.github.actions import (
+    get_workflow_run_logs,
+    list_workflow_run_jobs,
+    list_workflow_runs,
+)
 from app.services.github.issues import list_issues
-from app.services.github.pull_requests import list_pull_request_files, list_pull_request_review_comments, list_pull_requests
+from app.services.github.pull_requests import (
+    list_pull_request_files,
+    list_pull_request_review_comments,
+    list_pull_requests,
+)
 
 
 class GitHubRetrievalAgent(BaseAgent):

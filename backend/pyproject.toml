@@ -33,6 +33,7 @@ dependencies = [
 dev = [
     "pytest==8.3.4",
     "pytest-asyncio==0.25.0",
+    "ruff>=0.17.2",
 ]
 local-embedding = [
     "sentence-transformers>=5.0.0",
@@ -46,4 +47,17 @@ package = false
 # app 是隐式命名空间包，需把 backend 根目录加入 sys.path（等价于原 `python -m pytest`）
 pythonpath = ["."]
 testpaths = ["app/tests"]
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.ruff]
+target-version = "py312"
+
+[tool.ruff.lint]
+ignore = [
+    "B008",   # FastAPI 依赖注入（Depends/Query/require_permission）只能写在参数默认值里
+    "BLE001", # agent 代码刻意的 defensive fallback（LLM/工具失败兜底降级）
+    "RUF012", # BaseAgent.available_tools 是只读工具清单（声明式类属性，非可变状态）
+    "TRY004", # 配置文件/评测集数据校验抛 ValueError 是正确语义（非 API 参数类型错误）
+]
+
 

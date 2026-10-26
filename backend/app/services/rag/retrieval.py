@@ -1,10 +1,10 @@
-import heapq
 import hashlib
+import heapq
 import math
 import re
 import uuid
 from collections import Counter
-from datetime import datetime, time, timezone
+from datetime import UTC, datetime, time
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -12,9 +12,15 @@ from sqlalchemy.orm import Session
 from app.db.models import Document
 from app.services.context_compression import compress_retrieval_results
 from app.services.rag.rerank import rerank_documents
-from app.services.rag.source_policy import RAG_SOURCE_TYPES, is_searchable_source, normalize_source_types
-from app.services.rag.vector_store import MilvusUnavailableError, search_milvus_documents
-
+from app.services.rag.source_policy import (
+    RAG_SOURCE_TYPES,
+    is_searchable_source,
+    normalize_source_types,
+)
+from app.services.rag.vector_store import (
+    MilvusUnavailableError,
+    search_milvus_documents,
+)
 
 BM25_K1 = 1.5
 BM25_B = 0.75
@@ -41,9 +47,9 @@ def _parse_datetime(value: str | None, end_of_day: bool = False) -> datetime | N
     try:
         if len(value) == 10:
             parsed_date = datetime.fromisoformat(value).date()
-            return datetime.combine(parsed_date, time.max if end_of_day else time.min, tzinfo=timezone.utc)
-        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-        return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+            return datetime.combine(parsed_date, time.max if end_of_day else time.min, tzinfo=UTC)
+        parsed = datetime.fromisoformat(value)
+        return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
     except ValueError:
         return None
 

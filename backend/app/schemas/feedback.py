@@ -4,7 +4,6 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-
 FeedbackRating = Literal["helpful", "unhelpful"]
 FeedbackReason = Literal[
     "inaccurate",

@@ -49,7 +49,13 @@ NODE_TYPE_ALIASES = {
     "session_decision": "session_decision",
 }
 
-DOCUMENT_NODE_TYPES = {"knowledge_file", "weekly_report", "project_doc", "project_manifest", "project_overview"}
+DOCUMENT_NODE_TYPES = {
+    "knowledge_file",
+    "weekly_report",
+    "project_doc",
+    "project_manifest",
+    "project_overview",
+}
 
 
 @dataclass
@@ -68,7 +74,9 @@ def normalize_node_type(value: str | None) -> str:
 
 
 def rebuild_knowledge_graph(db: Session, repo: Repository) -> dict[str, int]:
-    db.query(KnowledgeGraphEdge).filter(KnowledgeGraphEdge.repo_id == repo.id).delete(synchronize_session=False)
+    db.query(KnowledgeGraphEdge).filter(KnowledgeGraphEdge.repo_id == repo.id).delete(
+        synchronize_session=False
+    )
     edges = _generate_edges(db, repo.id)
     db.add_all(
         KnowledgeGraphEdge(
@@ -97,12 +105,18 @@ def knowledge_graph_payload(
     center_id: str | None = None,
     depth: int = 1,
 ) -> dict[str, Any]:
-    edge_count = db.query(KnowledgeGraphEdge).filter(KnowledgeGraphEdge.repo_id == repo.id).count()
+    edge_count = (
+        db.query(KnowledgeGraphEdge)
+        .filter(KnowledgeGraphEdge.repo_id == repo.id)
+        .count()
+    )
     if edge_count == 0:
         rebuild_knowledge_graph(db, repo)
 
     nodes_by_key = _collect_nodes(db, repo.id)
-    edge_rows = db.query(KnowledgeGraphEdge).filter(KnowledgeGraphEdge.repo_id == repo.id).all()
+    edge_rows = (
+        db.query(KnowledgeGraphEdge).filter(KnowledgeGraphEdge.repo_id == repo.id).all()
+    )
     edges = [_edge_payload(row) for row in edge_rows]
     center_key = None
     resolved_center_type = normalize_node_type(center_type)
@@ -113,13 +127,20 @@ def knowledge_graph_payload(
             _fallback_node(resolved_center_type, center_id, highlighted=True),
         )
 
-    selected_keys, truncated = _select_subgraph(nodes_by_key, edges, center_key, max(1, min(depth, 2)))
+    selected_keys, truncated = _select_subgraph(
+        nodes_by_key, edges, center_key, max(1, min(depth, 2))
+    )
     selected_edges = [
-        edge for edge in edges if _node_key(edge["from_type"], edge["from_id"]) in selected_keys and _node_key(edge["to_type"], edge["to_id"]) in selected_keys
+        edge
+        for edge in edges
+        if _node_key(edge["from_type"], edge["from_id"]) in selected_keys
+        and _node_key(edge["to_type"], edge["to_id"]) in selected_keys
     ]
     for edge in selected_edges:
         if edge["relation"] == "used_as_evidence":
-            nodes_by_key[_node_key(edge["to_type"], edge["to_id"])]["highlighted"] = True
+            nodes_by_key[_node_key(edge["to_type"], edge["to_id"])]["highlighted"] = (
+                True
+            )
 
     return {
         "repo_id": repo.id,
@@ -142,7 +163,12 @@ def _generate_edges(db: Session, repo_id: uuid.UUID) -> list[dict[str, Any]]:
     issues = db.query(Issue).filter(Issue.repo_id == repo_id).all()
     prs = db.query(PullRequest).filter(PullRequest.repo_id == repo_id).all()
     runs = db.query(WorkflowRun).filter(WorkflowRun.repo_id == repo_id).all()
-    pr_files = db.query(PRFile).join(PullRequest, PRFile.pr_id == PullRequest.id).filter(PullRequest.repo_id == repo_id).all()
+    pr_files = (
+        db.query(PRFile)
+        .join(PullRequest, PRFile.pr_id == PullRequest.id)
+        .filter(PullRequest.repo_id == repo_id)
+        .all()
+    )
     docs = _document_groups(db, repo_id)
 
     issues_by_number = {issue.number: issue for issue in issues}
@@ -188,7 +214,14 @@ def _generate_edges(db: Session, repo_id: uuid.UUID) -> list[dict[str, Any]]:
         for assignee in issue.assignees or []:
             member_id = team_by_name.get(str(assignee).strip().lower())
             if member_id:
-                add_edge("issue", str(issue.id), "team_member", member_id, "assigned_to", metadata={"assignee": assignee})
+                add_edge(
+                    "issue",
+                    str(issue.id),
+                    "team_member",
+                    member_id,
+                    "assigned_to",
+                    metadata={"assignee": assignee},
+                )
         _add_text_reference_edges(
             add_edge,
             "issue",
@@ -208,18 +241,48 @@ def _generate_edges(db: Session, repo_id: uuid.UUID) -> list[dict[str, Any]]:
         for number in closing_refs:
             issue = issues_by_number.get(number)
             if issue:
-                add_edge("pull_request", str(pr.id), "issue", str(issue.id), "resolves", metadata={"issue_number": number})
+                add_edge(
+                    "pull_request",
+                    str(pr.id),
+                    "issue",
+                    str(issue.id),
+                    "resolves",
+                    metadata={"issue_number": number},
+                )
         for number in _issue_refs(text) - closing_refs:
             issue = issues_by_number.get(number)
             if issue:
-                add_edge("pull_request", str(pr.id), "issue", str(issue.id), "mentions", metadata={"issue_number": number})
+                add_edge(
+                    "pull_request",
+                    str(pr.id),
+                    "issue",
+                    str(issue.id),
+                    "mentions",
+                    metadata={"issue_number": number},
+                )
         author_member = team_by_name.get(str(pr.author or "").strip().lower())
         if author_member:
-            add_edge("pull_request", str(pr.id), "team_member", author_member, "mentions", metadata={"author": pr.author})
+            add_edge(
+                "pull_request",
+                str(pr.id),
+                "team_member",
+                author_member,
+                "mentions",
+                metadata={"author": pr.author},
+            )
 
     for pr_file in pr_files:
-        code_id = code_path_to_id.get(pr_file.filename) or _path_node_id(pr_file.filename)
-        add_edge("pull_request", str(pr_file.pr_id), "code_file", code_id, "touches_file", metadata={"path": pr_file.filename, "status": pr_file.status})
+        code_id = code_path_to_id.get(pr_file.filename) or _path_node_id(
+            pr_file.filename
+        )
+        add_edge(
+            "pull_request",
+            str(pr_file.pr_id),
+            "code_file",
+            code_id,
+            "touches_file",
+            metadata={"path": pr_file.filename, "status": pr_file.status},
+        )
 
     for run in runs:
         if (run.conclusion or "").lower() != "failure":
@@ -228,11 +291,27 @@ def _generate_edges(db: Session, repo_id: uuid.UUID) -> list[dict[str, Any]]:
         for number in _pr_refs(text):
             pr = prs_by_number.get(number)
             if pr:
-                add_edge("ci_run", str(run.id), "pull_request", str(pr.id), "failed_in_ci", confidence=0.85, metadata={"pr_number": number})
+                add_edge(
+                    "ci_run",
+                    str(run.id),
+                    "pull_request",
+                    str(pr.id),
+                    "failed_in_ci",
+                    confidence=0.85,
+                    metadata={"pr_number": number},
+                )
         for number in _issue_refs(text):
             issue = issues_by_number.get(number)
             if issue:
-                add_edge("ci_run", str(run.id), "issue", str(issue.id), "failed_in_ci", confidence=0.75, metadata={"issue_number": number})
+                add_edge(
+                    "ci_run",
+                    str(run.id),
+                    "issue",
+                    str(issue.id),
+                    "failed_in_ci",
+                    confidence=0.75,
+                    metadata={"issue_number": number},
+                )
 
     for doc in docs:
         if doc.source_type == "team_member":
@@ -250,7 +329,9 @@ def _generate_edges(db: Session, repo_id: uuid.UUID) -> list[dict[str, Any]]:
             code_path_to_id,
             relation_for_issue=relation,
             relation_for_pr=relation,
-            relation_for_code="cites" if doc.source_type == "memory_note" else "documents",
+            relation_for_code="cites"
+            if doc.source_type == "memory_note"
+            else "documents",
         )
 
     for decision in _decision_nodes(db, repo_id):
@@ -268,18 +349,43 @@ def _generate_edges(db: Session, repo_id: uuid.UUID) -> list[dict[str, Any]]:
             relation_for_code="cites",
         )
         for citation in decision["metadata"].get("citations") or []:
-            target_type = normalize_node_type(str(citation.get("type") or citation.get("source_type") or ""))
+            target_type = normalize_node_type(
+                str(citation.get("type") or citation.get("source_type") or "")
+            )
             target_id = str(citation.get("id") or citation.get("source_id") or "")
             if target_type and target_id:
-                add_edge("session_decision", decision["id"], target_type, target_id, "cites", confidence=0.9, source="memory_citation")
+                add_edge(
+                    "session_decision",
+                    decision["id"],
+                    target_type,
+                    target_id,
+                    "cites",
+                    confidence=0.9,
+                    source="memory_citation",
+                )
 
-    for run in db.query(AgentRun).filter(AgentRun.repo_id == repo_id).order_by(AgentRun.created_at.desc()).limit(25):
+    for run in (
+        db.query(AgentRun)
+        .filter(AgentRun.repo_id == repo_id)
+        .order_by(AgentRun.created_at.desc())
+        .limit(25)
+    ):
         source_id = f"agent_run:{run.id}"
         for citation in _extract_citation_like_values(run.tool_calls or []):
-            target_type = normalize_node_type(str(citation.get("type") or citation.get("source_type") or ""))
+            target_type = normalize_node_type(
+                str(citation.get("type") or citation.get("source_type") or "")
+            )
             target_id = str(citation.get("id") or citation.get("source_id") or "")
             if target_type and target_id:
-                add_edge("session_decision", source_id, target_type, target_id, "used_as_evidence", confidence=0.75, source="tool_call_trace")
+                add_edge(
+                    "session_decision",
+                    source_id,
+                    target_type,
+                    target_id,
+                    "used_as_evidence",
+                    confidence=0.75,
+                    source="tool_call_trace",
+                )
 
     return list(edges.values())
 
@@ -300,20 +406,51 @@ def _add_text_reference_edges(
     for number in _issue_refs(text):
         issue = issues_by_number.get(number)
         if issue:
-            add_edge(from_type, from_id, "issue", str(issue.id), relation_for_issue, confidence=0.75, metadata={"issue_number": number})
+            add_edge(
+                from_type,
+                from_id,
+                "issue",
+                str(issue.id),
+                relation_for_issue,
+                confidence=0.75,
+                metadata={"issue_number": number},
+            )
     for number in _pr_refs(text):
         pr = prs_by_number.get(number)
         if pr:
-            add_edge(from_type, from_id, "pull_request", str(pr.id), relation_for_pr, confidence=0.8, metadata={"pr_number": number})
+            add_edge(
+                from_type,
+                from_id,
+                "pull_request",
+                str(pr.id),
+                relation_for_pr,
+                confidence=0.8,
+                metadata={"pr_number": number},
+            )
     for path, code_id in code_path_to_id.items():
         if len(path) >= 6 and path in text:
-            add_edge(from_type, from_id, "code_file", code_id, relation_for_code, confidence=0.8, metadata={"path": path})
+            add_edge(
+                from_type,
+                from_id,
+                "code_file",
+                code_id,
+                relation_for_code,
+                confidence=0.8,
+                metadata={"path": path},
+            )
 
 
 def _collect_nodes(db: Session, repo_id: uuid.UUID) -> dict[str, dict[str, Any]]:
     nodes: dict[str, dict[str, Any]] = {}
 
-    def put(node_type: str, node_id: str, title: str, subtitle: str = "", metadata: dict[str, Any] | None = None, highlighted: bool = False) -> None:
+    def put(
+        node_type: str,
+        node_id: str,
+        title: str,
+        subtitle: str = "",
+        metadata: dict[str, Any] | None = None,
+        highlighted: bool = False,
+    ) -> None:
         normalized = normalize_node_type(node_type)
         key = _node_key(normalized, str(node_id))
         if key in nodes:
@@ -330,32 +467,103 @@ def _collect_nodes(db: Session, repo_id: uuid.UUID) -> dict[str, dict[str, Any]]
         }
 
     for issue in db.query(Issue).filter(Issue.repo_id == repo_id).all():
-        put("issue", str(issue.id), f"#{issue.number} {issue.title}", issue.state, {"number": issue.number, "labels": issue.labels or [], "assignees": issue.assignees or []})
+        put(
+            "issue",
+            str(issue.id),
+            f"#{issue.number} {issue.title}",
+            issue.state,
+            {
+                "number": issue.number,
+                "labels": issue.labels or [],
+                "assignees": issue.assignees or [],
+            },
+        )
     for pr in db.query(PullRequest).filter(PullRequest.repo_id == repo_id).all():
         subtitle = "merged" if pr.merged_at else pr.state
-        put("pull_request", str(pr.id), f"#{pr.number} {pr.title}", subtitle, {"number": pr.number, "author": pr.author, "head_branch": pr.head_branch})
+        put(
+            "pull_request",
+            str(pr.id),
+            f"#{pr.number} {pr.title}",
+            subtitle,
+            {"number": pr.number, "author": pr.author, "head_branch": pr.head_branch},
+        )
     for run in db.query(WorkflowRun).filter(WorkflowRun.repo_id == repo_id).all():
-        put("ci_run", str(run.id), run.name, run.conclusion or run.status, {"status": run.status, "conclusion": run.conclusion, "html_url": run.html_url})
+        put(
+            "ci_run",
+            str(run.id),
+            run.name,
+            run.conclusion or run.status,
+            {
+                "status": run.status,
+                "conclusion": run.conclusion,
+                "html_url": run.html_url,
+            },
+        )
 
     docs = _document_groups(db, repo_id)
     for doc in docs:
         if doc.source_type == "team_member":
-            put("team_member", doc.source_id, doc.metadata.get("name") or doc.title, doc.metadata.get("role") or "", doc.metadata)
+            put(
+                "team_member",
+                doc.source_id,
+                doc.metadata.get("name") or doc.title,
+                doc.metadata.get("role") or "",
+                doc.metadata,
+            )
         elif doc.source_type == "memory_note":
             put("memory_note", doc.source_id, doc.title, "memory note", doc.metadata)
         elif doc.source_type in DOCUMENT_NODE_TYPES:
-            put("document", doc.source_id, doc.metadata.get("display_title") or doc.title, doc.source_type, doc.metadata | {"source_type": doc.source_type})
+            put(
+                "document",
+                doc.source_id,
+                doc.metadata.get("display_title") or doc.title,
+                doc.source_type,
+                doc.metadata | {"source_type": doc.source_type},
+            )
 
-    for pr_file in db.query(PRFile).join(PullRequest, PRFile.pr_id == PullRequest.id).filter(PullRequest.repo_id == repo_id).all():
-        put("code_file", _path_node_id(pr_file.filename), pr_file.filename, "PR touched file", {"path": pr_file.filename, "status": pr_file.status})
+    for pr_file in (
+        db.query(PRFile)
+        .join(PullRequest, PRFile.pr_id == PullRequest.id)
+        .filter(PullRequest.repo_id == repo_id)
+        .all()
+    ):
+        put(
+            "code_file",
+            _path_node_id(pr_file.filename),
+            pr_file.filename,
+            "PR touched file",
+            {"path": pr_file.filename, "status": pr_file.status},
+        )
 
     for decision in _decision_nodes(db, repo_id):
-        put("session_decision", decision["id"], decision["title"], decision["subtitle"], decision["metadata"])
+        put(
+            "session_decision",
+            decision["id"],
+            decision["title"],
+            decision["subtitle"],
+            decision["metadata"],
+        )
 
-    for run in db.query(AgentRun).filter(AgentRun.repo_id == repo_id).order_by(AgentRun.created_at.desc()).limit(25):
-        put("session_decision", f"agent_run:{run.id}", f"AI answer: {run.route}", "tool evidence path", {"route": run.route, "created_at": run.created_at.isoformat() if run.created_at else None})
+    for run in (
+        db.query(AgentRun)
+        .filter(AgentRun.repo_id == repo_id)
+        .order_by(AgentRun.created_at.desc())
+        .limit(25)
+    ):
+        put(
+            "session_decision",
+            f"agent_run:{run.id}",
+            f"AI answer: {run.route}",
+            "tool evidence path",
+            {
+                "route": run.route,
+                "created_at": run.created_at.isoformat() if run.created_at else None,
+            },
+        )
 
-    for edge in db.query(KnowledgeGraphEdge).filter(KnowledgeGraphEdge.repo_id == repo_id).all():
+    for edge in (
+        db.query(KnowledgeGraphEdge).filter(KnowledgeGraphEdge.repo_id == repo_id).all()
+    ):
         from_key = _node_key(edge.from_type, edge.from_id)
         to_key = _node_key(edge.to_type, edge.to_id)
         nodes.setdefault(from_key, _fallback_node(edge.from_type, edge.from_id))
@@ -385,7 +593,10 @@ def _select_subgraph(
             selected.append(key)
             if distance >= depth:
                 continue
-            for nxt in sorted(adjacency.get(key, []), key=lambda item: nodes_by_key.get(item, {}).get("title", item)):
+            for nxt in sorted(
+                adjacency.get(key, []),
+                key=lambda item: nodes_by_key.get(item, {}).get("title", item),
+            ):
                 if nxt in seen:
                     continue
                 seen.add(nxt)
@@ -398,7 +609,11 @@ def _select_subgraph(
         touched.add(_node_key(edge["to_type"], edge["to_id"]))
     ranked = sorted(
         nodes_by_key,
-        key=lambda key: (0 if key in touched else 1, _node_priority(nodes_by_key[key]["type"]), nodes_by_key[key]["title"]),
+        key=lambda key: (
+            0 if key in touched else 1,
+            _node_priority(nodes_by_key[key]["type"]),
+            nodes_by_key[key]["title"],
+        ),
     )
     selected = ranked[:GRAPH_NODE_LIMIT]
     return selected, len(ranked) > GRAPH_NODE_LIMIT
@@ -406,25 +621,42 @@ def _select_subgraph(
 
 def _document_groups(db: Session, repo_id: uuid.UUID) -> list[DocumentGroup]:
     groups: dict[tuple[str, str], list[Document]] = defaultdict(list)
-    for doc in db.query(Document).filter(Document.repo_id == repo_id).order_by(Document.created_at.asc()).all():
+    for doc in (
+        db.query(Document)
+        .filter(Document.repo_id == repo_id)
+        .order_by(Document.created_at.asc())
+        .all()
+    ):
         groups[(doc.source_type, str(doc.source_id))].append(doc)
 
     output: list[DocumentGroup] = []
     for (source_type, source_id), docs in groups.items():
-        docs.sort(key=lambda item: ((item.meta or {}).get("chunk_index", 0), item.created_at))
+        docs.sort(
+            key=lambda item: ((item.meta or {}).get("chunk_index", 0), item.created_at)
+        )
         first = docs[0]
         metadata = dict(first.meta or {})
         title = str(metadata.get("display_title") or first.title)
         content = "\n".join(doc.content or "" for doc in docs[:4])
-        output.append(DocumentGroup(source_type, source_id, title, content, metadata, first.created_at))
+        output.append(
+            DocumentGroup(
+                source_type, source_id, title, content, metadata, first.created_at
+            )
+        )
     return output
 
 
 def _decision_nodes(db: Session, repo_id: uuid.UUID) -> list[dict[str, Any]]:
     output: list[dict[str, Any]] = []
-    thread_memories = db.query(ThreadMemory).filter(ThreadMemory.repo_id == repo_id).all()
-    conversation_memories = db.query(ConversationMemory).filter(ConversationMemory.repo_id == repo_id).all()
-    for prefix, memory in [("thread", item) for item in thread_memories] + [("conversation", item) for item in conversation_memories]:
+    thread_memories = (
+        db.query(ThreadMemory).filter(ThreadMemory.repo_id == repo_id).all()
+    )
+    conversation_memories = (
+        db.query(ConversationMemory).filter(ConversationMemory.repo_id == repo_id).all()
+    )
+    for prefix, memory in [("thread", item) for item in thread_memories] + [
+        ("conversation", item) for item in conversation_memories
+    ]:
         for index, decision in enumerate(memory.decisions or []):
             text = str(decision).strip()
             if not text:
@@ -467,7 +699,9 @@ def _code_path_to_node_id(pr_files: list[PRFile]) -> dict[str, str]:
 def _extract_citation_like_values(value: Any) -> list[dict[str, Any]]:
     found: list[dict[str, Any]] = []
     if isinstance(value, dict):
-        if ("source_type" in value or "type" in value) and ("source_id" in value or "id" in value):
+        if ("source_type" in value or "type" in value) and (
+            "source_id" in value or "id" in value
+        ):
             found.append(value)
         for child in value.values():
             found.extend(_extract_citation_like_values(child))
@@ -491,7 +725,9 @@ def _edge_payload(row: KnowledgeGraphEdge) -> dict[str, Any]:
     }
 
 
-def _fallback_node(node_type: str, node_id: str, highlighted: bool = False) -> dict[str, Any]:
+def _fallback_node(
+    node_type: str, node_id: str, highlighted: bool = False
+) -> dict[str, Any]:
     return {
         "id": str(node_id),
         "type": normalize_node_type(node_type),
@@ -506,8 +742,15 @@ def _node_key(node_type: str, node_id: str) -> str:
     return f"{normalize_node_type(node_type)}:{node_id}"
 
 
-def _edge_id(from_type: str, from_id: str, to_type: str, to_id: str, relation: str) -> str:
-    return str(uuid.uuid5(uuid.NAMESPACE_URL, f"kynflow-graph:{from_type}:{from_id}:{relation}:{to_type}:{to_id}"))
+def _edge_id(
+    from_type: str, from_id: str, to_type: str, to_id: str, relation: str
+) -> str:
+    return str(
+        uuid.uuid5(
+            uuid.NAMESPACE_URL,
+            f"kynflow-graph:{from_type}:{from_id}:{relation}:{to_type}:{to_id}",
+        )
+    )
 
 
 def _path_node_id(path: str) -> str:

@@ -2,7 +2,7 @@ import asyncio
 import hashlib
 import re
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -19,15 +19,18 @@ from app.schemas.knowledge import (
     KnowledgeUploadResponse,
     MemoryCandidateActionResponse,
     MemoryCandidateResponse,
+    MemoryNoteRequest,
     MemorySearchResponse,
     MemoryStatusResponse,
-    MemoryNoteRequest,
     RecallEventResponse,
     TeamMemberRequest,
     TeamMemberResponse,
 )
-from app.services.knowledge_graph import knowledge_graph_payload, rebuild_knowledge_graph
 from app.services.chat_memory import EvidenceStore
+from app.services.knowledge_graph import (
+    knowledge_graph_payload,
+    rebuild_knowledge_graph,
+)
 from app.services.memory_hub import (
     approve_memory_candidate,
     list_memory_candidates,
@@ -37,10 +40,19 @@ from app.services.memory_hub import (
     reject_memory_candidate,
 )
 from app.services.rag.chunking import chunk_document
-from app.services.rag.document_extraction import MAX_DOCUMENT_BYTES, extract_document_text
+from app.services.rag.document_extraction import (
+    MAX_DOCUMENT_BYTES,
+    extract_document_text,
+)
 from app.services.rag.document_processing import SUPPORTED_KNOWLEDGE_SUFFIXES
 from app.services.rag.embeddings import embed_texts, embedding_provider_name
-from app.services.rag.vector_store import DocumentPayload, add_document, add_documents, delete_document_group, stable_source_id
+from app.services.rag.vector_store import (
+    DocumentPayload,
+    add_document,
+    add_documents,
+    delete_document_group,
+    stable_source_id,
+)
 
 router = APIRouter()
 
@@ -125,7 +137,7 @@ def _group_documents(documents: list[Document]) -> list[KnowledgeItemResponse]:
                 created_at=first.created_at,
             )
         )
-    items.sort(key=lambda item: item.created_at or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
+    items.sort(key=lambda item: item.created_at or datetime.min.replace(tzinfo=UTC), reverse=True)
     return items
 
 
@@ -317,7 +329,7 @@ async def upload_knowledge_file(
                 "chunk_chars": len(str(chunk["content"])),
                 "total_chunks": len(chunks),
                 "chunk_strategy": "structure_aware_v1",
-                "uploaded_at": datetime.now(timezone.utc).isoformat(),
+                "uploaded_at": datetime.now(UTC).isoformat(),
                 "embedding_provider": embedding_provider_name(),
                 "embedding_model": settings.embedding_model,
                 "embedding_dimensions": settings.embedding_dimensions,

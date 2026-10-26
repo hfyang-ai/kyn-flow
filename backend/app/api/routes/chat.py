@@ -1,8 +1,8 @@
-import uuid
-from datetime import datetime, timedelta, timezone
 import os
-from pathlib import Path
 import re
+import uuid
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -10,30 +10,54 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.config import settings
-from app.db.models import ActionDraft, AgentRun, AgentTaskRun, AgentWorkflowRun, ChatMessage, Conversation, Issue, PullRequest, Repository, WorkflowRun
+from app.db.models import (
+    ActionDraft,
+    AgentRun,
+    AgentTaskRun,
+    AgentWorkflowRun,
+    ChatMessage,
+    Conversation,
+    Issue,
+    PullRequest,
+    Repository,
+    WorkflowRun,
+)
 from app.db.session import get_db
-from app.schemas.chat import ChatHistoryMessage, ChatPlanExecuteRequest, ChatRequest, ChatResponse, PromptRecommendationRequest, PromptRecommendationResponse
-from app.services.agents.ci_debug_agent import CIDebugAgent
+from app.schemas.chat import (
+    ChatHistoryMessage,
+    ChatPlanExecuteRequest,
+    ChatRequest,
+    ChatResponse,
+    PromptRecommendationRequest,
+    PromptRecommendationResponse,
+)
+from app.schemas.workflow import WorkflowSpec, WorkflowTask, WorkflowTaskResult
 from app.services.agents.chat_agent import ChatAgent, encode_sse
+from app.services.agents.ci_debug_agent import CIDebugAgent
 from app.services.agents.issue_agent import IssueAgent
 from app.services.agents.planner_agent import PlannerAgent
-from app.services.agents.workflow_models import execution_label
 from app.services.agents.pr_review_agent import PRReviewAgent
 from app.services.agents.recommendation_agent import RecommendationAgent
 from app.services.agents.report_agent import ReportAgent
 from app.services.agents.safety_agent import SafetyAgent
+from app.services.agents.workflow_models import execution_label
 from app.services.agents.workflow_orchestrator import WorkflowOrchestrator
-from app.services.chat_memory import ContextAssembler, EvidenceStore, MessageStore, ProgressiveContextManager, SessionSealer
+from app.services.chat_memory import (
+    ContextAssembler,
+    EvidenceStore,
+    MessageStore,
+    ProgressiveContextManager,
+    SessionSealer,
+)
 from app.services.code_search import query_terms, search_checkout_code
 from app.services.conversations import ensure_conversation, touch_conversation
-from app.services.memory_hub import record_recall_event
 from app.services.mcp_client import StdioMcpClient
+from app.services.memory_hub import record_recall_event
+from app.services.permissions import ensure_demo_user, write_audit_log
 from app.services.rag.retrieval import search_similar_documents
 from app.services.rag.vector_store import add_document
-from app.schemas.workflow import WorkflowSpec, WorkflowTask, WorkflowTaskResult
-from app.services.skills import SkillRegistry, get_skill_registry
-from app.services.permissions import ensure_demo_user, write_audit_log
 from app.services.repository_health import repository_health_snapshot
+from app.services.skills import SkillRegistry, get_skill_registry
 
 router = APIRouter()
 
@@ -238,21 +262,21 @@ def _risky_action(message: str) -> str | None:
 
 
 def _date_window_from_context(context: dict[str, Any]) -> tuple[datetime, datetime]:
-    end_at = datetime.now(timezone.utc)
+    end_at = datetime.now(UTC)
     time_range = str(context.get("time_range") or "7d").lower()
     days = int(time_range[:-1]) if time_range.endswith("d") and time_range[:-1].isdigit() else 7
     start_at = end_at - timedelta(days=max(1, days) - 1)
     if context.get("start_date"):
-        start_at = datetime.fromisoformat(str(context["start_date"])).replace(tzinfo=timezone.utc)
+        start_at = datetime.fromisoformat(str(context["start_date"])).replace(tzinfo=UTC)
     if context.get("end_date"):
-        end_at = datetime.fromisoformat(str(context["end_date"])).replace(hour=23, minute=59, second=59, tzinfo=timezone.utc)
+        end_at = datetime.fromisoformat(str(context["end_date"])).replace(hour=23, minute=59, second=59, tzinfo=UTC)
     return start_at, end_at
 
 
 def _within(value: datetime | None, start_at: datetime, end_at: datetime) -> bool:
     if not value:
         return False
-    current = value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+    current = value if value.tzinfo else value.replace(tzinfo=UTC)
     return start_at <= current <= end_at
 
 
@@ -490,8 +514,8 @@ def _read_workspace_text(path: Path, max_bytes: int = 250_000) -> str:
 
 def _draft_for_action(action: str, message: str, repo: Repository, issues: list[Issue], prs: list[PullRequest], runs: list[WorkflowRun]) -> tuple[str, list[dict[str, str]]]:
     citations: list[dict[str, str]] = [{"type": "repository", "id": str(repo.id), "title": repo.full_name}]
-    latest_issue = sorted(issues, key=_item_time, reverse=True)[0] if issues else None
-    latest_pr = sorted(prs, key=_item_time, reverse=True)[0] if prs else None
+    latest_issue = max(issues, key=_item_time) if issues else None
+    latest_pr = max(prs, key=_item_time) if prs else None
     failed_runs = [run for run in runs if run.conclusion == "failure"]
     if action == "create_issue":
         return f"## Issue 草稿\n标题：{message.strip()[:120]}\n\n### 背景\n请补充影响范围、复现步骤和预期行为。\n\n### 验收标准\n- 预期行为清晰\n- 包含验证步骤\n", citations
@@ -624,11 +648,11 @@ def _build_engineering_workflow_runtime(
         number_attribute="github_run_id",
     )
     if selected_issue is None:
-        selected_issue = sorted(issues, key=_item_time, reverse=True)[0] if issues else None
+        selected_issue = max(issues, key=_item_time) if issues else None
     if selected_pr is None:
-        selected_pr = sorted(prs, key=_item_time, reverse=True)[0] if prs else None
+        selected_pr = max(prs, key=_item_time) if prs else None
     if selected_run is None:
-        selected_run = sorted(failed_runs, key=_item_time, reverse=True)[0] if failed_runs else None
+        selected_run = max(failed_runs, key=_item_time) if failed_runs else None
 
     def claimed_target(task: WorkflowTask, target_type: str, items: list[Any], fallback: Any | None) -> Any | None:
         if task.claim.target_type != target_type:
@@ -926,7 +950,7 @@ def _persist_engineering_workflow(
         final_answer=str(report.get("final_answer") or ""),
         metrics=report.get("metrics") or {},
         status=_workflow_report_status(report),
-        completed_at=datetime.now(timezone.utc),
+        completed_at=datetime.now(UTC),
     )
     db.add(workflow)
     db.flush()
@@ -1231,7 +1255,7 @@ def _build_conversation_tools(repo: Repository | None, conversation: Conversatio
                 "start_date": start_at.date().isoformat(),
                 "end_date": end_at.date().isoformat(),
                 "repo_name": repo.full_name,
-                "generated_at": datetime.now(timezone.utc).isoformat(),
+                "generated_at": datetime.now(UTC).isoformat(),
                 "source": "chat",
             },
             commit=False,
@@ -1250,8 +1274,8 @@ def _build_conversation_tools(repo: Repository | None, conversation: Conversatio
         action = _risky_action(input_data["message"]) or "write_back"
         draft, citations = _draft_for_action(action, input_data["message"], repo, issues, prs, runs)
         safety = await SafetyAgent().run({"action": action, "draft": draft}, agent_context(context))
-        latest_issue = sorted(issues, key=_item_time, reverse=True)[0] if issues else None
-        latest_pr = sorted(prs, key=_item_time, reverse=True)[0] if prs else None
+        latest_issue = max(issues, key=_item_time) if issues else None
+        latest_pr = max(prs, key=_item_time) if prs else None
         target_type = "repository"
         target_id = None
         metadata: dict[str, Any] = {"source": "chat", "message": input_data["message"]}
@@ -1296,7 +1320,7 @@ def _build_conversation_tools(repo: Repository | None, conversation: Conversatio
         return {
             "route": "safety_draft",
             "tool_calls": [{"tool_name": "safety_agent.classify_action_risk", "arguments": {"action": action, "draft_id": str(action_draft.id)}, "status": "success"}],
-            "answer": f"这个请求可能写入 GitHub 或发送到外部渠道，已生成待确认安全草稿。\n\n草稿 ID：{action_draft.id}\n\n{str(safety.get('draft') or draft)}",
+            "answer": f"这个请求可能写入 GitHub 或发送到外部渠道，已生成待确认安全草稿。\n\n草稿 ID：{action_draft.id}\n\n{safety.get('draft') or draft!s}",
             "citations": citations,
         }
 

@@ -1,14 +1,21 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from app.db.models import KnowledgeSourceDocument
 from app.db.session import SessionLocal
 from app.services.rag.chunking import chunk_document
-from app.services.rag.document_extraction import MAX_DOCUMENT_BYTES, extract_document_text
+from app.services.rag.document_extraction import (
+    MAX_DOCUMENT_BYTES,
+    extract_document_text,
+)
 from app.services.rag.embeddings import embed_knowledge_texts
 from app.services.rag.knowledge_base import get_or_create_config
-from app.services.rag.vector_store import DocumentPayload, add_documents, delete_document_group
+from app.services.rag.vector_store import (
+    DocumentPayload,
+    add_documents,
+    delete_document_group,
+)
 
 SUPPORTED_KNOWLEDGE_SUFFIXES = {".txt", ".md", ".markdown", ".mdx", ".pdf", ".docx", ".json", ".csv", ".log"}
 EMBEDDING_BATCH_SIZE = 64
@@ -46,7 +53,7 @@ def _set_status(document_id: uuid.UUID, status: str, *, error: str | None = None
             return
         document.status = status
         document.error_message = error
-        document.updated_at = datetime.now(timezone.utc)
+        document.updated_at = datetime.now(UTC)
         db.commit()
     finally:
         db.close()
@@ -135,7 +142,7 @@ def process_knowledge_document(document_id: uuid.UUID) -> None:
         )
         source.status = "completed"
         source.error_message = None
-        source.completed_at = datetime.now(timezone.utc)
+        source.completed_at = datetime.now(UTC)
         source.updated_at = source.completed_at
         db.commit()
     except Exception as exc:
@@ -144,7 +151,7 @@ def process_knowledge_document(document_id: uuid.UUID) -> None:
         if source is not None:
             source.status = "failed"
             source.error_message = str(exc)[:1000]
-            source.updated_at = datetime.now(timezone.utc)
+            source.updated_at = datetime.now(UTC)
             db.commit()
     finally:
         db.close()

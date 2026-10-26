@@ -1,7 +1,6 @@
 import re
 from typing import Any
 
-
 AMBIGUOUS_MARKERS = ("这个", "那个", "它", "这段", "这里", "怎么办", "怎么处理")
 CONFLICT_POLARITIES = (
     ("permission", ("允许", "可以", "enabled", "enable"), ("禁止", "不允许", "不能", "disabled", "disable")),

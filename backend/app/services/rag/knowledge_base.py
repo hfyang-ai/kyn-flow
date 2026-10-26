@@ -1,7 +1,7 @@
 import importlib.util
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 import httpx
@@ -376,7 +376,7 @@ def record_retrieval_test(
         retrieval_config=retrieval_config,
         results_json=results,
         duration_ms=duration_ms,
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
     )
     db.add(run)
     db.commit()

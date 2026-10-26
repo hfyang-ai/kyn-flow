@@ -11,8 +11,8 @@ from app.services.context_compression import (
     ensure_compaction_summary_preserves_key_facts,
     estimate_tokens,
     fallback_memory_update,
-    messages_after_compact_boundary,
     merge_memory,
+    messages_after_compact_boundary,
     microcompact_messages,
 )
 

@@ -1,5 +1,5 @@
-import re
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -8,24 +8,24 @@ from langchain_core.messages import AIMessage
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from app.api.routes.evaluations import _eval_comparison, _issue_markdown
 from app.core.config import settings
 from app.db.models import Base, Conversation, Document, EvalRun, Repository
-from app.api.routes.evaluations import _eval_comparison, _issue_markdown
 from app.schemas.evals import EvalRunRequest
 from app.services.agents.chat_agent import ChatAgent
 from app.services.evals.ragas_runner import (
     CORE_RAGAS_METRICS,
     RagEvalCase,
     _default_cases,
-    _hard_rules,
-    _evaluation_project_context,
     _ensure_ragas_compatibility,
+    _evaluation_project_context,
+    _hard_rules,
     _split_faithfulness_response,
     rescore_rag_result,
     run_rag_quality_eval,
 )
-from app.services.evals.suites import list_eval_suites, load_eval_suite
 from app.services.evals.runner import run_basic_eval
+from app.services.evals.suites import list_eval_suites, load_eval_suite
 from app.services.rag.vector_store import reset_milvus_store_cache
 
 
@@ -42,7 +42,12 @@ async def test_basic_eval_runner_returns_real_metrics() -> None:
 
 def test_ragas_collections_api_imports_with_current_langchain() -> None:
     _ensure_ragas_compatibility()
-    from ragas.metrics.collections import AnswerRelevancy, ContextPrecision, ContextRecall, Faithfulness
+    from ragas.metrics.collections import (
+        AnswerRelevancy,
+        ContextPrecision,
+        ContextRecall,
+        Faithfulness,
+    )
 
     assert all([AnswerRelevancy, ContextPrecision, ContextRecall, Faithfulness])
 

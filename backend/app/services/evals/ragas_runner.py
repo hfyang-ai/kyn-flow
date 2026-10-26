@@ -16,12 +16,18 @@ from typing import Any, Protocol
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.db.models import Conversation, Document, Issue, PullRequest, Repository, WorkflowRun
+from app.db.models import (
+    Conversation,
+    Document,
+    Issue,
+    PullRequest,
+    Repository,
+    WorkflowRun,
+)
 from app.services.agents.chat_agent import ChatAgent
 from app.services.chat_memory import ContextAssembler, EvidenceStore
 from app.services.rag.embeddings import embed_text
 from app.services.rag.source_policy import RAG_SOURCE_TYPES
-
 
 CORE_RAGAS_METRICS = (
     "context_precision",
@@ -643,7 +649,10 @@ async def _run_chatagent_case(
         db.flush()
         EvidenceStore(db).rebuild_repo(repo, conversation)
         assembled = ContextAssembler(db).assemble(repo, conversation, case.question)
-        from app.api.routes.chat import _build_conversation_tools, _skill_runtime_context
+        from app.api.routes.chat import (
+            _build_conversation_tools,
+            _skill_runtime_context,
+        )
 
         context: dict[str, Any] = {
             **_evaluation_project_context(db, repo.id),

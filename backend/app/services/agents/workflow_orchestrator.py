@@ -3,16 +3,21 @@ from __future__ import annotations
 import asyncio
 import time
 from collections.abc import Awaitable, Callable
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from app.core.config import settings
-from app.schemas.workflow import WorkflowObservation, WorkflowReport, WorkflowSpec, WorkflowTask, WorkflowTaskResult
+from app.schemas.workflow import (
+    WorkflowObservation,
+    WorkflowReport,
+    WorkflowSpec,
+    WorkflowTask,
+    WorkflowTaskResult,
+)
 from app.services.agents.base import BaseAgent
 from app.services.agents.observer_agent import ObserverAgent
 from app.services.agents.planner_agent import PlannerAgent
 from app.services.agents.synthesis_agent import SynthesisAgent
-
 
 WorkflowTaskRunner = Callable[[WorkflowTask, WorkflowSpec, dict[str, Any]], Awaitable[WorkflowTaskResult | dict[str, Any]]]
 
@@ -247,7 +252,7 @@ class WorkflowOrchestrator(BaseAgent):
         spec: WorkflowSpec,
         context: dict[str, Any],
     ) -> WorkflowTaskResult:
-        started_at = datetime.now(timezone.utc)
+        started_at = datetime.now(UTC)
         runner = self.task_runners.get(task.task_type)
         if runner is None:
             return WorkflowTaskResult(
@@ -257,7 +262,7 @@ class WorkflowOrchestrator(BaseAgent):
                 status="skipped",
                 summary=f"没有为 {task.task_type} 注册任务执行器。",
                 started_at=started_at,
-                completed_at=datetime.now(timezone.utc),
+                completed_at=datetime.now(UTC),
             )
         try:
             raw_result = await asyncio.wait_for(
@@ -266,7 +271,7 @@ class WorkflowOrchestrator(BaseAgent):
             )
             result = raw_result if isinstance(raw_result, WorkflowTaskResult) else WorkflowTaskResult.model_validate(raw_result)
             result.started_at = result.started_at or started_at
-            result.completed_at = result.completed_at or datetime.now(timezone.utc)
+            result.completed_at = result.completed_at or datetime.now(UTC)
             return result
         except TimeoutError:
             return self._error_result(
@@ -294,8 +299,8 @@ class WorkflowOrchestrator(BaseAgent):
             summary=f"{task.agent_name} 执行失败。",
             output={"error_kind": error_kind},
             error=error,
-            started_at=started_at or datetime.now(timezone.utc),
-            completed_at=datetime.now(timezone.utc),
+            started_at=started_at or datetime.now(UTC),
+            completed_at=datetime.now(UTC),
         )
 
     def _dependency_blocked_result(self, task: WorkflowTask, failed_dependencies: list[str]) -> WorkflowTaskResult:
@@ -307,7 +312,7 @@ class WorkflowOrchestrator(BaseAgent):
             summary=f"{task.agent_name} 未执行，因为依赖任务未成功：{', '.join(failed_dependencies)}。",
             output={"error_kind": "dependency_failed", "failed_dependencies": failed_dependencies},
             confidence=0.0,
-            completed_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(UTC),
         )
 
     def _task_timeout_seconds(self, context: dict[str, Any]) -> float:

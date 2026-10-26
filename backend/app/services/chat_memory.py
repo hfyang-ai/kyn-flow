@@ -1,7 +1,7 @@
 import re
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import and_, or_
@@ -12,7 +12,6 @@ from app.db.models import (
     AgentRun,
     ChatMessage,
     ChatSession,
-    ChatSession as ChatSessionModel,
     Conversation,
     ConversationMemory,
     Document,
@@ -22,6 +21,9 @@ from app.db.models import (
     Repository,
     ThreadMemory,
     WorkflowRun,
+)
+from app.db.models import (
+    ChatSession as ChatSessionModel,
 )
 from app.services.context_compression import (
     COMPACT_BOUNDARY_SUBTYPE,
@@ -36,13 +38,13 @@ from app.services.context_compression import (
     ensure_compaction_summary_preserves_key_facts,
     estimate_tokens,
     extract_relevant_snippet,
-    fallback_memory_update,
     fallback_compaction_summary,
+    fallback_memory_update,
     format_compaction_summary,
     is_compact_boundary_message,
-    messages_after_compact_boundary,
     memory_document_text,
     merge_memory,
+    messages_after_compact_boundary,
     microcompact_messages,
     render_structured_memory,
     structured_memory_from_model,
@@ -903,7 +905,7 @@ class ProgressiveContextManager:
         preservation_report: dict[str, Any],
         rehydration: dict[str, Any],
     ) -> ChatMessage:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         latest_source_time = max(
             (row.created_at for row in [*summarized_rows, *keep_rows] if row.created_at),
             default=None,
@@ -1054,7 +1056,7 @@ class ProgressiveContextManager:
                 "stage": stage,
                 "current_message": clip_to_token_budget(current_message, 120),
             },
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
         )
         self.db.add(failure)
         return failure
@@ -1166,7 +1168,7 @@ class SessionSealer:
         session.transcript_json = transcript
         session.digest = digest
         session.status = "sealed_with_warnings" if errors else "sealed"
-        session.sealed_at = datetime.now(timezone.utc)
+        session.sealed_at = datetime.now(UTC)
         self.db.flush()
         return session
 

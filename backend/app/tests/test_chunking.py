@@ -1,4 +1,5 @@
 import io
+import itertools
 import zipfile
 
 import pytest
@@ -146,7 +147,7 @@ def test_plain_text_overlap_is_present_and_line_numbers_keep_leading_blanks() ->
 
     assert len(chunks) > 2
     assert chunks[0]["start_line"] == 3
-    assert all(previous["content"][-12:] == current["content"][:12] for previous, current in zip(chunks, chunks[1:]))
+    assert all(previous["content"][-12:] == current["content"][:12] for previous, current in itertools.pairwise(chunks))
 
 
 def test_csv_long_rows_are_split_without_data_loss() -> None:

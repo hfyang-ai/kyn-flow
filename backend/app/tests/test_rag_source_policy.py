@@ -30,7 +30,12 @@ from app.services.rag.knowledge_base import get_or_create_config, retrieve_knowl
 from app.services.rag.qa import rag_status, reindex_documents
 from app.services.rag.retrieval import search_similar_documents
 from app.services.rag.source_policy import retrieval_mode, should_vectorize
-from app.services.rag.vector_store import DocumentPayload, MilvusUnavailableError, add_documents, reset_milvus_store_cache
+from app.services.rag.vector_store import (
+    DocumentPayload,
+    MilvusUnavailableError,
+    add_documents,
+    reset_milvus_store_cache,
+)
 
 
 def _db_session():

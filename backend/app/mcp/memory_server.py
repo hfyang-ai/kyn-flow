@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import asyncio
 import json
 import sys
@@ -7,18 +6,16 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
 if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
-from sqlalchemy.orm import Session  # noqa: E402
+from sqlalchemy.orm import Session
 
-from app.db.models import Conversation, Repository  # noqa: E402
-from app.db.session import Base, SessionLocal, engine  # noqa: E402
-from app.services.chat_memory import MemoryTools  # noqa: E402
-from app.services.conversations import ensure_conversation  # noqa: E402
-
+from app.db.models import Conversation, Repository
+from app.db.session import Base, SessionLocal, engine
+from app.services.chat_memory import MemoryTools
+from app.services.conversations import ensure_conversation
 
 SERVER_NAME = "kynflow-memory-mcp"
 SERVER_VERSION = "0.1.0"

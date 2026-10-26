@@ -249,7 +249,7 @@ async def _issue_analysis_sse(issue_id: UUID, conversation_id: UUID | None, db: 
     payload = _issue_payload(issue)
     try:
         yield _encode_sse("trace", _trace_item("step", "读取 Issue", f"读取 Issue #{issue.number} 的标题、正文、标签、状态和已分配人员。", "running"))
-        query, context, counts = _build_issue_analysis_context(db, issue, conversation_id)
+        _query, context, counts = _build_issue_analysis_context(db, issue, conversation_id)
         yield _encode_sse("trace", _trace_item("tool", "检索相似历史", f"找到 {counts['duplicates']} 个相似 Issue 候选。"))
         yield _encode_sse("trace", _trace_item("tool", "检索代码与文档", f"找到 {counts['code']} 条代码线索、{counts['documents']} 条项目文档/记忆线索。"))
         yield _encode_sse("trace", _trace_item("tool", "读取团队画像", f"读取 {counts['team_members']} 位团队成员，用于建议负责人。"))

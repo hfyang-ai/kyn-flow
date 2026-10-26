@@ -1,6 +1,12 @@
 from fastapi import APIRouter, HTTPException
 
-from app.schemas.skills import McpRuntimeResponse, McpToolResponse, SkillListResponse, SkillManifestResponse, SkillResponse
+from app.schemas.skills import (
+    McpRuntimeResponse,
+    McpToolResponse,
+    SkillListResponse,
+    SkillManifestResponse,
+    SkillResponse,
+)
 from app.services.mcp_client import McpClientError, StdioMcpClient
 from app.services.skills import get_skill_registry
 

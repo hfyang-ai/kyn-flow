@@ -22,7 +22,7 @@ class IssueAgent(BaseAgent):
             try:
                 normalized = self._merge_with_fallback(llm_output, fallback, input_data, context)
                 return IssueAnalysisOutput.model_validate(normalized).model_dump()
-            except Exception:
+            except Exception:  # noqa: S110 - LLM 输出校验失败，静默降级到规则 fallback
                 pass
         return fallback
 

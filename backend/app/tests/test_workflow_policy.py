@@ -6,13 +6,21 @@ import httpx
 import pytest
 
 from app.core.config import Settings, settings
-from app.schemas.workflow import WorkflowObservation, WorkflowSpec
+from app.schemas.workflow import WorkflowSpec
 from app.services.agents.observer_agent import ObserverAgent
 from app.services.agents.planner_agent import PlannerAgent
 from app.services.agents.synthesis_agent import SynthesisAgent
-from app.services.agents.workflow_models import execution_label, review_facts
+from app.services.agents.workflow_models import review_facts
 from app.services.llm.client import LLMClient
-from app.tests.test_workflow_models import StubLLM, context, observer_input, plan, result, review, spec
+from app.tests.test_workflow_models import (
+    StubLLM,
+    context,
+    observer_input,
+    plan,
+    result,
+    review,
+    spec,
+)
 
 
 @pytest.fixture(autouse=True)

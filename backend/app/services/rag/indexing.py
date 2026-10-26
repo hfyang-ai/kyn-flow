@@ -2,7 +2,13 @@ import re
 
 from sqlalchemy.orm import Session, selectinload
 
-from app.db.models import Issue, KnowledgeBaseConfig, PullRequest, Repository, WorkflowRun
+from app.db.models import (
+    Issue,
+    KnowledgeBaseConfig,
+    PullRequest,
+    Repository,
+    WorkflowRun,
+)
 from app.services.rag.embeddings import embed_knowledge_texts
 from app.services.rag.vector_store import DocumentPayload, replace_documents
 
@@ -148,7 +154,7 @@ def index_repository_documents(
             continue
         log_chunks, logs_truncated = _ci_log_chunks(run.logs_text or "")
         for chunk_index, log_chunk in enumerate(log_chunks):
-            content = "\n".join([run.name, log_chunk])
+            content = f"{run.name}\n{log_chunk}"
             item = _payload(
                 "workflow_run",
                 run.id,

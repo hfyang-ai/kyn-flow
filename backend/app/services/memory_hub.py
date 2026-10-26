@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import func
@@ -152,7 +152,7 @@ def capture_memory_candidates(
                 content=content,
                 status="pending",
                 source="session_sealer",
-                meta={"memory_update_key": kind, "captured_at": datetime.now(timezone.utc).isoformat()},
+                meta={"memory_update_key": kind, "captured_at": datetime.now(UTC).isoformat()},
             )
             db.add(candidate)
             created.append(candidate)
@@ -198,7 +198,7 @@ def approve_memory_candidate(db: Session, repo: Repository, candidate_id: uuid.U
         commit=False,
     )
     candidate.status = "approved"
-    candidate.reviewed_at = datetime.now(timezone.utc)
+    candidate.reviewed_at = datetime.now(UTC)
     candidate.meta = {**(candidate.meta or {}), "approved_document_id": str(doc.id)}
     db.flush()
     return candidate, doc
@@ -209,7 +209,7 @@ def reject_memory_candidate(db: Session, repo: Repository, candidate_id: uuid.UU
     if candidate is None:
         raise ValueError("candidate_not_found")
     candidate.status = "rejected"
-    candidate.reviewed_at = datetime.now(timezone.utc)
+    candidate.reviewed_at = datetime.now(UTC)
     db.flush()
     return candidate
 

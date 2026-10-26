@@ -3,9 +3,22 @@ from __future__ import annotations
 from typing import Any
 
 from app.core.config import settings
-from app.schemas.workflow import WorkflowClaim, WorkflowObservation, WorkflowSpec, WorkflowTask, WorkflowTaskResult
+from app.schemas.workflow import (
+    WorkflowClaim,
+    WorkflowObservation,
+    WorkflowSpec,
+    WorkflowTask,
+    WorkflowTaskResult,
+)
 from app.services.agents.base import BaseAgent
-from app.services.agents.workflow_models import PLAN_PROMPT, PlanProposal, fallback_execution, request_workflow_model, rules_execution, task_evidence
+from app.services.agents.workflow_models import (
+    PLAN_PROMPT,
+    PlanProposal,
+    fallback_execution,
+    request_workflow_model,
+    rules_execution,
+    task_evidence,
+)
 from app.services.llm.client import LLMClient
 
 

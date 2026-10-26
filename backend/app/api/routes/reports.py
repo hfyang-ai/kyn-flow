@@ -1,4 +1,4 @@
-from datetime import date, datetime, time, timezone
+from datetime import UTC, date, datetime, time
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -14,8 +14,8 @@ router = APIRouter()
 
 def _range_bounds(start_date: date, end_date: date) -> tuple[datetime, datetime]:
     return (
-        datetime.combine(start_date, time.min, tzinfo=timezone.utc),
-        datetime.combine(end_date, time.max, tzinfo=timezone.utc),
+        datetime.combine(start_date, time.min, tzinfo=UTC),
+        datetime.combine(end_date, time.max, tzinfo=UTC),
     )
 
 
@@ -23,7 +23,7 @@ def _normalize_dt(value: datetime | None) -> datetime | None:
     if value is None:
         return None
     if value.tzinfo is None:
-        return value.replace(tzinfo=timezone.utc)
+        return value.replace(tzinfo=UTC)
     return value
 
 
@@ -99,7 +99,7 @@ async def weekly_report(payload: WeeklyReportRequest, db: Session = Depends(get_
             "start_date": str(payload.start_date),
             "end_date": str(payload.end_date),
             "repo_name": repo.full_name,
-            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "generated_at": datetime.now(UTC).isoformat(),
         },
     )
     return result

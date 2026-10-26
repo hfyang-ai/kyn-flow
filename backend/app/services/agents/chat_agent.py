@@ -3,7 +3,12 @@ import re
 from collections.abc import AsyncIterator, Awaitable, Callable
 from typing import Any, Literal, TypedDict
 
-from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage, ToolMessage
+from langchain_core.messages import (
+    BaseMessage,
+    HumanMessage,
+    SystemMessage,
+    ToolMessage,
+)
 from langchain_core.tools import StructuredTool
 from langchain_openai import ChatOpenAI
 from langgraph.graph import END, START, StateGraph
@@ -20,7 +25,6 @@ from app.services.context_compression import (
     prompt_cache_model_kwargs,
 )
 from app.services.skills import SkillRegistry, SkillRegistryError
-
 
 ConversationTool = Callable[[dict[str, Any], dict[str, Any]], Awaitable[dict[str, Any]]]
 ToolErrorKind = Literal[
@@ -654,7 +658,7 @@ class ChatAgent(BaseAgent):
         pending = raw_state.get("pending_tool_calls")
         if not isinstance(pending, list) or not pending or not isinstance(pending[0], dict):
             return None
-        safe_action, public_action, tool_use_id, action_input = self._tool_call_parts(pending[0], raw_state)
+        _safe_action, public_action, tool_use_id, action_input = self._tool_call_parts(pending[0], raw_state)
         return {
             "type": "tool_use",
             "step": raw_state.get("step", 0),
@@ -938,9 +942,7 @@ class ChatAgent(BaseAgent):
     def _is_retriable_tool_error(self, error_kind: ToolErrorKind, public_action: str) -> bool:
         if error_kind not in {"timeout", "rate_limited", "transient_network"}:
             return False
-        if public_action in {"safety_agent.classify_action_risk", "report_agent.generate_weekly_report", "workflow.run_engineering_review"}:
-            return False
-        return True
+        return public_action not in {"safety_agent.classify_action_risk", "report_agent.generate_weekly_report", "workflow.run_engineering_review"}
 
     def _tool_model(self, tools: dict[str, StructuredTool]):
         if self.model is None:

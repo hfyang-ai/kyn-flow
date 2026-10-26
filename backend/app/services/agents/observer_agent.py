@@ -3,9 +3,22 @@ from __future__ import annotations
 from typing import Any
 
 from app.core.config import settings
-from app.schemas.workflow import WorkflowFinding, WorkflowObservation, WorkflowSpec, WorkflowTaskResult
+from app.schemas.workflow import (
+    WorkflowFinding,
+    WorkflowObservation,
+    WorkflowSpec,
+    WorkflowTaskResult,
+)
 from app.services.agents.base import BaseAgent
-from app.services.agents.workflow_models import REVIEW_PROMPT, ReviewProposal, fallback_execution, grounded_review, request_workflow_model, review_facts, rules_execution
+from app.services.agents.workflow_models import (
+    REVIEW_PROMPT,
+    ReviewProposal,
+    fallback_execution,
+    grounded_review,
+    request_workflow_model,
+    review_facts,
+    rules_execution,
+)
 from app.services.llm.client import LLMClient
 
 
@@ -195,17 +208,21 @@ class ObserverAgent(BaseAgent):
                     recommendation="解决 PR 阻塞问题后重新运行工作流。",
                 )
             )
-        if pr_result and ci_result and bool(ci_result.output.get("is_merge_blocking")):
-            if self._looks_like_merge_approval(str(pr_result.output.get("merge_recommendation") or "")):
-                findings.append(
-                    WorkflowFinding(
-                        finding_type="cross_agent_conflict",
-                        severity="blocker",
-                        message="PR Agent 倾向合并，但 CI Agent 报告了阻塞合并的失败。",
-                        task_ids=[pr_result.task_id, ci_result.task_id],
-                        recommendation="在失败解决前，让 CI 门禁优先于 PR 合并建议。",
-                    )
+        if (
+            pr_result
+            and ci_result
+            and bool(ci_result.output.get("is_merge_blocking"))
+            and self._looks_like_merge_approval(str(pr_result.output.get("merge_recommendation") or ""))
+        ):
+            findings.append(
+                WorkflowFinding(
+                    finding_type="cross_agent_conflict",
+                    severity="blocker",
+                    message="PR Agent 倾向合并，但 CI Agent 报告了阻塞合并的失败。",
+                    task_ids=[pr_result.task_id, ci_result.task_id],
+                    recommendation="在失败解决前，让 CI 门禁优先于 PR 合并建议。",
                 )
+            )
         return findings
 
     def _ownership_findings(self, results: list[WorkflowTaskResult], context: dict[str, Any]) -> list[WorkflowFinding]:

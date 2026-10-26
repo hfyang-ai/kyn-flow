@@ -18,8 +18,8 @@ from app.api.routes import (
     project_index,
     pull_requests,
     rag,
-    repos,
     reports,
+    repos,
     search,
     skills,
     webhooks,
@@ -28,8 +28,8 @@ from app.api.routes import (
 from app.core.config import settings
 from app.db.models import Base
 from app.db.session import engine
-from app.services.scheduler import periodic_repo_sync_loop
 from app.services.rag.vector_store import MilvusUnavailableError
+from app.services.scheduler import periodic_repo_sync_loop
 
 
 def _cors_origins() -> list[str]:
@@ -141,9 +141,12 @@ def create_app() -> FastAPI:
                 with engine.begin() as connection:
                     connection.execute(text("ALTER TABLE documents DROP COLUMN embedding"))
         from app.db.session import SessionLocal
-        from app.services.conversations import backfill_all_default_conversations
         from app.services.code_analysis import purge_legacy_code_documents
-        from app.services.rag.vector_store import delete_milvus_documents, milvus_runtime_status
+        from app.services.conversations import backfill_all_default_conversations
+        from app.services.rag.vector_store import (
+            delete_milvus_documents,
+            milvus_runtime_status,
+        )
 
         db = SessionLocal()
         try:

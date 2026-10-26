@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
@@ -102,7 +102,7 @@ def delete_conversation(db: Session, repo_id: uuid.UUID, conversation_id: uuid.U
     db.query(ConversationMemory).filter(ConversationMemory.conversation_id == conversation.id).delete(synchronize_session=False)
     db.query(EvidenceItem).filter(EvidenceItem.conversation_id == conversation.id).delete(synchronize_session=False)
     conversation.status = "deleted"
-    conversation.updated_at = datetime.now(timezone.utc)
+    conversation.updated_at = datetime.now(UTC)
     db.flush()
 
     replacement = (
@@ -126,7 +126,7 @@ def touch_conversation(
         if title:
             conversation.title = title[:40]
     conversation.message_count = (conversation.message_count or 0) + increment
-    conversation.updated_at = datetime.now(timezone.utc)
+    conversation.updated_at = datetime.now(UTC)
     db.flush()
 
 

@@ -9,6 +9,7 @@ import httpx
 
 from app.core.config import settings
 
+
 def _deterministic_tokens(text: str) -> list[str]:
     lowered = (text or "").lower()
     tokens = re.findall(r"[a-z0-9_\-]+", lowered)

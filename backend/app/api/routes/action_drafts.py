@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -8,7 +8,12 @@ from app.core.config import settings
 from app.core.security import decrypt_token
 from app.db.models import ActionDraft, AuditLog, Issue, PullRequest, Repository, User
 from app.db.session import get_db
-from app.schemas.action_drafts import ActionDraftConfirmResponse, ActionDraftCreateRequest, ActionDraftResponse, AuditLogResponse
+from app.schemas.action_drafts import (
+    ActionDraftConfirmResponse,
+    ActionDraftCreateRequest,
+    ActionDraftResponse,
+    AuditLogResponse,
+)
 from app.services.github.client import GitHubClient
 from app.services.permissions import require_permission, write_audit_log
 
@@ -172,7 +177,7 @@ async def confirm_action_draft(
         result = await _execute_github_draft(db, draft, repo)
         draft.status = "executed"
         draft.confirmed_by = user.id
-        draft.executed_at = datetime.now(timezone.utc)
+        draft.executed_at = datetime.now(UTC)
         draft.execution_result = result
         audit = write_audit_log(
             db,
@@ -188,7 +193,7 @@ async def confirm_action_draft(
     except Exception as exc:
         draft.status = "failed"
         draft.confirmed_by = user.id
-        draft.executed_at = datetime.now(timezone.utc)
+        draft.executed_at = datetime.now(UTC)
         draft.error_message = str(exc)
         audit = write_audit_log(
             db,

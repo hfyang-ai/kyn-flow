@@ -196,7 +196,7 @@ class RecommendationAgent(BaseAgent):
                 return value.timestamp()
             if isinstance(value, str) and value:
                 try:
-                    return datetime.fromisoformat(value.replace("Z", "+00:00")).timestamp()
+                    return datetime.fromisoformat(value).timestamp()
                 except ValueError:
                     continue
         return 0.0

@@ -4,8 +4,15 @@ import pytest
 
 from app.core.config import settings
 from app.db.models import Document
-from app.services.rag.embeddings import embed_knowledge_texts, validate_embedding_contract
-from app.services.rag.vector_store import _clip_utf8, _collection_dimensions, upsert_milvus_documents
+from app.services.rag.embeddings import (
+    embed_knowledge_texts,
+    validate_embedding_contract,
+)
+from app.services.rag.vector_store import (
+    _clip_utf8,
+    _collection_dimensions,
+    upsert_milvus_documents,
+)
 
 
 def test_clip_utf8_limits_encoded_length_without_breaking_characters() -> None:

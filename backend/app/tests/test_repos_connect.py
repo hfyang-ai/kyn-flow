@@ -2,7 +2,11 @@ import pytest
 from fastapi import HTTPException
 from pydantic import ValidationError
 
-from app.api.routes.repos import _clone_target_from_parent, _infer_provider, _parse_git_remote_url
+from app.api.routes.repos import (
+    _clone_target_from_parent,
+    _infer_provider,
+    _parse_git_remote_url,
+)
 from app.schemas.repos import RepoConnectRequest
 
 

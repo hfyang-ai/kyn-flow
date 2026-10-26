@@ -1,16 +1,34 @@
 import asyncio
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from app.api.routes.chat import WorkflowTargetResolutionError, _build_conversation_tools, _build_engineering_workflow_runtime
+from app.api.routes.chat import (
+    WorkflowTargetResolutionError,
+    _build_conversation_tools,
+    _build_engineering_workflow_runtime,
+)
 from app.core.config import settings
-from app.db.models import AgentTaskRun, AgentWorkflowRun, Conversation, Issue, PRFile, PullRequest, Repository, WorkflowRun
+from app.db.models import (
+    AgentTaskRun,
+    AgentWorkflowRun,
+    Conversation,
+    Issue,
+    PRFile,
+    PullRequest,
+    Repository,
+    WorkflowRun,
+)
 from app.db.session import Base
-from app.schemas.workflow import WorkflowClaim, WorkflowSpec, WorkflowTask, WorkflowTaskResult
+from app.schemas.workflow import (
+    WorkflowClaim,
+    WorkflowSpec,
+    WorkflowTask,
+    WorkflowTaskResult,
+)
 from app.services.agents.observer_agent import ObserverAgent
 from app.services.agents.planner_agent import PlannerAgent
 from app.services.agents.pr_review_agent import PRReviewAgent
@@ -75,7 +93,7 @@ async def test_confirmed_workflow_keeps_explicit_issue_pr_and_ci_claims_after_ne
     monkeypatch.setattr(PRReviewAgent, "run", capture_pr_run)
     engine = create_engine("sqlite+pysqlite:///:memory:")
     Base.metadata.create_all(engine)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     with Session(engine) as db:
         repo = Repository(owner="acme", name="targets", full_name="acme/targets")
         db.add(repo)
@@ -470,7 +488,7 @@ async def test_chat_workflow_tool_persists_workflow_and_task_runs(monkeypatch: p
     monkeypatch.setattr(settings, "llm_api_key", None)
     engine = create_engine("sqlite+pysqlite:///:memory:")
     Base.metadata.create_all(engine)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     with Session(engine) as db:
         repo = Repository(owner="acme", name="demo", full_name="acme/demo")
         db.add(repo)

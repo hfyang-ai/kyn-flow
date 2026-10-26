@@ -81,28 +81,27 @@ class LLMClient:
         payload_messages = [{"role": "system", "content": system_prompt}, *messages]
         payload: dict[str, Any] = {"model": self.model, "messages": payload_messages, "stream": True}
         payload.update(prompt_cache_model_kwargs())
-        async with httpx.AsyncClient(timeout=60) as client:
-            async with client.stream(
-                "POST",
-                f"{self.base_url}/chat/completions",
-                headers={"Authorization": f"Bearer {self.api_key}"},
-                json=payload,
-            ) as response:
+        async with httpx.AsyncClient(timeout=60) as client, client.stream(
+            "POST",
+            f"{self.base_url}/chat/completions",
+            headers={"Authorization": f"Bearer {self.api_key}"},
+            json=payload,
+        ) as response:
+            try:
+                response.raise_for_status()
+            except httpx.HTTPStatusError:
+                return
+            async for line in response.aiter_lines():
+                if not line.startswith("data: "):
+                    continue
+                data = line.removeprefix("data: ").strip()
+                if data == "[DONE]":
+                    break
                 try:
-                    response.raise_for_status()
-                except httpx.HTTPStatusError:
-                    return
-                async for line in response.aiter_lines():
-                    if not line.startswith("data: "):
-                        continue
-                    data = line.removeprefix("data: ").strip()
-                    if data == "[DONE]":
-                        break
-                    try:
-                        chunk = json.loads(data)
-                    except json.JSONDecodeError:
-                        continue
-                    delta = chunk.get("choices", [{}])[0].get("delta", {})
-                    content = delta.get("content")
-                    if content:
-                        yield str(content)
+                    chunk = json.loads(data)
+                except json.JSONDecodeError:
+                    continue
+                delta = chunk.get("choices", [{}])[0].get("delta", {})
+                content = delta.get("content")
+                if content:
+                    yield str(content)

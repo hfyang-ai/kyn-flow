@@ -17,8 +17,12 @@ from app.services.evals.ragas_runner import (
     rescore_rag_result,
     run_rag_quality_eval,
 )
-from app.services.evals.suites import AUTO_SMOKE_SUITE_ID, list_eval_suites, load_eval_suite
 from app.services.evals.runner import run_basic_eval
+from app.services.evals.suites import (
+    AUTO_SMOKE_SUITE_ID,
+    list_eval_suites,
+    load_eval_suite,
+)
 from app.services.permissions import require_permission, write_audit_log
 
 router = APIRouter()

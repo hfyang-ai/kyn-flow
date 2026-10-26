@@ -10,7 +10,6 @@ from app.core.config import settings
 from app.schemas.workflow import WorkflowModelExecution, WorkflowTaskResult
 from app.services.llm.client import LLMClient
 
-
 TaskType = Literal["repo_health", "issue_analysis", "pr_review", "ci_debug", "rag_search", "safety_review"]
 T = TypeVar("T", bound=BaseModel)
 
@@ -116,7 +115,7 @@ def rules_execution(reason: str) -> WorkflowModelExecution:
     return WorkflowModelExecution(mode="rules", reason=reason)
 
 
-async def request_workflow_model(
+async def request_workflow_model[T: BaseModel](
     llm: LLMClient, prompt: str, payload: dict[str, Any], output_type: type[T],
     *, timeout_seconds: float | None = None,
 ) -> tuple[T | None, WorkflowModelExecution]:

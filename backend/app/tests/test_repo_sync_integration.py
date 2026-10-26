@@ -2,12 +2,12 @@
 import asyncio
 import json
 import threading
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlencode, urlsplit
 
-import pytest
 import httpx
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, inspect, text
@@ -15,9 +15,22 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.api.routes import repos
-from app.api.routes.chat import _build_conversation_tools, _build_engineering_workflow_runtime, _engineering_workflow_response, _persist_engineering_workflow
+from app.api.routes.chat import (
+    _build_conversation_tools,
+    _build_engineering_workflow_runtime,
+    _engineering_workflow_response,
+    _persist_engineering_workflow,
+)
 from app.core.config import settings
-from app.db.models import AgentWorkflowRun, Base, Issue, PRFile, PRReviewComment, Repository, WorkflowRun
+from app.db.models import (
+    AgentWorkflowRun,
+    Base,
+    Issue,
+    PRFile,
+    PRReviewComment,
+    Repository,
+    WorkflowRun,
+)
 from app.db.session import get_db
 from app.schemas.repos import RepoSyncRequest
 from app.schemas.workflow import WorkflowClaim, WorkflowSpec, WorkflowTask
@@ -235,13 +248,13 @@ async def test_failed_source_is_not_reported_as_empty(github_server, database, s
     populate(github_server)
     github_server["errors"]["/repos/acme/demo/actions/runs"] = status
     db, repo = database
-    previous = datetime.now(timezone.utc) - timedelta(days=1)
+    previous = datetime.now(UTC) - timedelta(days=1)
     repo.last_sync_at = previous
     result = await sync_repository(db, repo, RepoSyncRequest())
     assert result.status == "partial"
     assert result.sources["workflow_runs"]["status"] == "failed"
     assert result.errors == [f"workflow_runs: HTTP {status}"]
-    assert repo.last_sync_at.replace(tzinfo=timezone.utc) == previous
+    assert repo.last_sync_at.replace(tzinfo=UTC) == previous
     assert db.query(Issue).count() == 205
 
 
@@ -303,7 +316,7 @@ async def test_health_summary_and_workflow_gate_missing_or_incomplete_data(githu
     if state not in {"never", "legacy"}:
         await sync_repository(db, repo, RepoSyncRequest(limit=1 if state == "partial" else None))
     if state == "old":
-        repo.sync_metadata = {**repo.sync_metadata, "attempted_at": (datetime.now(timezone.utc) - timedelta(days=2)).isoformat()}
+        repo.sync_metadata = {**repo.sync_metadata, "attempted_at": (datetime.now(UTC) - timedelta(days=2)).isoformat()}
     if state in {"legacy", "empty_with_history"}:
         db.add(Issue(repo_id=repo.id, number=99, title="Legacy data", state="open"))
     db.commit()

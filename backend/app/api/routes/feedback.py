@@ -1,13 +1,24 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from app.db.models import AgentRun, ChatFeedback, ChatMessage, ChatSession, Conversation, Repository
+from app.db.models import (
+    AgentRun,
+    ChatFeedback,
+    ChatMessage,
+    ChatSession,
+    Conversation,
+    Repository,
+)
 from app.db.session import get_db
-from app.schemas.feedback import ChatFeedbackCreate, ChatFeedbackResponse, ChatFeedbackReview
+from app.schemas.feedback import (
+    ChatFeedbackCreate,
+    ChatFeedbackResponse,
+    ChatFeedbackReview,
+)
 from app.services.feedback_notifications import send_negative_feedback_notification
 from app.services.permissions import ensure_demo_user
 
@@ -200,7 +211,7 @@ async def create_feedback(payload: ChatFeedbackCreate, db: Session = Depends(get
     else:
         feedback.review_status = "resolved"
         feedback.review_note = None
-        feedback.reviewed_at = datetime.now(timezone.utc)
+        feedback.reviewed_at = datetime.now(UTC)
         feedback.notification_status = "not_applicable"
         feedback.notification_error = None
     db.commit()
@@ -216,7 +227,7 @@ async def create_feedback(payload: ChatFeedbackCreate, db: Session = Depends(get
         )
         feedback.notification_status = notification_status
         feedback.notification_error = notification_error
-        feedback.notified_at = datetime.now(timezone.utc) if notification_status == "sent" else None
+        feedback.notified_at = datetime.now(UTC) if notification_status == "sent" else None
         db.commit()
         db.refresh(feedback)
     return feedback
@@ -233,7 +244,7 @@ async def review_feedback(
         raise HTTPException(status_code=404, detail="未找到反馈记录")
     feedback.review_status = payload.review_status
     feedback.review_note = (payload.review_note or "").strip() or None
-    feedback.reviewed_at = datetime.now(timezone.utc) if payload.review_status in {"resolved", "dismissed"} else None
+    feedback.reviewed_at = datetime.now(UTC) if payload.review_status in {"resolved", "dismissed"} else None
     db.commit()
     db.refresh(feedback)
     return feedback

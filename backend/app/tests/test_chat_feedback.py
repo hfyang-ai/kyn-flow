@@ -8,7 +8,15 @@ from sqlalchemy.orm import sessionmaker
 os.environ.setdefault("DATABASE_URL", "sqlite+pysqlite:///:memory:")
 
 from app.api.routes import feedback as feedback_routes
-from app.db.models import AgentRun, Base, ChatFeedback, ChatMessage, ChatSession, Conversation, Repository
+from app.db.models import (
+    AgentRun,
+    Base,
+    ChatFeedback,
+    ChatMessage,
+    ChatSession,
+    Conversation,
+    Repository,
+)
 from app.schemas.feedback import ChatFeedbackCreate, ChatFeedbackReview
 
 

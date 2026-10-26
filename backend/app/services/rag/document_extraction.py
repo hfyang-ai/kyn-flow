@@ -5,7 +5,6 @@ import zipfile
 from io import BytesIO
 from pathlib import Path
 
-
 MAX_DOCUMENT_BYTES = 12 * 1024 * 1024
 MAX_EXTRACTED_CHARS = 4_000_000
 MAX_PDF_PAGES = 500

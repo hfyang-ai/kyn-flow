@@ -7,7 +7,12 @@ from sqlalchemy.orm import sessionmaker
 
 from app.db.models import Base, Document, EvidenceItem, Repository
 from app.services.knowledge_graph import _collect_nodes
-from app.services.project_indexing import discover_project_docs, get_project_index_state, scan_project_index, snooze_project_index
+from app.services.project_indexing import (
+    discover_project_docs,
+    get_project_index_state,
+    scan_project_index,
+    snooze_project_index,
+)
 from app.services.rag.retrieval import search_similar_documents
 
 
@@ -132,7 +137,7 @@ def test_allowlist_rescan_removes_course_docs_from_rag_evidence_and_graph(tmp_pa
     assert state["summary_json"]["excludedFiles"] == 2
     assert "README.md" in indexed_paths
     assert "docs/architecture/system.md" in indexed_paths
-    assert not any(path.startswith("docs/course/") or path.startswith("docs/demo code/") for path in indexed_paths)
+    assert not any(path.startswith(("docs/course/", "docs/demo code/")) for path in indexed_paths)
     assert not any(path.startswith(".data/") for path in indexed_paths)
     assert not any(
         "COURSE_ONLY_MARKER" in item.content or "DEMO_ONLY_MARKER" in item.content

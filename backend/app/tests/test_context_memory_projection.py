@@ -1,11 +1,17 @@
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from app.db.models import ChatMessage, ChatSession, Conversation, RecallEvent, Repository
+from app.db.models import (
+    ChatMessage,
+    ChatSession,
+    Conversation,
+    RecallEvent,
+    Repository,
+)
 from app.db.session import Base
 from app.services.chat_memory import (
     ContextAssembler,
@@ -62,7 +68,7 @@ def _message(
 def test_durable_timeline_crosses_boundary_and_hides_compatibility_copies() -> None:
     db = _db()
     repo, conversation = _scope(db)
-    start = datetime.now(timezone.utc)
+    start = datetime.now(UTC)
     first = _message(db, repo, conversation, role="user", content="first exact request", at=start)
     answer = _message(db, repo, conversation, role="assistant", content="first exact answer", at=start + timedelta(seconds=1))
     boundary = _message(
@@ -95,7 +101,7 @@ def test_durable_timeline_crosses_boundary_and_hides_compatibility_copies() -> N
 def test_durable_timeline_cursor_is_stable_when_timestamps_are_equal() -> None:
     db = _db()
     repo, conversation = _scope(db)
-    at = datetime.now(timezone.utc)
+    at = datetime.now(UTC)
     rows = [
         _message(db, repo, conversation, role="user", content=f"same-time-{index}", at=at)
         for index in range(3)
@@ -117,7 +123,7 @@ def test_durable_timeline_cursor_is_stable_when_timestamps_are_equal() -> None:
 async def test_exact_thread_recall_reads_pre_boundary_text_and_is_audited() -> None:
     db = _db()
     repo, conversation = _scope(db)
-    start = datetime.now(timezone.utc)
+    start = datetime.now(UTC)
     old = _message(
         db,
         repo,
@@ -164,7 +170,7 @@ async def test_session_event_tool_returns_transcript_and_records_recall() -> Non
         digest="short digest",
         transcript_json={"messages": [{"role": "user", "content": "exact sealed text"}]},
         status="sealed",
-        sealed_at=datetime.now(timezone.utc),
+        sealed_at=datetime.now(UTC),
     )
     db.add(session)
     db.flush()
@@ -194,7 +200,7 @@ async def test_formal_compaction_reuses_original_rows_and_rehydrates_working_sta
 
     db = _db()
     repo, conversation = _scope(db)
-    start = datetime.now(timezone.utc)
+    start = datetime.now(UTC)
     rows: list[ChatMessage] = []
     for index in range(6):
         rows.append(
@@ -249,7 +255,7 @@ async def test_session_sealer_keeps_raw_transcript_when_extraction_fails() -> No
 
     db = _db()
     repo, conversation = _scope(db)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     user = _message(db, repo, conversation, role="user", content="remember exact input", at=now)
     assistant = _message(db, repo, conversation, role="assistant", content="completed answer", at=now + timedelta(seconds=1))
 
@@ -271,7 +277,7 @@ async def test_session_sealer_keeps_raw_transcript_when_extraction_fails() -> No
 def test_context_assembler_keeps_recent_history_out_of_system_context() -> None:
     db = _db()
     repo, conversation = _scope(db)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     _message(db, repo, conversation, role="user", content="UNIQUE-RECENT-MESSAGE", at=now)
 
     assembled = ContextAssembler(db).assemble(repo, conversation, "UNIQUE-RECENT-MESSAGE")

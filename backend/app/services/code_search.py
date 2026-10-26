@@ -7,7 +7,6 @@ from typing import Any
 
 from app.db.models import Repository
 
-
 SKIP_DIRS = {
     ".git",
     ".hg",
@@ -242,8 +241,7 @@ def _ripgrep_matches(checkout: Path, root: Path, terms: list[str], max_matches: 
         command,
         cwd=str(checkout),
         check=False,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
         text=True,
         encoding="utf-8",
         errors="replace",

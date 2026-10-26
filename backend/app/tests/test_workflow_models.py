@@ -6,11 +6,24 @@ import httpx
 import pytest
 
 from app.core.config import settings
-from app.schemas.workflow import WorkflowClaim, WorkflowFinding, WorkflowObservation, WorkflowSpec, WorkflowTask, WorkflowTaskResult
+from app.schemas.workflow import (
+    WorkflowClaim,
+    WorkflowFinding,
+    WorkflowObservation,
+    WorkflowSpec,
+    WorkflowTask,
+    WorkflowTaskResult,
+)
 from app.services.agents.observer_agent import ObserverAgent
 from app.services.agents.planner_agent import PlannerAgent
 from app.services.agents.synthesis_agent import SynthesisAgent
-from app.services.agents.workflow_models import PLAN_PROMPT, REVIEW_PROMPT, SYNTHESIS_PROMPT, PlanProposal, request_workflow_model, task_evidence
+from app.services.agents.workflow_models import (
+    PLAN_PROMPT,
+    SYNTHESIS_PROMPT,
+    PlanProposal,
+    request_workflow_model,
+    task_evidence,
+)
 from app.services.agents.workflow_orchestrator import WorkflowOrchestrator
 from app.services.llm.client import LLMClient
 
@@ -287,6 +300,7 @@ async def test_full_orchestrator_calls_all_three_models_but_dispatches_with_prog
 
     from sqlalchemy import create_engine
     from sqlalchemy.orm import Session
+
     from app.api.routes.chat import _persist_engineering_workflow, _workflow_plan_answer
     from app.db.models import AgentWorkflowRun, Repository
     from app.db.session import Base

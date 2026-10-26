@@ -9,9 +9,9 @@ from app.services.agents.ci_debug_agent import CIDebugAgent
 from app.services.agents.issue_agent import IssueAgent
 from app.services.agents.pr_review_agent import PRReviewAgent
 from app.services.context_compression import (
-    compression_eval_summary,
     compress_messages,
     compress_retrieval_results,
+    compression_eval_summary,
     fallback_memory_update,
     merge_memory,
     render_structured_memory,

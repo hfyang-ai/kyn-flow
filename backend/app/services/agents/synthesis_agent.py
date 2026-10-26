@@ -5,7 +5,15 @@ from typing import Any
 from app.core.config import settings
 from app.schemas.workflow import WorkflowObservation, WorkflowSpec, WorkflowTaskResult
 from app.services.agents.base import BaseAgent
-from app.services.agents.workflow_models import SYNTHESIS_PROMPT, SynthesisProposal, execution_label, fallback_execution, request_workflow_model, rules_execution, task_evidence
+from app.services.agents.workflow_models import (
+    SYNTHESIS_PROMPT,
+    SynthesisProposal,
+    execution_label,
+    fallback_execution,
+    request_workflow_model,
+    rules_execution,
+    task_evidence,
+)
 from app.services.llm.client import LLMClient
 
 

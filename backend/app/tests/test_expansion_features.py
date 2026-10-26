@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 import pytest
@@ -9,18 +9,38 @@ from sqlalchemy.orm import sessionmaker
 os.environ.setdefault("DATABASE_URL", "sqlite+pysqlite:///:memory:")
 
 from app.api.routes.action_drafts import confirm_action_draft, create_action_draft
-from app.api.routes.ci import _augment_ci_context_with_snapshot, _build_ci_analysis_context
+from app.api.routes.ci import (
+    _augment_ci_context_with_snapshot,
+    _build_ci_analysis_context,
+)
 from app.api.routes.code_graph import search_code_graph
-from app.api.routes.pull_requests import _augment_pr_context_with_snapshot, _build_pr_analysis_context
+from app.api.routes.pull_requests import (
+    _augment_pr_context_with_snapshot,
+    _build_pr_analysis_context,
+)
 from app.api.routes.workspaces import create_workspace, multi_repo_report
 from app.core.config import settings
-from app.db.models import Base, CodeRelation, CodeSymbol, Issue, PRFile, PRReviewComment, PullRequest, Repository, User, WorkflowRun
+from app.db.models import (
+    Base,
+    CodeRelation,
+    CodeSymbol,
+    Issue,
+    PRFile,
+    PRReviewComment,
+    PullRequest,
+    Repository,
+    User,
+    WorkflowRun,
+)
 from app.schemas.action_drafts import ActionDraftCreateRequest
 from app.schemas.workspaces import MultiRepoReportRequest, WorkspaceCreateRequest
 from app.services.code_analysis import _sync_code_graph
 from app.services.code_search import search_repository_code
 from app.services.rag.vector_store import reset_milvus_store_cache
-from app.services.worktree_manager import _sync_pr_snapshot_analysis, cleanup_pr_snapshots
+from app.services.worktree_manager import (
+    _sync_pr_snapshot_analysis,
+    cleanup_pr_snapshots,
+)
 
 
 def _db_session():
@@ -70,17 +90,17 @@ async def test_multi_repo_report_aggregates_workspace_repositories(monkeypatch) 
     user = _user(db)
     repo_a = _repo(db, "api")
     repo_b = _repo(db, "web")
-    db.add(Issue(repo_id=repo_a.id, number=1, title="Fix auth", state="open", created_at=datetime.now(timezone.utc)))
-    db.add(PullRequest(repo_id=repo_b.id, number=2, title="UI update", state="open", created_at=datetime.now(timezone.utc)))
-    db.add(WorkflowRun(repo_id=repo_b.id, github_run_id=3, name="test", status="completed", conclusion="failure", created_at=datetime.now(timezone.utc)))
+    db.add(Issue(repo_id=repo_a.id, number=1, title="Fix auth", state="open", created_at=datetime.now(UTC)))
+    db.add(PullRequest(repo_id=repo_b.id, number=2, title="UI update", state="open", created_at=datetime.now(UTC)))
+    db.add(WorkflowRun(repo_id=repo_b.id, github_run_id=3, name="test", status="completed", conclusion="failure", created_at=datetime.now(UTC)))
     db.flush()
 
     workspace = await create_workspace(WorkspaceCreateRequest(name="team", repo_ids=[repo_a.id, repo_b.id]), db=db, user=user)
     result = await multi_repo_report(
         MultiRepoReportRequest(
             workspace_id=workspace.id,
-            start_date=datetime.now(timezone.utc).date(),
-            end_date=datetime.now(timezone.utc).date(),
+            start_date=datetime.now(UTC).date(),
+            end_date=datetime.now(UTC).date(),
         ),
         db=db,
         user=user,
@@ -328,7 +348,7 @@ def test_cleanup_pr_snapshots_removes_old_dirs_and_code_graph(tmp_path, monkeypa
     snapshot_dir.mkdir(parents=True)
     (snapshot_dir / ".kynflow-pr-snapshot.json").write_text(
         '{"updated_at": "'
-        + (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+        + (datetime.now(UTC) - timedelta(days=30)).isoformat()
         + '", "pr_id": "00000000-0000-0000-0000-000000000123"}',
         encoding="utf-8",
     )

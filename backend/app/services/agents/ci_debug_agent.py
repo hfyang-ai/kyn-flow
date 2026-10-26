@@ -21,7 +21,7 @@ class CIDebugAgent(BaseAgent):
         if llm_output:
             try:
                 return CIDebugOutput.model_validate(self._merge_with_fallback(llm_output, fallback)).model_dump()
-            except Exception:
+            except Exception:  # noqa: S110 - LLM 输出校验失败，静默降级到规则 fallback
                 pass
         return fallback
 

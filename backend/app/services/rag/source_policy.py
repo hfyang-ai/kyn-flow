@@ -1,7 +1,6 @@
 from collections.abc import Iterable
 from typing import Literal
 
-
 RetrievalMode = Literal["rag", "direct"]
 
 # RAG is reserved for reusable, unstructured project knowledge where semantic

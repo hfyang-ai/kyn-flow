@@ -1,6 +1,6 @@
 import math
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from app.core.config import settings
@@ -39,12 +39,12 @@ def _freshness_bonus(metadata: dict[str, Any]) -> float:
         if not value:
             continue
         try:
-            parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+            parsed = datetime.fromisoformat(str(value))
             if parsed.tzinfo is None:
-                parsed = parsed.replace(tzinfo=timezone.utc)
+                parsed = parsed.replace(tzinfo=UTC)
         except ValueError:
             continue
-        age_days = max(0, (datetime.now(timezone.utc) - parsed).days)
+        age_days = max(0, (datetime.now(UTC) - parsed).days)
         if age_days <= 30:
             return 0.04
         if age_days <= 180:

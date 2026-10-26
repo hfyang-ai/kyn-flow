@@ -2,7 +2,7 @@ import os
 import re
 import subprocess
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import urlparse
 from uuid import UUID
@@ -11,13 +11,50 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
-from app.db.models import ActionDraft, AgentRun, AgentTaskRun, AgentWorkflowRun, AnalysisResult, AuditLog, ChatFeedback, ChatMessage, ChatSession, CodeRelation, CodeSymbol, Conversation, ConversationMemory, Document, EvidenceItem, Issue, KnowledgeBaseConfig, KnowledgeGraphEdge, KnowledgeSourceDocument, MemoryCandidate, PRFile, PRReviewComment, ProjectIndexState, PullRequest, RecallEvent, Repository, RetrievalTestRun, ThreadMemory, WorkflowRun, Workspace
-from app.db.session import get_db
-from app.schemas.repos import RepoConnectRequest, RepoConnectResponse, RepoResponse, RepoSyncRequest, RepoSyncResponse
 from app.core.config import settings
 from app.core.security import encrypt_token
-from app.services.github.client import GitHubClient
+from app.db.models import (
+    ActionDraft,
+    AgentRun,
+    AgentTaskRun,
+    AgentWorkflowRun,
+    AnalysisResult,
+    AuditLog,
+    ChatFeedback,
+    ChatMessage,
+    ChatSession,
+    CodeRelation,
+    CodeSymbol,
+    Conversation,
+    ConversationMemory,
+    Document,
+    EvidenceItem,
+    Issue,
+    KnowledgeBaseConfig,
+    KnowledgeGraphEdge,
+    KnowledgeSourceDocument,
+    MemoryCandidate,
+    PRFile,
+    ProjectIndexState,
+    PRReviewComment,
+    PullRequest,
+    RecallEvent,
+    Repository,
+    RetrievalTestRun,
+    ThreadMemory,
+    WorkflowRun,
+    Workspace,
+)
+from app.db.session import get_db
+from app.schemas.repos import (
+    RepoConnectRequest,
+    RepoConnectResponse,
+    RepoResponse,
+    RepoSyncRequest,
+    RepoSyncResponse,
+)
 from app.services.code_analysis import sync_repository_code_analysis_by_id
+from app.services.github.client import GitHubClient
 from app.services.rag.vector_store import delete_milvus_documents
 from app.services.repos_sync import sync_repository
 
@@ -60,8 +97,7 @@ def _git_output(args: list[str], cwd: Path) -> str:
             ["git", *args],
             cwd=str(cwd),
             check=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            capture_output=True,
             text=True,
             timeout=30,
         )
@@ -297,7 +333,7 @@ async def select_repo(repo_id: UUID, db: Session = Depends(get_db)) -> dict:
     repo = db.get(Repository, repo_id)
     if repo is None:
         raise HTTPException(status_code=404, detail="未找到仓库")
-    repo.updated_at = datetime.now(timezone.utc)
+    repo.updated_at = datetime.now(UTC)
     db.commit()
     return {"repo_id": str(repo.id), "full_name": repo.full_name, "selected": True}
 

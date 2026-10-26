@@ -5,7 +5,15 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, UploadFile
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    HTTPException,
+    Query,
+    UploadFile,
+)
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -32,7 +40,10 @@ from app.schemas.rag import (
     RetrievalTestResponse,
 )
 from app.services.rag.document_extraction import MAX_DOCUMENT_BYTES
-from app.services.rag.document_processing import SUPPORTED_KNOWLEDGE_SUFFIXES, process_knowledge_document
+from app.services.rag.document_processing import (
+    SUPPORTED_KNOWLEDGE_SUFFIXES,
+    process_knowledge_document,
+)
 from app.services.rag.embeddings import validate_embedding_contract
 from app.services.rag.knowledge_base import (
     config_dict,
@@ -42,7 +53,12 @@ from app.services.rag.knowledge_base import (
     retrieve_knowledge,
     runtime_status,
 )
-from app.services.rag.qa import answer_question, build_sources, rag_status, reindex_documents
+from app.services.rag.qa import (
+    answer_question,
+    build_sources,
+    rag_status,
+    reindex_documents,
+)
 from app.services.rag.vector_store import delete_document_group
 
 router = APIRouter()

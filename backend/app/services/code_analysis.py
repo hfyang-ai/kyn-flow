@@ -3,10 +3,10 @@
 import asyncio
 import logging
 import os
+import re
 import shutil
 import subprocess
 import uuid
-import re
 from pathlib import Path
 from urllib.parse import quote, urlparse, urlunparse
 
@@ -158,6 +158,7 @@ def _is_git_work_tree(path: Path) -> bool:
         stderr=subprocess.DEVNULL,
         text=True,
         timeout=30,
+        check=False,
     )
     return result.returncode == 0 and result.stdout.strip().lower() == "true"
 

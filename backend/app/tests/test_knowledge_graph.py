@@ -7,7 +7,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.db.models import Base, Document, Issue, PRFile, PullRequest, Repository
-from app.services.knowledge_graph import knowledge_graph_payload, rebuild_knowledge_graph
+from app.services.knowledge_graph import (
+    knowledge_graph_payload,
+    rebuild_knowledge_graph,
+)
 
 
 def _db_session():

@@ -5,7 +5,7 @@ import shutil
 import subprocess
 import threading
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -42,8 +42,7 @@ def _run_git(args: list[str], cwd: Path) -> str:
         ["git", *args],
         cwd=str(cwd),
         check=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
         text=True,
         timeout=180,
     )
@@ -60,7 +59,7 @@ def _snapshot_meta_path(path: Path) -> Path:
 
 
 def _write_snapshot_meta(path: Path, meta: dict[str, Any]) -> None:
-    payload = {**meta, "updated_at": datetime.now(timezone.utc).isoformat()}
+    payload = {**meta, "updated_at": datetime.now(UTC).isoformat()}
     _snapshot_meta_path(path).write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
@@ -170,7 +169,7 @@ def cleanup_pr_snapshots(db: Session, repo: Repository, *, max_age_hours: int = 
     root = _checkout_root() / "worktrees" / str(repo.id)
     if not root.exists():
         return {"removed": 0, "paths": []}
-    cutoff = datetime.now(timezone.utc) - timedelta(hours=max_age_hours)
+    cutoff = datetime.now(UTC) - timedelta(hours=max_age_hours)
     removed_paths: list[str] = []
     removed_pr_ids: set[uuid.UUID] = set()
     for path in root.iterdir():
@@ -189,7 +188,7 @@ def cleanup_pr_snapshots(db: Session, repo: Repository, *, max_age_hours: int = 
             except (OSError, ValueError, json.JSONDecodeError):
                 updated_at = None
         if updated_at is None:
-            updated_at = datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc)
+            updated_at = datetime.fromtimestamp(path.stat().st_mtime, tz=UTC)
         if updated_at >= cutoff:
             continue
         try:

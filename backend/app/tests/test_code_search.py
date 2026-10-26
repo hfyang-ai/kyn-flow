@@ -1,7 +1,11 @@
 import uuid
 from types import SimpleNamespace
 
-from app.services.code_search import query_terms, search_checkout_code, search_repository_code
+from app.services.code_search import (
+    query_terms,
+    search_checkout_code,
+    search_repository_code,
+)
 
 
 def test_query_terms_prioritizes_code_identifiers() -> None:

@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from app.db.models import Issue, PullRequest, Repository, WorkflowRun
 
@@ -17,8 +17,8 @@ def repository_health_snapshot(repo: Repository, issues: list[Issue], prs: list[
     else:
         attempted_at = datetime.fromisoformat(metadata["attempted_at"]) if metadata.get("attempted_at") else None
         if attempted_at and attempted_at.tzinfo is None:
-            attempted_at = attempted_at.replace(tzinfo=timezone.utc)
-        if not attempted_at or datetime.now(timezone.utc) - attempted_at > timedelta(hours=24):
+            attempted_at = attempted_at.replace(tzinfo=UTC)
+        if not attempted_at or datetime.now(UTC) - attempted_at > timedelta(hours=24):
             state = "stale"
         else:
             state = "empty" if metadata.get("status") == "empty" or not evidence_count else "ready"

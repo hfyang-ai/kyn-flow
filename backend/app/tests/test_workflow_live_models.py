@@ -3,15 +3,20 @@ import os
 import pytest
 
 from app.core.config import settings
-from app.schemas.workflow import WorkflowClaim, WorkflowFinding, WorkflowObservation, WorkflowSpec, WorkflowTask, WorkflowTaskResult
+from app.schemas.workflow import (
+    WorkflowClaim,
+    WorkflowFinding,
+    WorkflowObservation,
+    WorkflowSpec,
+    WorkflowTask,
+    WorkflowTaskResult,
+)
 from app.services.agents.ci_debug_agent import CIDebugAgent
 from app.services.agents.observer_agent import ObserverAgent
 from app.services.agents.planner_agent import PlannerAgent
 from app.services.agents.pr_review_agent import PRReviewAgent
-from app.services.agents.synthesis_agent import SynthesisAgent
 from app.services.agents.workflow_orchestrator import WorkflowOrchestrator
 from app.services.llm.client import LLMClient
-
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.skipif(
     os.environ.get("KYNFLOW_RUN_LIVE_LLM") != "1" or not settings.llm_api_key,

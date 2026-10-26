@@ -7,7 +7,11 @@ from sqlalchemy.orm import Session
 from app.db.models import Repository
 from app.db.session import get_db
 from app.schemas.conversations import ConversationCreateRequest, ConversationResponse
-from app.services.conversations import create_conversation, delete_conversation, list_conversations
+from app.services.conversations import (
+    create_conversation,
+    delete_conversation,
+    list_conversations,
+)
 
 router = APIRouter()
 
