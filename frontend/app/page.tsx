@@ -713,13 +713,13 @@ function traceItemsFromAgentEvents(events: Array<Record<string, unknown>> = []):
       const query = contextString(preRetrieval.query);
       const sourceLines = Array.isArray(preRetrieval.sources)
         ? preRetrieval.sources
-            .slice(0, 8)
-            .map((value) => contextRecord(value))
-            .map((source) => {
-              const title = contextString(source.title) || "未命名证据";
-              const sourceType = contextString(source.source_type) || "evidence";
-              return `- [${sourceType}] ${title}`;
-            })
+          .slice(0, 8)
+          .map((value) => contextRecord(value))
+          .map((source) => {
+            const title = contextString(source.title) || "未命名证据";
+            const sourceType = contextString(source.source_type) || "evidence";
+            return `- [${sourceType}] ${title}`;
+          })
         : [];
       items.push({
         id: `history-rag-strategy-${index}`,
@@ -1424,7 +1424,7 @@ export default function DashboardPage() {
           id: item.id,
           title: item.title,
           content: item.content_preview
-      }))
+        }))
     );
   }
 
@@ -2169,7 +2169,7 @@ export default function DashboardPage() {
           setMessages((items) =>
             items.map((item) =>
               item.id === assistantId ? { ...item, content: item.content + data.content, responsePending: true } : item
-              )
+            )
           );
           return;
         }
@@ -2179,20 +2179,20 @@ export default function DashboardPage() {
             items.map((item) =>
               item.id === assistantId
                 ? {
-                    ...item,
-                    content: data.answer,
-                    route: data.route,
-                    toolCalls: data.tool_calls,
-                    traceItems: finalizedTraceItems(data.agent_events, item.traceItems),
-                    compressionStats: data.compression_stats,
-                    progressiveCompaction: data.progressive_compaction,
-                    modelUsage: data.model_usage,
-                    contextDiagnostics: data.context_diagnostics,
-                    messageId: data.message_id,
-                    contextCollapsed: true,
-                    traceCollapsed: true,
-                    responsePending: false
-                  }
+                  ...item,
+                  content: data.answer,
+                  route: data.route,
+                  toolCalls: data.tool_calls,
+                  traceItems: finalizedTraceItems(data.agent_events, item.traceItems),
+                  compressionStats: data.compression_stats,
+                  progressiveCompaction: data.progressive_compaction,
+                  modelUsage: data.model_usage,
+                  contextDiagnostics: data.context_diagnostics,
+                  messageId: data.message_id,
+                  contextCollapsed: true,
+                  traceCollapsed: true,
+                  responsePending: false
+                }
                 : item
             )
           );
@@ -2259,17 +2259,17 @@ export default function DashboardPage() {
         items.map((item) =>
           item.id === assistantId
             ? {
-                ...item,
-                content: data.answer,
-                route: data.route,
-                toolCalls: data.tool_calls,
-                traceItems: traceItemsFromAgentEvents(data.agent_events ?? []),
-                workflowPlan: data.plan,
-                planSourceMessage: trimmedText,
-                planStatus: "ready",
-                traceCollapsed: true,
-                responsePending: false
-              }
+              ...item,
+              content: data.answer,
+              route: data.route,
+              toolCalls: data.tool_calls,
+              traceItems: traceItemsFromAgentEvents(data.agent_events ?? []),
+              workflowPlan: data.plan,
+              planSourceMessage: trimmedText,
+              planStatus: "ready",
+              traceCollapsed: true,
+              responsePending: false
+            }
             : item
         )
       );
@@ -2279,12 +2279,12 @@ export default function DashboardPage() {
         items.map((item) =>
           item.id === assistantId
             ? {
-                ...item,
-                content: `创建计划失败：${getFriendlyError(error)}`,
-                planStatus: "error",
-                responsePending: false,
-                traceCollapsed: true
-              }
+              ...item,
+              content: `创建计划失败：${getFriendlyError(error)}`,
+              planStatus: "error",
+              responsePending: false,
+              traceCollapsed: true
+            }
             : item
         )
       );
@@ -2310,14 +2310,14 @@ export default function DashboardPage() {
       items.map((item) =>
         item.id === messageId
           ? {
-              ...item,
-              content: "",
-              route: "engineering_workflow",
-              traceItems: [],
-              traceCollapsed: false,
-              responsePending: true,
-              planStatus: "executing"
-            }
+            ...item,
+            content: "",
+            route: "engineering_workflow",
+            traceItems: [],
+            traceCollapsed: false,
+            responsePending: true,
+            planStatus: "executing"
+          }
           : item
       )
     );
@@ -2353,16 +2353,16 @@ export default function DashboardPage() {
             items.map((item) =>
               item.id === messageId
                 ? {
-                    ...item,
-                    content: data.answer,
-                    route: data.route,
-                    toolCalls: data.tool_calls,
-                    traceItems: finalizedTraceItems(data.agent_events, item.traceItems),
-                    messageId: data.message_id,
-                    traceCollapsed: true,
-                    responsePending: false,
-                    planStatus: data.route === "error" ? "error" : "done"
-                  }
+                  ...item,
+                  content: data.answer,
+                  route: data.route,
+                  toolCalls: data.tool_calls,
+                  traceItems: finalizedTraceItems(data.agent_events, item.traceItems),
+                  messageId: data.message_id,
+                  traceCollapsed: true,
+                  responsePending: false,
+                  planStatus: data.route === "error" ? "error" : "done"
+                }
                 : item
             )
           );
@@ -2378,12 +2378,12 @@ export default function DashboardPage() {
         items.map((item) =>
           item.id === messageId
             ? {
-                ...item,
-                content: `执行计划失败：${getFriendlyError(error)}`,
-                planStatus: "error",
-                responsePending: false,
-                traceCollapsed: true
-              }
+              ...item,
+              content: `执行计划失败：${getFriendlyError(error)}`,
+              planStatus: "error",
+              responsePending: false,
+              traceCollapsed: true
+            }
             : item
         )
       );
@@ -2540,9 +2540,8 @@ export default function DashboardPage() {
               <button
                 key={repo.id}
                 onClick={() => selectProject(repo).catch(() => undefined)}
-                className={`mb-2 inline-flex h-9 w-9 items-center justify-center rounded-md transition ${
-                  isSelectedRepo ? "bg-panel text-ink shadow-sm" : "text-stone-300 hover:bg-panel"
-                }`}
+                className={`mb-2 inline-flex h-9 w-9 items-center justify-center rounded-md transition ${isSelectedRepo ? "bg-panel text-ink shadow-sm" : "text-stone-300 hover:bg-panel"
+                  }`}
                 title={repo.full_name}
               >
                 <Folder className="h-4 w-4" />
@@ -2587,9 +2586,8 @@ export default function DashboardPage() {
                       <div key={conversation.id} className="group/conversation flex items-center gap-1">
                         <button
                           onClick={() => selectConversation(repo, conversation).catch(() => undefined)}
-                          className={`flex h-8 min-w-0 flex-1 items-center justify-between gap-2 rounded-md px-2 text-left text-sm transition ${
-                            selectedConversationId === conversation.id ? "bg-panel text-ink shadow-sm" : "text-stone-300 hover:bg-panel"
-                          }`}
+                          className={`flex h-8 min-w-0 flex-1 items-center justify-between gap-2 rounded-md px-2 text-left text-sm transition ${selectedConversationId === conversation.id ? "bg-panel text-ink shadow-sm" : "text-stone-300 hover:bg-panel"
+                            }`}
                           title={conversation.title}
                         >
                           <span className="truncate">{conversation.title}</span>
@@ -2719,9 +2717,8 @@ export default function DashboardPage() {
                     }
                     setWorkspaceTab(tab);
                   }}
-                  className={`shrink-0 rounded-md px-3 py-1.5 text-xs font-medium transition ${
-                    workspaceTab === tab ? "bg-accent text-[#062a1d]" : "bg-panel text-stone-300 hover:bg-sage-900"
-                  }`}
+                  className={`shrink-0 rounded-md px-3 py-1.5 text-xs font-medium transition ${workspaceTab === tab ? "bg-accent text-[#062a1d]" : "bg-panel text-stone-300 hover:bg-sage-900"
+                    }`}
                 >
                   {tab}
                 </button>
@@ -2730,292 +2727,291 @@ export default function DashboardPage() {
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto p-4">
-          {!hasWorkspaceDetail && (workspaceTab === "Issue" || workspaceTab === "PR" || workspaceTab === "CI") && (
-            <WorkspaceControls
-              query={workspaceQuery}
-              status={workspaceStatus}
-              owner={workspaceOwner}
-              time={workspaceTime}
-              owners={ownerOptions}
-              activeTab={workspaceTab}
-              onQueryChange={(value) => {
-                setWorkspaceQuery(value);
-                setSelectedWorkspaceItem(null);
-              }}
-              onStatusChange={(value) => {
-                setWorkspaceStatus(value);
-                setSelectedWorkspaceItem(null);
-              }}
-              onOwnerChange={(value) => {
-                setWorkspaceOwner(value);
-                setSelectedWorkspaceItem(null);
-              }}
-              onTimeChange={(value) => {
-                setWorkspaceTime(value);
-                setSelectedWorkspaceItem(null);
-              }}
-            />
-          )}
+            {!hasWorkspaceDetail && (workspaceTab === "Issue" || workspaceTab === "PR" || workspaceTab === "CI") && (
+              <WorkspaceControls
+                query={workspaceQuery}
+                status={workspaceStatus}
+                owner={workspaceOwner}
+                time={workspaceTime}
+                owners={ownerOptions}
+                activeTab={workspaceTab}
+                onQueryChange={(value) => {
+                  setWorkspaceQuery(value);
+                  setSelectedWorkspaceItem(null);
+                }}
+                onStatusChange={(value) => {
+                  setWorkspaceStatus(value);
+                  setSelectedWorkspaceItem(null);
+                }}
+                onOwnerChange={(value) => {
+                  setWorkspaceOwner(value);
+                  setSelectedWorkspaceItem(null);
+                }}
+                onTimeChange={(value) => {
+                  setWorkspaceTime(value);
+                  setSelectedWorkspaceItem(null);
+                }}
+              />
+            )}
 
-          {hasWorkspaceDetail && (
-            <WorkspaceDetail
-              issue={selectedIssue}
-              pr={selectedPr}
-              run={selectedRun}
-              analyzingIssue={Boolean(selectedIssue && analyzingIssueId === selectedIssue.id)}
-              analyzingPr={Boolean(selectedPr && analyzingPrId === selectedPr.id)}
-              analyzingRun={Boolean(selectedRun && analyzingRunId === selectedRun.id)}
-              onAnalyzeIssue={selectedIssue ? () => analyzeIssue(selectedIssue) : undefined}
-              onAnalyzePr={selectedPr ? () => analyzePr(selectedPr) : undefined}
-              onAnalyzeRun={selectedRun ? () => analyzeCi(selectedRun) : undefined}
-              onClose={() => setSelectedWorkspaceItem(null)}
-            />
-          )}
+            {hasWorkspaceDetail && (
+              <WorkspaceDetail
+                issue={selectedIssue}
+                pr={selectedPr}
+                run={selectedRun}
+                analyzingIssue={Boolean(selectedIssue && analyzingIssueId === selectedIssue.id)}
+                analyzingPr={Boolean(selectedPr && analyzingPrId === selectedPr.id)}
+                analyzingRun={Boolean(selectedRun && analyzingRunId === selectedRun.id)}
+                onAnalyzeIssue={selectedIssue ? () => analyzeIssue(selectedIssue) : undefined}
+                onAnalyzePr={selectedPr ? () => analyzePr(selectedPr) : undefined}
+                onAnalyzeRun={selectedRun ? () => analyzeCi(selectedRun) : undefined}
+                onClose={() => setSelectedWorkspaceItem(null)}
+              />
+            )}
 
-          {!hasWorkspaceDetail && workspaceTab === "Issue" && (
-            <div className="mt-4 space-y-3">
-              {issueCategoryMeta.map((category) => {
-                const items = filteredIssues.filter((item) => classifyIssue(item) === category.key);
-                const groupKey = `issue-${category.key}`;
-                return (
-                  <CategoryGroup
-                    key={category.key}
-                    label={category.label}
-                    color={category.color}
-                    count={items.length}
-                    isCollapsed={collapsedGroups[groupKey] ?? false}
-                    onToggle={() => toggleCategory(groupKey)}
-                    items={items.map((item) => ({
+            {!hasWorkspaceDetail && workspaceTab === "Issue" && (
+              <div className="mt-4 space-y-3">
+                {issueCategoryMeta.map((category) => {
+                  const items = filteredIssues.filter((item) => classifyIssue(item) === category.key);
+                  const groupKey = `issue-${category.key}`;
+                  return (
+                    <CategoryGroup
+                      key={category.key}
+                      label={category.label}
+                      color={category.color}
+                      count={items.length}
+                      isCollapsed={collapsedGroups[groupKey] ?? false}
+                      onToggle={() => toggleCategory(groupKey)}
+                      items={items.map((item) => ({
+                        id: item.id,
+                        title: `#${item.number} ${item.title}`,
+                        meta: item.state,
+                        detail: item.body,
+                        badges: item.labels,
+                        selected: selectedWorkspaceItem?.type === "issue" && selectedWorkspaceItem.id === item.id,
+                        onClick: () => setSelectedWorkspaceItem({ type: "issue", id: item.id })
+                      }))}
+                    />
+                  );
+                })}
+              </div>
+            )}
+
+            {!hasWorkspaceDetail && workspaceTab === "PR" && (
+              <div className="mt-4 space-y-3">
+                {prCategoryMeta.map((category) => {
+                  const items = filteredPrs.filter((item) => classifyPr(item) === category.key);
+                  const groupKey = `pr-${category.key}`;
+                  return (
+                    <CategoryGroup
+                      key={category.key}
+                      label={category.label}
+                      color={category.color}
+                      count={items.length}
+                      isCollapsed={collapsedGroups[groupKey] ?? false}
+                      onToggle={() => toggleCategory(groupKey)}
+                      items={items.map((item) => ({
+                        id: item.id,
+                        title: `#${item.number} ${item.title}`,
+                        meta: item.merged_at ? "merged" : item.state,
+                        detail: item.body,
+                        badges: [item.author, item.head_branch].filter(Boolean) as string[],
+                        selected: selectedWorkspaceItem?.type === "pr" && selectedWorkspaceItem.id === item.id,
+                        onClick: () => setSelectedWorkspaceItem({ type: "pr", id: item.id })
+                      }))}
+                    />
+                  );
+                })}
+              </div>
+            )}
+
+            {!hasWorkspaceDetail && workspaceTab === "CI" && (
+              <div className="mt-4 space-y-2">
+                {filteredRuns.length === 0 && <EmptyWorkspaceState label="暂无 Workflow Run" />}
+                {filteredRuns.map((item) => (
+                  <WorkspaceItemButton
+                    key={item.id}
+                    item={{
                       id: item.id,
-                      title: `#${item.number} ${item.title}`,
-                      meta: item.state,
-                      detail: item.body,
-                      badges: item.labels,
-                      selected: selectedWorkspaceItem?.type === "issue" && selectedWorkspaceItem.id === item.id,
-                      onClick: () => setSelectedWorkspaceItem({ type: "issue", id: item.id })
-                    }))}
+                      title: item.name,
+                      meta: item.conclusion || item.status,
+                      detail: item.logs_text,
+                      selected: selectedWorkspaceItem?.type === "ci" && selectedWorkspaceItem.id === item.id,
+                      onClick: () => setSelectedWorkspaceItem({ type: "ci", id: item.id })
+                    }}
                   />
-                );
-              })}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
 
-          {!hasWorkspaceDetail && workspaceTab === "PR" && (
-            <div className="mt-4 space-y-3">
-              {prCategoryMeta.map((category) => {
-                const items = filteredPrs.filter((item) => classifyPr(item) === category.key);
-                const groupKey = `pr-${category.key}`;
-                return (
-                  <CategoryGroup
-                    key={category.key}
-                    label={category.label}
-                    color={category.color}
-                    count={items.length}
-                    isCollapsed={collapsedGroups[groupKey] ?? false}
-                    onToggle={() => toggleCategory(groupKey)}
-                    items={items.map((item) => ({
-                      id: item.id,
-                      title: `#${item.number} ${item.title}`,
-                      meta: item.merged_at ? "merged" : item.state,
-                      detail: item.body,
-                      badges: [item.author, item.head_branch].filter(Boolean) as string[],
-                      selected: selectedWorkspaceItem?.type === "pr" && selectedWorkspaceItem.id === item.id,
-                      onClick: () => setSelectedWorkspaceItem({ type: "pr", id: item.id })
-                    }))}
-                  />
-                );
-              })}
-            </div>
-          )}
+            {!hasWorkspaceDetail && workspaceTab === "团队" && (
+              <TeamWorkspace
+                members={teamMembers}
+                draft={memberDraft}
+                onDraftChange={setMemberDraft}
+                onAddMember={addTeamMember}
+                onRemoveMember={removeTeamMember}
+              />
+            )}
 
-          {!hasWorkspaceDetail && workspaceTab === "CI" && (
-            <div className="mt-4 space-y-2">
-              {filteredRuns.length === 0 && <EmptyWorkspaceState label="暂无 Workflow Run" />}
-              {filteredRuns.map((item) => (
-                <WorkspaceItemButton
-                  key={item.id}
-                  item={{
-                    id: item.id,
-                    title: item.name,
-                    meta: item.conclusion || item.status,
-                    detail: item.logs_text,
-                    selected: selectedWorkspaceItem?.type === "ci" && selectedWorkspaceItem.id === item.id,
-                    onClick: () => setSelectedWorkspaceItem({ type: "ci", id: item.id })
-                  }}
-                />
-              ))}
-            </div>
-          )}
+            {!hasWorkspaceDetail && workspaceTab === "记忆&知识库" && (
+              <MemoryHubWorkspace
+                repoId={selectedRepo?.id}
+                notes={memoryNotes}
+                draft={memoryDraft}
+                knowledgeItems={knowledgeItems}
+                uploading={uploadingKnowledge}
+                onDraftChange={setMemoryDraft}
+                onAddNote={addMemoryNote}
+                onRemoveNote={removeMemoryNote}
+                onUploadFile={uploadKnowledgeFile}
+                onRemoveKnowledgeItem={removeKnowledgeItem}
+                onRefreshKnowledge={() => selectedRepo && loadProjectKnowledge(selectedRepo.id)}
+              />
+            )}
 
-          {!hasWorkspaceDetail && workspaceTab === "团队" && (
-            <TeamWorkspace
-              members={teamMembers}
-              draft={memberDraft}
-              onDraftChange={setMemberDraft}
-              onAddMember={addTeamMember}
-              onRemoveMember={removeTeamMember}
-            />
-          )}
+            {!hasWorkspaceDetail && workspaceTab === "技能&MCP" && (
+              <SkillMcpWorkspace
+                runtime={mcpRuntime}
+                skills={skills}
+                selectedSkillName={selectedSkillName}
+                loading={skillRuntimeLoading}
+                error={skillRuntimeError}
+                onSelectSkill={setSelectedSkillName}
+                onRefresh={loadSkillRuntime}
+              />
+            )}
 
-          {!hasWorkspaceDetail && workspaceTab === "记忆&知识库" && (
-            <MemoryHubWorkspace
-              repoId={selectedRepo?.id}
-              notes={memoryNotes}
-              draft={memoryDraft}
-              knowledgeItems={knowledgeItems}
-              uploading={uploadingKnowledge}
-              onDraftChange={setMemoryDraft}
-              onAddNote={addMemoryNote}
-              onRemoveNote={removeMemoryNote}
-              onUploadFile={uploadKnowledgeFile}
-              onRemoveKnowledgeItem={removeKnowledgeItem}
-              onRefreshKnowledge={() => selectedRepo && loadProjectKnowledge(selectedRepo.id)}
-            />
-          )}
-
-          {!hasWorkspaceDetail && workspaceTab === "技能&MCP" && (
-            <SkillMcpWorkspace
-              runtime={mcpRuntime}
-              skills={skills}
-              selectedSkillName={selectedSkillName}
-              loading={skillRuntimeLoading}
-              error={skillRuntimeError}
-              onSelectSkill={setSelectedSkillName}
-              onRefresh={loadSkillRuntime}
-            />
-          )}
-
-          {!hasWorkspaceDetail && workspaceTab === "图谱" && (
-            <KnowledgeGraphWorkspace
-              graph={selectedKnowledgeGraph ?? null}
-              loading={graphLoadingRepoId === selectedRepo?.id}
-              error={graphError}
-              query={graphQuery}
-              selectedNodeKey={selectedGraphNodeKey}
-              hiddenNodeTypes={hiddenGraphNodeTypes}
-              hiddenRelations={hiddenGraphRelations}
-              onQueryChange={setGraphQuery}
-              onSelectNode={setSelectedGraphNodeKey}
-              onToggleNodeType={(type) => setHiddenGraphNodeTypes((items) => ({ ...items, [type]: !items[type] }))}
-              onToggleRelation={(relation) => setHiddenGraphRelations((items) => ({ ...items, [relation]: !items[relation] }))}
-              onRefresh={() => selectedRepo && loadKnowledgeGraph(selectedRepo.id)}
-              onRebuild={rebuildSelectedKnowledgeGraph}
-              onFocusNode={(node) => selectedRepo && loadKnowledgeGraph(selectedRepo.id, { type: node.type, id: node.id })}
-              onOpenNode={(node) => openGraphNodeInWorkspace(node, setWorkspaceTab, setSelectedWorkspaceItem, preserveWorkspaceSelectionRef)}
-            />
-          )}
+            {!hasWorkspaceDetail && workspaceTab === "图谱" && (
+              <KnowledgeGraphWorkspace
+                graph={selectedKnowledgeGraph ?? null}
+                loading={graphLoadingRepoId === selectedRepo?.id}
+                error={graphError}
+                query={graphQuery}
+                selectedNodeKey={selectedGraphNodeKey}
+                hiddenNodeTypes={hiddenGraphNodeTypes}
+                hiddenRelations={hiddenGraphRelations}
+                onQueryChange={setGraphQuery}
+                onSelectNode={setSelectedGraphNodeKey}
+                onToggleNodeType={(type) => setHiddenGraphNodeTypes((items) => ({ ...items, [type]: !items[type] }))}
+                onToggleRelation={(relation) => setHiddenGraphRelations((items) => ({ ...items, [relation]: !items[relation] }))}
+                onRefresh={() => selectedRepo && loadKnowledgeGraph(selectedRepo.id)}
+                onRebuild={rebuildSelectedKnowledgeGraph}
+                onFocusNode={(node) => selectedRepo && loadKnowledgeGraph(selectedRepo.id, { type: node.type, id: node.id })}
+                onOpenNode={(node) => openGraphNodeInWorkspace(node, setWorkspaceTab, setSelectedWorkspaceItem, preserveWorkspaceSelectionRef)}
+              />
+            )}
           </div>
         </aside>
 
-          <section className="flex min-h-0 min-w-0 flex-col bg-[#0d1612]">
-            <div ref={chatScrollRef} className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
-              <div className="flex w-full flex-col gap-4">
-                {messages.map((item) => {
-                  const isWelcome = item.id.startsWith("welcome-");
-                  const traceItems = item.traceItems ?? [];
-                  const failedTools = (item.toolCalls ?? []).filter((call) => call.status === "error");
-                  const failedToolTitle = failedTools.map((call) => `${call.tool_name}: ${call.error ?? "failed"}`).join("\n");
-                  return (
-                    <div key={item.id} className={`flex ${item.role === "user" ? "justify-end" : "justify-start"}`}>
-                      <div
-                        className={`${isWelcome ? "w-full max-w-none rounded-md" : "max-w-[80%] rounded-2xl"} px-4 py-3 text-sm leading-7 shadow-sm ${
-                          item.role === "user" ? "bg-[#3a1a10] text-stone-100" : "border border-line bg-panel text-stone-200"
+        <section className="flex min-h-0 min-w-0 flex-col bg-[#0d1612]">
+          <div ref={chatScrollRef} className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+            <div className="flex w-full flex-col gap-4">
+              {messages.map((item) => {
+                const isWelcome = item.id.startsWith("welcome-");
+                const traceItems = item.traceItems ?? [];
+                const failedTools = (item.toolCalls ?? []).filter((call) => call.status === "error");
+                const failedToolTitle = failedTools.map((call) => `${call.tool_name}: ${call.error ?? "failed"}`).join("\n");
+                return (
+                  <div key={item.id} className={`flex ${item.role === "user" ? "justify-end" : "justify-start"}`}>
+                    <div
+                      className={`${isWelcome ? "w-full max-w-none rounded-md" : "max-w-[80%] rounded-2xl"} px-4 py-3 text-sm leading-7 shadow-sm ${item.role === "user" ? "bg-[#3a1a10] text-stone-100" : "border border-line bg-panel text-stone-200"
                         }`}
-                      >
-                        {item.role === "assistant" ? (
-                          <>
-                            {item.workflowPlan && (
-                              <WorkflowPlanCard
-                                plan={item.workflowPlan}
-                                status={item.planStatus ?? "ready"}
-                                disabled={loading || Boolean(item.responsePending) || item.planStatus === "done"}
-                                onExecute={() => executeWorkflowPlan(item.id)}
-                              />
-                            )}
-                            {item.content.trim() ? (
-                              <div className={item.workflowPlan ? "mt-3" : ""}>
-                                <MarkdownMessage content={item.content} />
-                              </div>
-                            ) : traceItems.length === 0 ? (
-                              <div className="text-stone-400">Agent 正在分析...</div>
-                            ) : null}
-                          </>
-                        ) : (
-                          <div className="whitespace-pre-wrap">{item.content}</div>
-                        )}
-                        {item.route && (
-                          <div className="mt-3 flex flex-wrap gap-2 border-t border-line pt-2 text-xs text-stone-400">
-                            <span>route: {item.route}</span>
-                            <span>tools: {item.toolCalls?.length ?? 0}</span>
-                            {failedTools.length > 0 && (
-                              <span className="text-rose-400" title={failedToolTitle}>
-                                failed: {failedTools.length}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                        {item.role === "assistant" && item.compressionStats && Object.keys(item.compressionStats).length > 0 && (
-                          <ContextDiagnostics
-                            compressionStats={item.compressionStats}
-                            progressiveCompaction={item.progressiveCompaction ?? {}}
-                            modelUsage={item.modelUsage ?? []}
-                            contextDiagnostics={item.contextDiagnostics ?? {}}
-                            collapsed={item.contextCollapsed !== false}
-                            onToggle={() => toggleContextDiagnostics(item.id)}
-                          />
-                        )}
-                        {item.role === "assistant" && traceItems.length > 0 && (
-                          <div className="mt-3">
-                            <ChatTraceInline
-                              traceItems={traceItems}
-                              collapsed={item.responsePending ? false : Boolean(item.traceCollapsed)}
-                              responsePending={Boolean(item.responsePending)}
-                              onToggle={() => toggleAssistantTrace(item.id)}
+                    >
+                      {item.role === "assistant" ? (
+                        <>
+                          {item.workflowPlan && (
+                            <WorkflowPlanCard
+                              plan={item.workflowPlan}
+                              status={item.planStatus ?? "ready"}
+                              disabled={loading || Boolean(item.responsePending) || item.planStatus === "done"}
+                              onExecute={() => executeWorkflowPlan(item.id)}
                             />
-                          </div>
-                        )}
-                        {item.role === "assistant" && item.responsePending && (traceItems.length > 0 || item.content.trim()) && (
-                          <div className="mt-3 flex items-center gap-2 rounded-md border border-sage-800 bg-sage-900 px-3 py-2 text-xs text-stone-300">
-                            <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-accent" />
-                            <span>Agent 正在回复，工具结果已收集，正在整理最终回答...</span>
-                          </div>
-                        )}
-                        {item.role === "assistant" && item.messageId && !item.responsePending && selectedRepo && selectedConversation && (
-                          <FeedbackControls
-                            repoId={selectedRepo.id}
-                            conversationId={selectedConversation.id}
-                            messageId={item.messageId}
-                            initialFeedback={item.feedback}
-                            onSaved={(feedback) =>
-                              setMessages((current) =>
-                                current.map((message) => (message.id === item.id ? { ...message, feedback } : message))
-                              )
-                            }
+                          )}
+                          {item.content.trim() ? (
+                            <div className={item.workflowPlan ? "mt-3" : ""}>
+                              <MarkdownMessage content={item.content} />
+                            </div>
+                          ) : traceItems.length === 0 ? (
+                            <div className="text-stone-400">Agent 正在分析...</div>
+                          ) : null}
+                        </>
+                      ) : (
+                        <div className="whitespace-pre-wrap">{item.content}</div>
+                      )}
+                      {item.route && (
+                        <div className="mt-3 flex flex-wrap gap-2 border-t border-line pt-2 text-xs text-stone-400">
+                          <span>route: {item.route}</span>
+                          <span>tools: {item.toolCalls?.length ?? 0}</span>
+                          {failedTools.length > 0 && (
+                            <span className="text-rose-400" title={failedToolTitle}>
+                              failed: {failedTools.length}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {item.role === "assistant" && item.compressionStats && Object.keys(item.compressionStats).length > 0 && (
+                        <ContextDiagnostics
+                          compressionStats={item.compressionStats}
+                          progressiveCompaction={item.progressiveCompaction ?? {}}
+                          modelUsage={item.modelUsage ?? []}
+                          contextDiagnostics={item.contextDiagnostics ?? {}}
+                          collapsed={item.contextCollapsed !== false}
+                          onToggle={() => toggleContextDiagnostics(item.id)}
+                        />
+                      )}
+                      {item.role === "assistant" && traceItems.length > 0 && (
+                        <div className="mt-3">
+                          <ChatTraceInline
+                            traceItems={traceItems}
+                            collapsed={item.responsePending ? false : Boolean(item.traceCollapsed)}
+                            responsePending={Boolean(item.responsePending)}
+                            onToggle={() => toggleAssistantTrace(item.id)}
                           />
-                        )}
-                      </div>
+                        </div>
+                      )}
+                      {item.role === "assistant" && item.responsePending && (traceItems.length > 0 || item.content.trim()) && (
+                        <div className="mt-3 flex items-center gap-2 rounded-md border border-sage-800 bg-sage-900 px-3 py-2 text-xs text-stone-300">
+                          <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-accent" />
+                          <span>Agent 正在回复，工具结果已收集，正在整理最终回答...</span>
+                        </div>
+                      )}
+                      {item.role === "assistant" && item.messageId && !item.responsePending && selectedRepo && selectedConversation && (
+                        <FeedbackControls
+                          repoId={selectedRepo.id}
+                          conversationId={selectedConversation.id}
+                          messageId={item.messageId}
+                          initialFeedback={item.feedback}
+                          onSaved={(feedback) =>
+                            setMessages((current) =>
+                              current.map((message) => (message.id === item.id ? { ...message, feedback } : message))
+                            )
+                          }
+                        />
+                      )}
                     </div>
-                  );
-                })}
-                {selectedRepo && isEmptyConversation && selectedProjectIndexState && !indexSnoozed && selectedProjectIndexState.status !== "ready" && (
-                  <MemoryIndexPromptCard
-                    repo={selectedRepo}
-                    state={selectedProjectIndexState}
-                    scanning={indexScanningRepoId === selectedRepo.id || selectedProjectIndexState.status === "building"}
-                    error={indexActionError}
-                    onStartScan={startProjectIndexScan}
-                    onSnooze={snoozeProjectIndexPrompt}
-                  />
-                )}
-              </div>
+                  </div>
+                );
+              })}
+              {selectedRepo && isEmptyConversation && selectedProjectIndexState && !indexSnoozed && selectedProjectIndexState.status !== "ready" && (
+                <MemoryIndexPromptCard
+                  repo={selectedRepo}
+                  state={selectedProjectIndexState}
+                  scanning={indexScanningRepoId === selectedRepo.id || selectedProjectIndexState.status === "building"}
+                  error={indexActionError}
+                  onStartScan={startProjectIndexScan}
+                  onSnooze={snoozeProjectIndexPrompt}
+                />
+              )}
             </div>
+          </div>
 
-            <div className="border-t border-line bg-panel/90 p-4">
-              <div className="w-full">
-                {(promptSuggestions.length > 0 || loadingPrompts) && (
-                  <div className="mb-3 flex items-center gap-2">
-                    <div ref={promptRowRef} className="relative min-w-0 flex-1 overflow-hidden">
-                      <div className="flex min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap">
+          <div className="border-t border-line bg-panel/90 p-4">
+            <div className="w-full">
+              {(promptSuggestions.length > 0 || loadingPrompts) && (
+                <div className="mb-3 flex items-center gap-2">
+                  <div ref={promptRowRef} className="relative min-w-0 flex-1 overflow-hidden">
+                    <div className="flex min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap">
                       {loadingPrompts && promptSuggestions.length === 0 && (
                         <span className="shrink-0 rounded-full border border-line bg-panel px-3 py-1.5 text-xs text-stone-400">
                           推荐生成中{promptLoadingDots}
@@ -3032,83 +3028,81 @@ export default function DashboardPage() {
                           {prompt}
                         </button>
                       ))}
-                      </div>
-                      <div
-                        ref={promptMeasureRef}
-                        className="pointer-events-none invisible absolute -left-[9999px] top-0 flex items-center gap-2 whitespace-nowrap"
-                        aria-hidden="true"
-                      >
-                        {promptSuggestions.map((prompt) => (
-                          <button
-                            key={prompt}
-                            type="button"
-                            data-prompt-chip-measure
-                            className="shrink-0 rounded-full border border-line bg-panel px-3 py-1.5 text-xs text-stone-300"
-                            tabIndex={-1}
-                          >
-                            {prompt}
-                          </button>
-                        ))}
-                      </div>
                     </div>
-                    {promptSuggestions.length > 0 && (
-                      <button
-                        onClick={refreshPromptSuggestions}
-                        disabled={!selectedRepo || loading || loadingPrompts}
-                        className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-line bg-panel text-stone-400 transition hover:border-sage-700 hover:bg-sage-900 disabled:cursor-not-allowed disabled:opacity-50"
-                        title="刷新推荐提示语"
-                        aria-label="刷新推荐提示语"
-                      >
-                        <RefreshCw className={`h-4 w-4 ${loadingPrompts ? "animate-spin" : ""}`} />
-                      </button>
-                    )}
+                    <div
+                      ref={promptMeasureRef}
+                      className="pointer-events-none invisible absolute -left-[9999px] top-0 flex items-center gap-2 whitespace-nowrap"
+                      aria-hidden="true"
+                    >
+                      {promptSuggestions.map((prompt) => (
+                        <button
+                          key={prompt}
+                          type="button"
+                          data-prompt-chip-measure
+                          className="shrink-0 rounded-full border border-line bg-panel px-3 py-1.5 text-xs text-stone-300"
+                          tabIndex={-1}
+                        >
+                          {prompt}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                )}
-                <div className="flex items-stretch gap-3">
-                  <textarea
-                    className={`max-h-40 min-h-[5.5rem] flex-1 resize-none rounded-md border bg-panel px-3 py-3 text-sm leading-6 outline-none transition focus:border-sage-500 focus:ring-2 focus:ring-sage-100 ${
-                      planMode ? "border-sage-700" : "border-line"
+                  {promptSuggestions.length > 0 && (
+                    <button
+                      onClick={refreshPromptSuggestions}
+                      disabled={!selectedRepo || loading || loadingPrompts}
+                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-line bg-panel text-stone-400 transition hover:border-sage-700 hover:bg-sage-900 disabled:cursor-not-allowed disabled:opacity-50"
+                      title="刷新推荐提示语"
+                      aria-label="刷新推荐提示语"
+                    >
+                      <RefreshCw className={`h-4 w-4 ${loadingPrompts ? "animate-spin" : ""}`} />
+                    </button>
+                  )}
+                </div>
+              )}
+              <div className="flex items-stretch gap-3">
+                <textarea
+                  className={`max-h-40 min-h-[5.5rem] flex-1 resize-none rounded-md border bg-panel px-3 py-3 text-sm leading-6 outline-none transition focus:border-sage-500 focus:ring-2 focus:ring-sage-100 ${planMode ? "border-sage-700" : "border-line"
                     }`}
-                    value={message}
-                    onChange={(event) => setMessage(event.target.value)}
-                    placeholder="输入消息，询问当前代码仓..."
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" && !event.shiftKey) {
-                        event.preventDefault();
-                        if (!loading) {
-                          planMode ? createWorkflowPlan() : askAgent();
-                        }
+                  value={message}
+                  onChange={(event) => setMessage(event.target.value)}
+                  placeholder="输入消息，询问当前代码仓..."
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" && !event.shiftKey) {
+                      event.preventDefault();
+                      if (!loading) {
+                        planMode ? createWorkflowPlan() : askAgent();
                       }
-                    }}
-                  />
-                  <div className="flex w-12 shrink-0 flex-col gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setPlanMode((value) => !value)}
-                      disabled={loading}
-                      aria-pressed={planMode}
-                      className={`inline-flex h-8 w-12 items-center justify-center rounded-md border transition disabled:opacity-60 ${
-                        planMode
-                          ? "border-sage-500 bg-sage-500 text-[#062a1d] shadow-sm"
-                          : "border-line bg-panel text-stone-400 hover:border-sage-700 hover:bg-sage-900"
+                    }
+                  }}
+                />
+                <div className="flex w-12 shrink-0 flex-col gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPlanMode((value) => !value)}
+                    disabled={loading}
+                    aria-pressed={planMode}
+                    className={`inline-flex h-8 w-12 items-center justify-center rounded-md border transition disabled:opacity-60 ${planMode
+                        ? "border-sage-500 bg-sage-500 text-[#062a1d] shadow-sm"
+                        : "border-line bg-panel text-stone-400 hover:border-sage-700 hover:bg-sage-900"
                       }`}
-                      title={planMode ? "切换到对话模式" : "切换到计划模式"}
-                    >
-                      <ListTodo className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => (loading ? stopAgentResponse() : planMode ? createWorkflowPlan() : askAgent())}
-                      disabled={!selectedRepo || (!loading && !message.trim())}
-                      className="inline-flex min-h-12 flex-1 items-center justify-center rounded-md bg-accent text-[#062a1d] transition hover:bg-sage-400 disabled:opacity-60"
-                      title={loading ? "停止响应" : "发送"}
-                    >
-                      {loading ? <Square className="h-4 w-4 fill-current" /> : <Send className="h-5 w-5" />}
-                    </button>
-                  </div>
+                    title={planMode ? "切换到对话模式" : "切换到计划模式"}
+                  >
+                    <ListTodo className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => (loading ? stopAgentResponse() : planMode ? createWorkflowPlan() : askAgent())}
+                    disabled={!selectedRepo || (!loading && !message.trim())}
+                    className="inline-flex min-h-12 flex-1 items-center justify-center rounded-md bg-accent text-[#062a1d] transition hover:bg-sage-400 disabled:opacity-60"
+                    title={loading ? "停止响应" : "发送"}
+                  >
+                    {loading ? <Square className="h-4 w-4 fill-current" /> : <Send className="h-5 w-5" />}
+                  </button>
                 </div>
               </div>
             </div>
-          </section>
+          </div>
+        </section>
 
       </section>
       {isAddProjectOpen && (
@@ -3612,15 +3606,14 @@ function ChatTraceInline({
         traceItems.map((item) => (
           <div
             key={item.id}
-            className={`rounded-md px-3 py-2 text-xs leading-5 ${
-              item.status === "error"
+            className={`rounded-md px-3 py-2 text-xs leading-5 ${item.status === "error"
                 ? "bg-rose-900/40 text-rose-300"
                 : item.status === "running"
                   ? "bg-sage-900 text-stone-200"
                   : item.kind === "rag_prefetch"
                     ? "border border-cyan-800/60 bg-cyan-900/40 text-stone-200"
-                  : "bg-stone-900 text-stone-300"
-            }`}
+                    : "bg-stone-900 text-stone-300"
+              }`}
           >
             <div className="mb-1 flex items-center justify-between gap-2">
               <span className="font-semibold text-ink">{item.title}</span>
@@ -3720,13 +3713,12 @@ function IssueAnalysisOverlay({
           {traceItems.map((item) => (
             <div
               key={item.id}
-              className={`rounded-md border p-3 text-xs leading-5 shadow-sm ${
-                item.kind === "error"
+              className={`rounded-md border p-3 text-xs leading-5 shadow-sm ${item.kind === "error"
                   ? "border-rose-800/60 bg-rose-900/40 text-rose-300"
                   : item.kind === "thinking"
                     ? "border-sage-700 bg-sage-900/80 text-stone-200"
                     : "border-line bg-panel text-stone-300"
-              }`}
+                }`}
             >
               <div className="mb-1 flex items-center justify-between gap-2">
                 <span className="font-semibold text-ink">{item.title}</span>
@@ -3883,13 +3875,12 @@ function AgentTraceAside({
         {traceItems.map((item) => (
           <div
             key={item.id}
-            className={`rounded-md border p-3 text-xs leading-5 shadow-sm ${
-              item.kind === "error"
+            className={`rounded-md border p-3 text-xs leading-5 shadow-sm ${item.kind === "error"
                 ? "border-rose-800/60 bg-rose-900/40 text-rose-300"
                 : item.kind === "thinking"
                   ? "border-sage-700 bg-sage-900/80 text-stone-200"
                   : "border-line bg-panel text-stone-300"
-            }`}
+              }`}
           >
             <div className="mb-1 flex items-center justify-between gap-2">
               <span className="font-semibold text-ink">{item.title}</span>
@@ -4224,181 +4215,178 @@ function AddProjectOverlay({
 
         <div className="min-h-0 flex-1 overflow-y-auto p-5">
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(280px,0.9fr)]">
-          <section className="rounded-md border border-line bg-panel p-4 shadow-sm">
-            <div className="grid gap-4">
-              <div className="grid grid-cols-2 overflow-hidden rounded-md border border-line bg-stone-900 p-1">
-                <button
-                  type="button"
-                  onClick={() => onSourceChange("remote")}
-                  className={`h-9 rounded px-3 text-sm font-medium transition ${
-                    source === "remote" ? "bg-panel text-ink shadow-sm" : "text-stone-300 hover:text-ink"
-                  }`}
-                >
-                  GitHub 地址
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onSourceChange("local")}
-                  className={`h-9 rounded px-3 text-sm font-medium transition ${
-                    source === "local" ? "bg-panel text-ink shadow-sm" : "text-stone-300 hover:text-ink"
-                  }`}
-                >
-                  本地仓库
-                </button>
-              </div>
-
-              {source === "remote" ? (
-                <div className="grid gap-4">
-                  <label className="text-sm font-medium text-stone-200">
+            <section className="rounded-md border border-line bg-panel p-4 shadow-sm">
+              <div className="grid gap-4">
+                <div className="grid grid-cols-2 overflow-hidden rounded-md border border-line bg-stone-900 p-1">
+                  <button
+                    type="button"
+                    onClick={() => onSourceChange("remote")}
+                    className={`h-9 rounded px-3 text-sm font-medium transition ${source === "remote" ? "bg-panel text-ink shadow-sm" : "text-stone-300 hover:text-ink"
+                      }`}
+                  >
                     GitHub 地址
-                    <input
-                      value={repoUrl}
-                      onChange={(event) => onRepoUrlChange(event.target.value)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") {
-                          event.preventDefault();
-                          onConnect();
-                        }
-                      }}
-                      placeholder="https://github.com/owner/repository 或 owner/repository"
-                      className="mt-2 h-11 w-full rounded-md border border-line bg-panel px-3 text-sm outline-none transition focus:border-sage-500 focus:ring-2 focus:ring-sage-100"
-                    />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onSourceChange("local")}
+                    className={`h-9 rounded px-3 text-sm font-medium transition ${source === "local" ? "bg-panel text-ink shadow-sm" : "text-stone-300 hover:text-ink"
+                      }`}
+                  >
+                    本地仓库
+                  </button>
+                </div>
+
+                {source === "remote" ? (
+                  <div className="grid gap-4">
+                    <label className="text-sm font-medium text-stone-200">
+                      GitHub 地址
+                      <input
+                        value={repoUrl}
+                        onChange={(event) => onRepoUrlChange(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.preventDefault();
+                            onConnect();
+                          }
+                        }}
+                        placeholder="https://github.com/owner/repository 或 owner/repository"
+                        className="mt-2 h-11 w-full rounded-md border border-line bg-panel px-3 text-sm outline-none transition focus:border-sage-500 focus:ring-2 focus:ring-sage-100"
+                      />
+                    </label>
+
+                    <label className="text-sm font-medium text-stone-200">
+                      下载父目录
+                      <input
+                        value={cloneParentDir}
+                        onChange={(event) => onCloneParentDirChange(event.target.value)}
+                        placeholder="例如 D:\\code\\repos，留空则使用默认缓存目录"
+                        className="mt-2 h-10 w-full rounded-md border border-line bg-panel px-3 text-sm outline-none transition focus:border-sage-500 focus:ring-2 focus:ring-sage-100"
+                      />
+                    </label>
+                  </div>
+                ) : (
+                  <label className="text-sm font-medium text-stone-200">
+                    本地仓库路径
+                    <div className="mt-2 flex gap-2">
+                      <input
+                        value={localPath}
+                        onChange={(event) => onLocalPathChange(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.preventDefault();
+                            onConnect();
+                          }
+                        }}
+                        placeholder="例如 D:\\code\\my-repo"
+                        className="h-11 min-w-0 flex-1 rounded-md border border-line bg-panel px-3 text-sm outline-none transition focus:border-sage-500 focus:ring-2 focus:ring-sage-100"
+                      />
+                      <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-line bg-panel text-stone-400">
+                        <Folder className="h-4 w-4" />
+                      </span>
+                    </div>
+                  </label>
+                )}
+
+                <div className="grid gap-3 md:grid-cols-2">
+                  <label className="text-sm font-medium text-stone-200">
+                    托管平台
+                    <select
+                      value={provider}
+                      onChange={(event) => onProviderChange(event.target.value)}
+                      className="mt-2 h-10 w-full rounded-md border border-line bg-panel px-3 text-sm outline-none transition focus:border-sage-500 focus:ring-2 focus:ring-sage-100"
+                    >
+                      <option value="github">GitHub</option>
+                      <option value="github_compatible">GitHub-compatible API</option>
+                    </select>
                   </label>
 
                   <label className="text-sm font-medium text-stone-200">
-                    下载父目录
+                    API Base URL
                     <input
-                      value={cloneParentDir}
-                      onChange={(event) => onCloneParentDirChange(event.target.value)}
-                      placeholder="例如 D:\\code\\repos，留空则使用默认缓存目录"
-                      className="mt-2 h-10 w-full rounded-md border border-line bg-panel px-3 text-sm outline-none transition focus:border-sage-500 focus:ring-2 focus:ring-sage-100"
+                      value={apiBaseUrl}
+                      disabled={provider === "github"}
+                      onChange={(event) => onApiBaseUrlChange(event.target.value)}
+                      className="mt-2 h-10 w-full rounded-md border border-line bg-panel px-3 text-sm outline-none transition focus:border-sage-500 focus:ring-2 focus:ring-sage-100 disabled:bg-stone-800 disabled:text-stone-400"
                     />
                   </label>
                 </div>
-              ) : (
-                <label className="text-sm font-medium text-stone-200">
-                  本地仓库路径
-                  <div className="mt-2 flex gap-2">
-                    <input
-                      value={localPath}
-                      onChange={(event) => onLocalPathChange(event.target.value)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") {
-                          event.preventDefault();
-                          onConnect();
-                        }
-                      }}
-                      placeholder="例如 D:\\code\\my-repo"
-                      className="h-11 min-w-0 flex-1 rounded-md border border-line bg-panel px-3 text-sm outline-none transition focus:border-sage-500 focus:ring-2 focus:ring-sage-100"
-                    />
-                    <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-line bg-panel text-stone-400">
-                      <Folder className="h-4 w-4" />
-                    </span>
-                  </div>
-                </label>
-              )}
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <label className="text-sm font-medium text-stone-200">
-                  托管平台
-                  <select
-                    value={provider}
-                    onChange={(event) => onProviderChange(event.target.value)}
-                    className="mt-2 h-10 w-full rounded-md border border-line bg-panel px-3 text-sm outline-none transition focus:border-sage-500 focus:ring-2 focus:ring-sage-100"
-                  >
-                    <option value="github">GitHub</option>
-                    <option value="github_compatible">GitHub-compatible API</option>
-                  </select>
-                </label>
 
                 <label className="text-sm font-medium text-stone-200">
-                  API Base URL
+                  Access Token
                   <input
-                    value={apiBaseUrl}
-                    disabled={provider === "github"}
-                    onChange={(event) => onApiBaseUrlChange(event.target.value)}
-                    className="mt-2 h-10 w-full rounded-md border border-line bg-panel px-3 text-sm outline-none transition focus:border-sage-500 focus:ring-2 focus:ring-sage-100 disabled:bg-stone-800 disabled:text-stone-400"
+                    type="password"
+                    value={token}
+                    onChange={(event) => onTokenChange(event.target.value)}
+                    placeholder="public repo 可留空，私有仓库需要 token"
+                    className="mt-2 h-10 w-full rounded-md border border-line bg-panel px-3 text-sm outline-none transition focus:border-sage-500 focus:ring-2 focus:ring-sage-100"
                   />
                 </label>
-              </div>
 
-              <label className="text-sm font-medium text-stone-200">
-                Access Token
-                <input
-                  type="password"
-                  value={token}
-                  onChange={(event) => onTokenChange(event.target.value)}
-                  placeholder="public repo 可留空，私有仓库需要 token"
-                  className="mt-2 h-10 w-full rounded-md border border-line bg-panel px-3 text-sm outline-none transition focus:border-sage-500 focus:ring-2 focus:ring-sage-100"
-                />
-              </label>
+                {status && (
+                  <div
+                    className={`rounded-md border px-3 py-2 text-sm leading-6 ${status.type === "success" ? "border-emerald-800/60 bg-emerald-900/40 text-emerald-200" : "border-rose-800/60 bg-rose-900/40 text-rose-200"
+                      }`}
+                  >
+                    <div className="font-semibold">{status.title}</div>
+                    {status.detail && <div className="mt-1 break-words">{status.detail}</div>}
+                  </div>
+                )}
 
-              {status && (
-                <div
-                  className={`rounded-md border px-3 py-2 text-sm leading-6 ${
-                    status.type === "success" ? "border-emerald-800/60 bg-emerald-900/40 text-emerald-200" : "border-rose-800/60 bg-rose-900/40 text-rose-200"
-                  }`}
-                >
-                  <div className="font-semibold">{status.title}</div>
-                  {status.detail && <div className="mt-1 break-words">{status.detail}</div>}
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    onClick={onConnect}
+                    disabled={loading || !canConnect}
+                    className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-4 text-sm font-medium text-[#062a1d] transition hover:bg-sage-400 disabled:opacity-60"
+                  >
+                    {loading ? "连接并同步中..." : "连接并同步"}
+                  </button>
+                  <button
+                    onClick={onClose}
+                    disabled={loading}
+                    className="inline-flex h-10 items-center justify-center rounded-md border border-line bg-panel px-4 text-sm font-medium text-stone-200 transition hover:bg-panel disabled:opacity-60"
+                  >
+                    关闭
+                  </button>
                 </div>
-              )}
-
-              <div className="flex flex-wrap items-center gap-3">
-                <button
-                  onClick={onConnect}
-                  disabled={loading || !canConnect}
-                  className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-4 text-sm font-medium text-[#062a1d] transition hover:bg-sage-400 disabled:opacity-60"
-                >
-                  {loading ? "连接并同步中..." : "连接并同步"}
-                </button>
-                <button
-                  onClick={onClose}
-                  disabled={loading}
-                  className="inline-flex h-10 items-center justify-center rounded-md border border-line bg-panel px-4 text-sm font-medium text-stone-200 transition hover:bg-panel disabled:opacity-60"
-                >
-                  关闭
-                </button>
               </div>
-            </div>
-          </section>
+            </section>
 
-          <section className="rounded-md border border-line bg-panel p-4 shadow-sm">
-            <h3 className="text-sm font-semibold text-ink">识别结果</h3>
-            <div className="mt-3 rounded-md bg-[#0e1a16] p-3 text-sm leading-7 text-stone-300">
-              {source === "remote" ? (
-                <>
-                  <div>
-                    Owner: <span className="font-medium text-ink">{parsed?.owner || "待识别"}</span>
-                  </div>
-                  <div>
-                    Repository: <span className="font-medium text-ink">{parsed?.repo || "待识别"}</span>
-                  </div>
-                  <div>
-                    下载到: <span className="break-all font-medium text-ink">{cloneParentDir.trim() || "默认缓存目录"}</span>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div>
-                    本地路径: <span className="break-all font-medium text-ink">{localPath.trim() || "待选择"}</span>
-                  </div>
-                  <div>
-                    远程仓库: <span className="font-medium text-ink">提交后从 origin 识别</span>
-                  </div>
-                </>
-              )}
-            </div>
-            <div className="mt-4 space-y-2 text-xs leading-6 text-stone-400">
-              {source === "remote" ? (
-                <div>支持 `https://github.com/owner/repo`、`git@github.com:owner/repo.git`、`owner/repo`。</div>
-              ) : (
-                <div>本地仓库需要已配置 `origin` 远程地址。</div>
-              )}
-              <div>连接成功后会同步 GitHub 数据，并在后台索引代码用于代码 RAG 和风险分析。</div>
-              <div>如果连接失败，会直接显示后端返回的原因，不再展开原始 JSON。</div>
-            </div>
-          </section>
+            <section className="rounded-md border border-line bg-panel p-4 shadow-sm">
+              <h3 className="text-sm font-semibold text-ink">识别结果</h3>
+              <div className="mt-3 rounded-md bg-[#0e1a16] p-3 text-sm leading-7 text-stone-300">
+                {source === "remote" ? (
+                  <>
+                    <div>
+                      Owner: <span className="font-medium text-ink">{parsed?.owner || "待识别"}</span>
+                    </div>
+                    <div>
+                      Repository: <span className="font-medium text-ink">{parsed?.repo || "待识别"}</span>
+                    </div>
+                    <div>
+                      下载到: <span className="break-all font-medium text-ink">{cloneParentDir.trim() || "默认缓存目录"}</span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      本地路径: <span className="break-all font-medium text-ink">{localPath.trim() || "待选择"}</span>
+                    </div>
+                    <div>
+                      远程仓库: <span className="font-medium text-ink">提交后从 origin 识别</span>
+                    </div>
+                  </>
+                )}
+              </div>
+              <div className="mt-4 space-y-2 text-xs leading-6 text-stone-400">
+                {source === "remote" ? (
+                  <div>支持 `https://github.com/owner/repo`、`git@github.com:owner/repo.git`、`owner/repo`。</div>
+                ) : (
+                  <div>本地仓库需要已配置 `origin` 远程地址。</div>
+                )}
+                <div>连接成功后会同步 GitHub 数据，并在后台索引代码用于代码 RAG 和风险分析。</div>
+                <div>如果连接失败，会直接显示后端返回的原因，不再展开原始 JSON。</div>
+              </div>
+            </section>
           </div>
         </div>
       </div>
@@ -4548,9 +4536,8 @@ function WorkspaceItemButton({ item }: { item: WorkspaceItem }) {
   return (
     <button
       onClick={item.onClick}
-      className={`w-full rounded-md border bg-panel p-3 text-left transition ${
-        item.selected ? "border-sage-500 ring-2 ring-sage-500" : "border-line hover:border-sage-700 hover:bg-sage-900"
-      }`}
+      className={`w-full rounded-md border bg-panel p-3 text-left transition ${item.selected ? "border-sage-500 ring-2 ring-sage-500" : "border-line hover:border-sage-700 hover:bg-sage-900"
+        }`}
     >
       <div className="line-clamp-2 text-sm font-medium text-ink">{item.title}</div>
       <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-stone-400">
@@ -5002,9 +4989,8 @@ function MemoryHubWorkspace({
             key={tab.id}
             type="button"
             onClick={() => setActiveTab(tab.id)}
-            className={`shrink-0 rounded-md px-3 py-1.5 text-xs font-medium transition ${
-              activeTab === tab.id ? "bg-accent text-[#062a1d]" : "text-stone-300 hover:bg-panel"
-            }`}
+            className={`shrink-0 rounded-md px-3 py-1.5 text-xs font-medium transition ${activeTab === tab.id ? "bg-accent text-[#062a1d]" : "text-stone-300 hover:bg-panel"
+              }`}
           >
             {tab.label}
           </button>
@@ -5459,10 +5445,10 @@ function KnowledgeGraphWorkspace({
     (selectedNodeKey && filtered.nodes.find((node) => knowledgeGraphNodeKey(node) === selectedNodeKey)) ?? filtered.nodes[0] ?? null;
   const selectedEdges = selectedNode
     ? filtered.edges.filter(
-        (edge) =>
-          (edge.from_type === selectedNode.type && edge.from_id === selectedNode.id) ||
-          (edge.to_type === selectedNode.type && edge.to_id === selectedNode.id)
-      )
+      (edge) =>
+        (edge.from_type === selectedNode.type && edge.from_id === selectedNode.id) ||
+        (edge.to_type === selectedNode.type && edge.to_id === selectedNode.id)
+    )
     : [];
   const showEdgeLabels = filtered.edges.length <= 8;
   const visibleNodeCount = graphStatNumber(graph, "visible_nodes", allNodes.length);
@@ -5530,9 +5516,8 @@ function KnowledgeGraphWorkspace({
                 key={type}
                 type="button"
                 onClick={() => onToggleNodeType(type)}
-                className={`rounded-md border px-2 py-1 text-[11px] font-medium transition ${
-                  hiddenNodeTypes[type] ? "border-line bg-panel text-stone-500" : "border-transparent bg-panel text-stone-200"
-                }`}
+                className={`rounded-md border px-2 py-1 text-[11px] font-medium transition ${hiddenNodeTypes[type] ? "border-line bg-panel text-stone-500" : "border-transparent bg-panel text-stone-200"
+                  }`}
               >
                 {graphNodeTypeLabel(type)}
               </button>
@@ -5547,9 +5532,8 @@ function KnowledgeGraphWorkspace({
                 key={relation}
                 type="button"
                 onClick={() => onToggleRelation(relation)}
-                className={`rounded-md border px-2 py-1 text-[11px] font-medium transition ${
-                  hiddenRelations[relation] ? "border-line bg-panel text-stone-500" : "border-transparent bg-panel text-stone-200"
-                }`}
+                className={`rounded-md border px-2 py-1 text-[11px] font-medium transition ${hiddenRelations[relation] ? "border-line bg-panel text-stone-500" : "border-transparent bg-panel text-stone-200"
+                  }`}
               >
                 {graphRelationLabel(relation)}
               </button>
