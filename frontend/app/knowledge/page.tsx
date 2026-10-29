@@ -85,7 +85,7 @@ export default function KnowledgeBasesPage() {
                   <p className="mt-0.5 text-xs text-stone-500">更新于 {formatDate(item.updated_at)}</p>
                 </div>
               </div>
-              <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-stone-500 transition group-hover:transtone-x-0.5 group-hover:text-sage-700" />
+              <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-stone-500 transition group-hover:translate-x-0.5 group-hover:text-sage-700" />
             </div>
             <p className="mt-4 line-clamp-2 min-h-10 text-sm leading-5 text-stone-300">{item.description || "暂无描述"}</p>
             <div className="mt-4 flex items-center gap-4 border-t border-stone-800 pt-3 text-xs text-stone-400">

@@ -4444,7 +4444,7 @@ function WorkspaceControls({
   return (
     <div className="space-y-2">
       <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -transtone-y-1/2 text-stone-500" />
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-500" />
         <input
           value={query}
           onChange={(event) => onQueryChange(event.target.value)}
@@ -4504,7 +4504,7 @@ function SelectFilter({
       >
         {children}
       </select>
-      <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -transtone-y-1/2 text-stone-500" />
+      <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-stone-500" />
     </label>
   );
 }
