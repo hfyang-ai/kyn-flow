@@ -190,6 +190,40 @@ def _clone_target_from_parent(raw_parent: str, repo_name: str) -> Path:
     return target
 
 
+@router.get("/local-dirs")
+async def list_local_directories(path: str = "") -> dict:
+    """列出指定目录下的子目录，用于前端「选择本地目录」弹窗。空路径默认到用户主目录。"""
+    if path.strip():
+        base = Path(path.strip()).expanduser().resolve()
+    else:
+        base = Path.home().resolve()
+    if not base.is_dir():
+        raise HTTPException(status_code=400, detail=f"不是有效目录: {base}")
+
+    dirs: list[dict] = []
+    try:
+        children = list(base.iterdir())
+    except OSError as exc:
+        raise HTTPException(status_code=400, detail=f"无法读取目录: {base}") from exc
+
+    for child in sorted(children, key=lambda item: item.name.lower()):
+        try:
+            if child.is_dir() and not child.name.startswith("."):
+                dirs.append({"name": child.name, "path": str(child)})
+        except OSError:
+            continue
+
+    parent = base.parent
+    return {
+        "current": str(base),
+        "parent": str(parent) if str(parent) != str(base) else None,
+        "home": str(Path.home()),
+        "root": str(Path(base.anchor)),
+        "separator": os.sep,
+        "dirs": dirs,
+    }
+
+
 @router.post("/connect", response_model=RepoConnectResponse)
 async def connect_repo(payload: RepoConnectRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)) -> RepoConnectResponse:
     local_path = _clean_text(payload.local_path)

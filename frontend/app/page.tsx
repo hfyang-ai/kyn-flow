@@ -9,13 +9,16 @@ import {
   Cable,
   CheckCircle2,
   ChevronDown,
+  ChevronLeft,
   Clock3,
   Database,
   FileText,
   Folder,
   Gauge,
   GitPullRequest,
+  Home,
   ListTodo,
+  Loader2,
   Network,
   PanelLeftClose,
   PanelLeftOpen,
@@ -3083,8 +3086,8 @@ export default function DashboardPage() {
                     disabled={loading}
                     aria-pressed={planMode}
                     className={`inline-flex h-8 w-12 items-center justify-center rounded-md border transition disabled:opacity-60 ${planMode
-                        ? "border-sage-500 bg-sage-500 text-[#062a1d] shadow-sm"
-                        : "border-line bg-panel text-stone-400 hover:border-sage-700 hover:bg-sage-900"
+                      ? "border-sage-500 bg-sage-500 text-[#062a1d] shadow-sm"
+                      : "border-line bg-panel text-stone-400 hover:border-sage-700 hover:bg-sage-900"
                       }`}
                     title={planMode ? "切换到对话模式" : "切换到计划模式"}
                   >
@@ -3607,12 +3610,12 @@ function ChatTraceInline({
           <div
             key={item.id}
             className={`rounded-md px-3 py-2 text-xs leading-5 ${item.status === "error"
-                ? "bg-rose-900/40 text-rose-300"
-                : item.status === "running"
-                  ? "bg-sage-900 text-stone-200"
-                  : item.kind === "rag_prefetch"
-                    ? "border border-cyan-800/60 bg-cyan-900/40 text-stone-200"
-                    : "bg-stone-900 text-stone-300"
+              ? "bg-rose-900/40 text-rose-300"
+              : item.status === "running"
+                ? "bg-sage-900 text-stone-200"
+                : item.kind === "rag_prefetch"
+                  ? "border border-cyan-800/60 bg-cyan-900/40 text-stone-200"
+                  : "bg-stone-900 text-stone-300"
               }`}
           >
             <div className="mb-1 flex items-center justify-between gap-2">
@@ -3714,10 +3717,10 @@ function IssueAnalysisOverlay({
             <div
               key={item.id}
               className={`rounded-md border p-3 text-xs leading-5 shadow-sm ${item.kind === "error"
-                  ? "border-rose-800/60 bg-rose-900/40 text-rose-300"
-                  : item.kind === "thinking"
-                    ? "border-sage-700 bg-sage-900/80 text-stone-200"
-                    : "border-line bg-panel text-stone-300"
+                ? "border-rose-800/60 bg-rose-900/40 text-rose-300"
+                : item.kind === "thinking"
+                  ? "border-sage-700 bg-sage-900/80 text-stone-200"
+                  : "border-line bg-panel text-stone-300"
                 }`}
             >
               <div className="mb-1 flex items-center justify-between gap-2">
@@ -3876,10 +3879,10 @@ function AgentTraceAside({
           <div
             key={item.id}
             className={`rounded-md border p-3 text-xs leading-5 shadow-sm ${item.kind === "error"
-                ? "border-rose-800/60 bg-rose-900/40 text-rose-300"
-                : item.kind === "thinking"
-                  ? "border-sage-700 bg-sage-900/80 text-stone-200"
-                  : "border-line bg-panel text-stone-300"
+              ? "border-rose-800/60 bg-rose-900/40 text-rose-300"
+              : item.kind === "thinking"
+                ? "border-sage-700 bg-sage-900/80 text-stone-200"
+                : "border-line bg-panel text-stone-300"
               }`}
           >
             <div className="mb-1 flex items-center justify-between gap-2">
@@ -4146,6 +4149,138 @@ function AnalysisBulletList({
   );
 }
 
+type LocalDirEntry = { name: string; path: string };
+
+type LocalDirsResponse = {
+  current: string;
+  parent: string | null;
+  home: string;
+  root: string;
+  separator: string;
+  dirs: LocalDirEntry[];
+};
+
+function DirectoryPicker({
+  onSelect,
+  onClose
+}: {
+  onSelect: (path: string) => void;
+  onClose: () => void;
+}) {
+  const [current, setCurrent] = useState("");
+  const [parent, setParent] = useState<string | null>(null);
+  const [dirs, setDirs] = useState<LocalDirEntry[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function load(path: string) {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await apiGet<LocalDirsResponse>(`/api/repos/local-dirs?path=${encodeURIComponent(path)}`);
+      setCurrent(data.current);
+      setParent(data.parent);
+      setDirs(data.dirs);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "无法读取目录");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void load("");
+  }, []);
+
+  return (
+    <div className="absolute inset-0 z-[60] flex items-center justify-center bg-stone-950/50 p-6 backdrop-blur-sm">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="选择本地目录"
+        className="flex max-h-[80vh] w-full max-w-lg flex-col overflow-hidden rounded-lg border border-line bg-[#134e4a] shadow-2xl"
+      >
+        <div className="flex items-center justify-between gap-4 border-b border-sage-800 px-4 py-3">
+          <div className="text-sm font-semibold text-ink">选择本地目录</div>
+          <button
+            onClick={onClose}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-panel text-stone-300 transition hover:bg-sage-900"
+            title="关闭"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2 border-b border-line px-4 py-2">
+          <button
+            onClick={() => load(parent ?? "")}
+            disabled={!parent || loading}
+            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-line bg-panel text-stone-300 transition hover:bg-sage-900 disabled:opacity-40"
+            title="返回上级"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => load("")}
+            disabled={loading}
+            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-line bg-panel text-stone-300 transition hover:bg-sage-900 disabled:opacity-40"
+            title="主目录"
+          >
+            <Home className="h-4 w-4" />
+          </button>
+          <div
+            className="min-w-0 flex-1 truncate rounded-md border border-line bg-panel px-3 py-1.5 font-mono text-xs text-stone-300"
+            title={current}
+          >
+            {current || "…"}
+          </div>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto p-2">
+          {loading ? (
+            <div className="flex items-center justify-center gap-2 py-10 text-sm text-stone-400">
+              <Loader2 className="h-4 w-4 animate-spin" /> 加载中…
+            </div>
+          ) : error ? (
+            <div className="px-3 py-8 text-center text-sm text-rose-300">{error}</div>
+          ) : dirs.length === 0 ? (
+            <div className="px-3 py-8 text-center text-sm text-stone-400">该目录下没有子目录</div>
+          ) : (
+            <div className="space-y-0.5">
+              {dirs.map((dir) => (
+                <button
+                  key={dir.path}
+                  onClick={() => load(dir.path)}
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-stone-200 transition hover:bg-sage-900"
+                >
+                  <Folder className="h-4 w-4 shrink-0 text-sage-300" />
+                  <span className="truncate">{dir.name}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center justify-end gap-2 border-t border-line px-4 py-3">
+          <button
+            onClick={onClose}
+            className="inline-flex h-9 items-center justify-center rounded-md border border-line bg-panel px-4 text-sm font-medium text-stone-200 transition hover:bg-panel"
+          >
+            取消
+          </button>
+          <button
+            onClick={() => onSelect(current)}
+            disabled={!current || loading}
+            className="inline-flex h-9 items-center justify-center rounded-md bg-accent px-4 text-sm font-medium text-[#062a1d] transition hover:bg-sage-400 disabled:opacity-60"
+          >
+            选择此目录
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AddProjectOverlay({
   source,
   repoUrl,
@@ -4187,6 +4322,15 @@ function AddProjectOverlay({
 }) {
   const parsed = source === "remote" ? parseRepositoryInput(repoUrl) : null;
   const canConnect = source === "local" ? Boolean(localPath.trim()) : Boolean(repoUrl.trim());
+  const [isDirPickerOpen, setDirPickerOpen] = useState(false);
+  const [isWindows, setIsWindows] = useState(false);
+
+  useEffect(() => {
+    setIsWindows(/Windows/i.test(navigator.userAgent));
+  }, []);
+
+  const localPathPlaceholder = isWindows ? "例如 D:\\code\\my-repo" : "例如 ~/code/my-repo";
+  const cloneParentPlaceholder = isWindows ? "例如 D:\\code\\repos，留空则使用默认缓存目录" : "例如 ~/code/repos，留空则使用默认缓存目录";
 
   return (
     <div className="absolute inset-0 z-50 flex items-center justify-center bg-stone-950/35 p-6 backdrop-blur-sm">
@@ -4255,13 +4399,23 @@ function AddProjectOverlay({
                     </label>
 
                     <label className="text-sm font-medium text-stone-200">
-                      下载父目录
-                      <input
-                        value={cloneParentDir}
-                        onChange={(event) => onCloneParentDirChange(event.target.value)}
-                        placeholder="例如 D:\\code\\repos，留空则使用默认缓存目录"
-                        className="mt-2 h-10 w-full rounded-md border border-line bg-panel px-3 text-sm outline-none transition focus:border-sage-500 focus:ring-2 focus:ring-sage-100"
-                      />
+                      下载到
+                      <div className="mt-2 flex items-center gap-2">
+                        <input
+                          value={cloneParentDir}
+                          onChange={(event) => onCloneParentDirChange(event.target.value)}
+                          placeholder={cloneParentPlaceholder}
+                          className="h-11 min-w-0 flex-1 rounded-md border border-line bg-panel px-3 text-sm outline-none transition focus:border-sage-500 focus:ring-2 focus:ring-sage-100"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setDirPickerOpen(true)}
+                          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-line bg-panel text-stone-400 transition hover:bg-sage-900 hover:text-ink"
+                          title="选择目录"
+                        >
+                          <Folder className="h-4 w-4" />
+                        </button>
+                      </div>
                     </label>
                   </div>
                 ) : (
@@ -4277,12 +4431,17 @@ function AddProjectOverlay({
                             onConnect();
                           }
                         }}
-                        placeholder="例如 D:\\code\\my-repo"
+                        placeholder={localPathPlaceholder}
                         className="h-11 min-w-0 flex-1 rounded-md border border-line bg-panel px-3 text-sm outline-none transition focus:border-sage-500 focus:ring-2 focus:ring-sage-100"
                       />
-                      <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-line bg-panel text-stone-400">
+                      <button
+                        type="button"
+                        onClick={() => setDirPickerOpen(true)}
+                        className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-line bg-panel text-stone-400 transition hover:bg-sage-900 hover:text-ink"
+                        title="选择目录"
+                      >
                         <Folder className="h-4 w-4" />
-                      </span>
+                      </button>
                     </div>
                   </label>
                 )}
@@ -4390,6 +4549,19 @@ function AddProjectOverlay({
           </div>
         </div>
       </div>
+      {isDirPickerOpen && (
+        <DirectoryPicker
+          onSelect={(path) => {
+            if (source === "remote") {
+              onCloneParentDirChange(path);
+            } else {
+              onLocalPathChange(path);
+            }
+            setDirPickerOpen(false);
+          }}
+          onClose={() => setDirPickerOpen(false)}
+        />
+      )}
     </div>
   );
 }
