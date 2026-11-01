@@ -33,7 +33,7 @@ export default function KnowledgeBasesPage() {
           <p className="mt-1 text-sm text-stone-400">每个 GitHub Repository 拥有独立的文档、分段和检索配置。</p>
         </div>
         <Link
-          href="/"
+          href="/home"
           className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-sage-500 px-4 text-sm font-medium text-[#062a1d] transition hover:bg-sage-400"
         >
           <GitBranch className="h-4 w-4" /> 连接仓库
@@ -61,7 +61,7 @@ export default function KnowledgeBasesPage() {
             {query ? "换个名称或描述试试。" : "Repository 是 RAG 的项目边界。连接仓库后，再上传 Markdown、PDF、DOCX 等项目资料。"}
           </p>
           {!query ? (
-            <Link href="/" className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-sage-300 hover:text-sage-100">
+            <Link href="/home" className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-sage-300 hover:text-sage-100">
               连接仓库 <ArrowRight className="h-4 w-4" />
             </Link>
           ) : null}

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const navItems = [
-  { href: "/", label: "工作台" },
+  { href: "/home", label: "工作台" },
   { href: "/knowledge", label: "项目知识" },
   { href: "/rag", label: "RAG 工作室" },
   { href: "/repos", label: "Repos" },
@@ -35,7 +35,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <header className="sticky top-0 z-40 border-b border-line bg-paper/90 backdrop-blur-sm">
         <div className="mx-auto flex h-[53px] max-w-[1500px] items-center gap-1 px-4 sm:px-6">
           <Link
-            href="/"
+            href="/home"
             className="mr-4 flex shrink-0 items-center gap-2.5"
             aria-label="Kynflow 首页"
           >
@@ -47,7 +47,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
           <nav className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto" aria-label="主导航">
             {navItems.map((item) => {
-              const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+              const active = item.href === "/home" ? pathname === "/home" : pathname.startsWith(item.href);
               return (
                 <Link
                   key={item.href}
