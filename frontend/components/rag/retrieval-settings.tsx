@@ -14,11 +14,12 @@ type Props = {
 const methods: { value: RetrievalMethod; label: string; note: string; icon: typeof Search }[] = [
   { value: "vector", label: "向量检索", note: "擅长理解语义相近的表达", icon: Layers3 },
   { value: "fulltext", label: "全文检索", note: "适合专有名词与精确关键词", icon: FileSearch },
-  { value: "hybrid", label: "混合检索", note: "融合语义与关键词结果", icon: Search }
+  { value: "hybrid", label: "混合检索", note: "融合语义与关键词结果", icon: Search },
 ];
 
 export function RetrievalSettings({ value, catalog, onChange, showChunking = true }: Props) {
-  const update = <K extends keyof KnowledgeConfig,>(key: K, next: KnowledgeConfig[K]) => onChange({ ...value, [key]: next });
+  const update = <K extends keyof KnowledgeConfig>(key: K, next: KnowledgeConfig[K]) =>
+    onChange({ ...value, [key]: next });
 
   return (
     <div className="space-y-7">
@@ -55,24 +56,41 @@ export function RetrievalSettings({ value, catalog, onChange, showChunking = tru
 
       <section>
         <h3 className="text-sm font-semibold text-ink">索引方式</h3>
-        <p className="mt-1 text-xs text-stone-400">DeepSeek 官方 API 暂无 Embedding，默认使用 Qwen。</p>
+        <p className="mt-1 text-xs text-stone-400">
+          DeepSeek 官方 API 暂无 Embedding，默认使用 Qwen。
+        </p>
         <label className="mt-3 block text-xs font-medium text-stone-300">
           Embedding 模型
           <select
             value={`${value.embedding_provider}::${value.embedding_model}`}
             onChange={(event) => {
               const [provider, model] = event.target.value.split("::");
-              const selected = catalog?.embedding_models.find((item) => item.provider === provider && item.model === model);
-              onChange({ ...value, embedding_provider: provider, embedding_model: model, embedding_dimensions: selected?.dimensions ?? value.embedding_dimensions });
+              const selected = catalog?.embedding_models.find(
+                (item) => item.provider === provider && item.model === model,
+              );
+              onChange({
+                ...value,
+                embedding_provider: provider,
+                embedding_model: model,
+                embedding_dimensions: selected?.dimensions ?? value.embedding_dimensions,
+              });
             }}
             className="mt-1.5 h-10 w-full rounded-md border border-line bg-panel px-3 text-sm text-ink outline-none focus:border-sage-600"
           >
             {(catalog?.embedding_models ?? []).map((model) => (
-              <option key={`${model.provider}-${model.model}`} value={`${model.provider}::${model.model}`}>
-                {model.label}{model.available ? "" : " · 未配置，自动降级"}
+              <option
+                key={`${model.provider}-${model.model}`}
+                value={`${model.provider}::${model.model}`}
+              >
+                {model.label}
+                {model.available ? "" : " · 未配置，自动降级"}
               </option>
             ))}
-            {!catalog ? <option value={`${value.embedding_provider}::${value.embedding_model}`}>{value.embedding_model}</option> : null}
+            {!catalog ? (
+              <option value={`${value.embedding_provider}::${value.embedding_model}`}>
+                {value.embedding_model}
+              </option>
+            ) : null}
           </select>
         </label>
       </section>
@@ -90,7 +108,9 @@ export function RetrievalSettings({ value, catalog, onChange, showChunking = tru
                 onClick={() => update("retrieval_method", method.value)}
                 className={`relative min-h-28 rounded-md border p-3 text-left transition ${selected ? "border-sage-500 bg-sage-900/60" : "border-line bg-panel hover:border-stone-600"}`}
               >
-                {selected ? <Check className="absolute right-2 top-2 h-4 w-4 text-sage-300" /> : null}
+                {selected ? (
+                  <Check className="absolute right-2 top-2 h-4 w-4 text-sage-300" />
+                ) : null}
                 <Icon className={`h-5 w-5 ${selected ? "text-sage-300" : "text-stone-400"}`} />
                 <span className="mt-3 block text-sm font-medium text-ink">{method.label}</span>
                 <span className="mt-1 block text-xs leading-5 text-stone-400">{method.note}</span>
@@ -104,7 +124,9 @@ export function RetrievalSettings({ value, catalog, onChange, showChunking = tru
         <div className="flex items-center justify-between gap-4">
           <div>
             <h3 className="text-sm font-semibold text-ink">Rerank 模型</h3>
-            <p className="mt-1 text-xs text-stone-400">对召回候选重新排序，API 不可用时自动使用本地重排。</p>
+            <p className="mt-1 text-xs text-stone-400">
+              对召回候选重新排序，API 不可用时自动使用本地重排。
+            </p>
           </div>
           <button
             type="button"
@@ -113,7 +135,9 @@ export function RetrievalSettings({ value, catalog, onChange, showChunking = tru
             onClick={() => update("rerank_enabled", !value.rerank_enabled)}
             className={`relative h-6 w-11 shrink-0 rounded-full transition ${value.rerank_enabled ? "bg-sage-500" : "bg-stone-700"}`}
           >
-            <span className={`absolute top-1 h-4 w-4 rounded-full bg-panel transition ${value.rerank_enabled ? "left-6" : "left-1"}`} />
+            <span
+              className={`absolute top-1 h-4 w-4 rounded-full bg-panel transition ${value.rerank_enabled ? "left-6" : "left-1"}`}
+            />
           </button>
         </div>
         {value.rerank_enabled ? (
@@ -126,11 +150,19 @@ export function RetrievalSettings({ value, catalog, onChange, showChunking = tru
             className="mt-3 h-10 w-full rounded-md border border-line bg-panel px-3 text-sm text-ink outline-none focus:border-sage-600"
           >
             {(catalog?.rerank_models ?? []).map((model) => (
-              <option key={`${model.provider}-${model.model}`} value={`${model.provider}::${model.model}`}>
-                {model.label}{model.available ? "" : " · 未配置，自动降级"}
+              <option
+                key={`${model.provider}-${model.model}`}
+                value={`${model.provider}::${model.model}`}
+              >
+                {model.label}
+                {model.available ? "" : " · 未配置，自动降级"}
               </option>
             ))}
-            {!catalog ? <option value={`${value.rerank_provider}::${value.rerank_model}`}>{value.rerank_model}</option> : null}
+            {!catalog ? (
+              <option value={`${value.rerank_provider}::${value.rerank_model}`}>
+                {value.rerank_model}
+              </option>
+            ) : null}
           </select>
         ) : null}
       </section>
@@ -139,18 +171,48 @@ export function RetrievalSettings({ value, catalog, onChange, showChunking = tru
         <label className="text-xs font-medium text-stone-300">
           Top K
           <div className="mt-2 flex items-center gap-3">
-            <input type="range" min={1} max={10} value={value.top_k} onChange={(event) => update("top_k", Number(event.target.value))} className="min-w-0 flex-1 accent-sage-700" />
-            <input type="number" min={1} max={20} value={value.top_k} onChange={(event) => update("top_k", Number(event.target.value))} className="h-9 w-16 rounded-md border border-line text-center text-sm outline-none focus:border-sage-600" />
+            <input
+              type="range"
+              min={1}
+              max={10}
+              value={value.top_k}
+              onChange={(event) => update("top_k", Number(event.target.value))}
+              className="min-w-0 flex-1 accent-sage-700"
+            />
+            <input
+              type="number"
+              min={1}
+              max={20}
+              value={value.top_k}
+              onChange={(event) => update("top_k", Number(event.target.value))}
+              className="h-9 w-16 rounded-md border border-line text-center text-sm outline-none focus:border-sage-600"
+            />
           </div>
         </label>
         <div>
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-stone-300">Score 阈值</span>
-            <input type="checkbox" checked={value.score_threshold_enabled} onChange={(event) => update("score_threshold_enabled", event.target.checked)} className="h-4 w-4 accent-sage-700" />
+            <input
+              type="checkbox"
+              checked={value.score_threshold_enabled}
+              onChange={(event) => update("score_threshold_enabled", event.target.checked)}
+              className="h-4 w-4 accent-sage-700"
+            />
           </div>
           <div className="mt-2 flex items-center gap-3">
-            <input type="range" min={0} max={1} step={0.01} disabled={!value.score_threshold_enabled} value={value.score_threshold} onChange={(event) => update("score_threshold", Number(event.target.value))} className="min-w-0 flex-1 accent-sage-700 disabled:opacity-40" />
-            <span className="w-12 text-right text-sm text-stone-300">{value.score_threshold.toFixed(2)}</span>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.01}
+              disabled={!value.score_threshold_enabled}
+              value={value.score_threshold}
+              onChange={(event) => update("score_threshold", Number(event.target.value))}
+              className="min-w-0 flex-1 accent-sage-700 disabled:opacity-40"
+            />
+            <span className="w-12 text-right text-sm text-stone-300">
+              {value.score_threshold.toFixed(2)}
+            </span>
           </div>
         </div>
       </section>

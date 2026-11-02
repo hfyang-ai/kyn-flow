@@ -4,7 +4,7 @@ import { AppShell } from "@/components/layout/app-shell";
 
 export const metadata: Metadata = {
   title: "Kynflow",
-  description: "PR / Issue intelligent collaboration agent for engineering teams"
+  description: "PR / Issue intelligent collaboration agent for engineering teams",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

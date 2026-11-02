@@ -39,10 +39,18 @@ type RepoSyncResult = {
 };
 
 const providers = [
-  { value: "github", label: "GitHub", hint: "默认平台，支持 public repo 和 Personal Access Token。" },
-  { value: "github_compatible", label: "自定义 GitHub-compatible API", hint: "适合 GitHub Enterprise、Gitea 或兼容 GitHub REST 的网关。" },
+  {
+    value: "github",
+    label: "GitHub",
+    hint: "默认平台，支持 public repo 和 Personal Access Token。",
+  },
+  {
+    value: "github_compatible",
+    label: "自定义 GitHub-compatible API",
+    hint: "适合 GitHub Enterprise、Gitea 或兼容 GitHub REST 的网关。",
+  },
   { value: "gitlab", label: "GitLab", hint: "界面已预留，真实同步需要单独适配 GitLab API。" },
-  { value: "gitee", label: "Gitee", hint: "界面已预留，真实同步需要单独适配 Gitee API。" }
+  { value: "gitee", label: "Gitee", hint: "界面已预留，真实同步需要单独适配 Gitee API。" },
 ];
 
 export default function ReposPage() {
@@ -77,7 +85,7 @@ export default function ReposPage() {
       sync_issues: true,
       sync_pull_requests: true,
       sync_workflow_runs: true,
-      limit: null
+      limit: null,
     });
     setSelectedRepoId(repoId);
     await refreshRepos(repoId);
@@ -99,16 +107,19 @@ export default function ReposPage() {
         owner: source === "remote" ? owner.trim() : undefined,
         repo: source === "remote" ? repo.trim() : undefined,
         local_path: source === "local" ? localPath.trim() : undefined,
-        clone_parent_dir: source === "remote" && cloneParentDir.trim() ? cloneParentDir.trim() : undefined,
+        clone_parent_dir:
+          source === "remote" && cloneParentDir.trim() ? cloneParentDir.trim() : undefined,
         provider,
         api_base_url: provider === "github" ? undefined : apiBaseUrl,
         token: token || undefined,
-        demo_mode: false
+        demo_mode: false,
       });
       setResult(JSON.stringify({ connected, sync: connected.sync_details }, null, 2));
       await refreshRepos(connected.repo_id);
     } catch (error) {
-      setResult(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }, null, 2));
+      setResult(
+        JSON.stringify({ error: error instanceof Error ? error.message : String(error) }, null, 2),
+      );
     } finally {
       setLoading(false);
     }
@@ -120,7 +131,9 @@ export default function ReposPage() {
       const synced = await syncRepo(repoId);
       setResult(JSON.stringify({ refreshed: synced }, null, 2));
     } catch (error) {
-      setResult(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }, null, 2));
+      setResult(
+        JSON.stringify({ error: error instanceof Error ? error.message : String(error) }, null, 2),
+      );
     } finally {
       setLoading(false);
     }
@@ -134,7 +147,9 @@ export default function ReposPage() {
   }
 
   async function deleteRepo(item: Repository) {
-    const confirmed = window.confirm(`确认删除仓库 ${item.full_name} 及其本地同步的 Issues、PR、CI、分析结果吗？此操作只删除本系统本地数据，不会删除远程 Git 仓库。`);
+    const confirmed = window.confirm(
+      `确认删除仓库 ${item.full_name} 及其本地同步的 Issues、PR、CI、分析结果吗？此操作只删除本系统本地数据，不会删除远程 Git 仓库。`,
+    );
     if (!confirmed) return;
     setLoading(true);
     try {
@@ -142,7 +157,9 @@ export default function ReposPage() {
       setResult(JSON.stringify(data, null, 2));
       await refreshRepos();
     } catch (error) {
-      setResult(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }, null, 2));
+      setResult(
+        JSON.stringify({ error: error instanceof Error ? error.message : String(error) }, null, 2),
+      );
     } finally {
       setLoading(false);
     }
@@ -150,7 +167,10 @@ export default function ReposPage() {
 
   return (
     <>
-      <PageTitle title="仓库接入" description="连接真实 Git 仓库后会立即触发后台同步；生产环境可配置 Webhook 实时触发，并通过定时同步兜底。" />
+      <PageTitle
+        title="仓库接入"
+        description="连接真实 Git 仓库后会立即触发后台同步；生产环境可配置 Webhook 实时触发，并通过定时同步兜底。"
+      />
 
       <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
         <Card>
@@ -279,26 +299,41 @@ export default function ReposPage() {
           <div className="mt-5 flex flex-wrap gap-3">
             <PrimaryButton
               onClick={connect}
-              disabled={loading || !supportsRealConnect || (source === "remote" ? !owner.trim() || !repo.trim() : !localPath.trim())}
+              disabled={
+                loading ||
+                !supportsRealConnect ||
+                (source === "remote" ? !owner.trim() || !repo.trim() : !localPath.trim())
+              }
             >
               {loading ? "连接并同步中..." : "连接并自动同步"}
             </PrimaryButton>
           </div>
 
           {!supportsRealConnect && (
-            <p className="mt-3 text-sm text-amber-300">当前平台已在界面预留，但真实 API 同步尚未实现。请选择 GitHub 或 GitHub-compatible API。</p>
+            <p className="mt-3 text-sm text-amber-300">
+              当前平台已在界面预留，但真实 API 同步尚未实现。请选择 GitHub 或 GitHub-compatible
+              API。
+            </p>
           )}
 
-          {result && <pre className="mt-4 overflow-auto rounded-md border border-stone-700 bg-stone-950 p-4 text-xs text-stone-100">{result}</pre>}
+          {result && (
+            <pre className="mt-4 overflow-auto rounded-md border border-stone-700 bg-stone-950 p-4 text-xs text-stone-100">
+              {result}
+            </pre>
+          )}
         </Card>
 
         <Card>
           <div className="flex items-center justify-between gap-3">
             <h2 className="font-semibold text-ink">已连接仓库</h2>
-            <span className="rounded-full bg-panel px-2.5 py-1 text-xs text-stone-400">{repos.length} 个</span>
+            <span className="rounded-full bg-panel px-2.5 py-1 text-xs text-stone-400">
+              {repos.length} 个
+            </span>
           </div>
           <div className="mt-4 space-y-3">
-            {repos.length === 0 && <p className="text-sm text-stone-300">还没有仓库。请连接一个真实 Git 仓库。</p>}
+            {repos.length === 0 && (
+              <p className="text-sm text-stone-300">还没有仓库。请连接一个真实 Git 仓库。</p>
+            )}
             {repos.map((item) => (
               <div
                 key={item.id}
@@ -310,11 +345,20 @@ export default function ReposPage() {
                     <div className="mt-1 text-xs text-stone-400">
                       {item.provider || "github"} · {item.default_branch || "main"}
                     </div>
-                    {item.local_path && <div className="mt-1 break-all text-xs text-stone-400">{item.checkout_mode === "local" ? "本地仓库" : "代码路径"}：{item.local_path}</div>}
+                    {item.local_path && (
+                      <div className="mt-1 break-all text-xs text-stone-400">
+                        {item.checkout_mode === "local" ? "本地仓库" : "代码路径"}：
+                        {item.local_path}
+                      </div>
+                    )}
                   </div>
-                  <span className="rounded-full bg-panel px-2.5 py-1 text-xs text-stone-400">{selectedRepoId === item.id ? "当前查看" : "已连接"}</span>
+                  <span className="rounded-full bg-panel px-2.5 py-1 text-xs text-stone-400">
+                    {selectedRepoId === item.id ? "当前查看" : "已连接"}
+                  </span>
                 </div>
-                <p className="mt-3 line-clamp-2 text-sm leading-6 text-stone-300">{item.description || "暂无仓库描述"}</p>
+                <p className="mt-3 line-clamp-2 text-sm leading-6 text-stone-300">
+                  {item.description || "暂无仓库描述"}
+                </p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   <button
                     onClick={() => selectRepo(item.id)}

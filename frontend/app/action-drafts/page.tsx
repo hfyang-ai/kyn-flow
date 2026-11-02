@@ -22,13 +22,26 @@ type ActionDraft = {
   executed_at?: string | null;
 };
 
-type AuditLog = { id: string; action: string; status: string; target_type?: string | null; target_id?: string | null; created_at: string };
+type AuditLog = {
+  id: string;
+  action: string;
+  status: string;
+  target_type?: string | null;
+  target_id?: string | null;
+  created_at: string;
+};
 
 const statusMeta: Record<string, { label: string; className: string }> = {
-  pending_confirmation: { label: "等待人工确认", className: "bg-amber-900/40 text-amber-200 border-amber-800/60" },
-  executed: { label: "已确认并执行", className: "bg-emerald-900/40 text-emerald-300 border-emerald-800/60" },
+  pending_confirmation: {
+    label: "等待人工确认",
+    className: "bg-amber-900/40 text-amber-200 border-amber-800/60",
+  },
+  executed: {
+    label: "已确认并执行",
+    className: "bg-emerald-900/40 text-emerald-300 border-emerald-800/60",
+  },
   cancelled: { label: "已取消", className: "bg-stone-800 text-stone-300 border-stone-800" },
-  failed: { label: "执行失败", className: "bg-rose-900/40 text-rose-300 border-rose-800/60" }
+  failed: { label: "执行失败", className: "bg-rose-900/40 text-rose-300 border-rose-800/60" },
 };
 
 export default function ActionDraftsPage() {
@@ -44,7 +57,7 @@ export default function ActionDraftsPage() {
     const suffix = repo ? `?repo_id=${repo}` : "";
     const [draftItems, auditItems] = await Promise.all([
       apiGet<ActionDraft[]>(`/api/action-drafts${suffix}`),
-      apiGet<AuditLog[]>(`/api/action-drafts/audit-logs${suffix}`).catch(() => [])
+      apiGet<AuditLog[]>(`/api/action-drafts/audit-logs${suffix}`).catch(() => []),
     ]);
     setDrafts(draftItems);
     setAudits(auditItems);
@@ -71,7 +84,7 @@ export default function ActionDraftsPage() {
         title: title.trim() || "发布检查报告",
         content,
         risk_level: "medium",
-        metadata: { source: "manual_review" }
+        metadata: { source: "manual_review" },
       });
       setContent("");
       await load();
@@ -90,12 +103,21 @@ export default function ActionDraftsPage() {
     }
   }
 
-  const pendingCount = useMemo(() => drafts.filter((draft) => draft.status === "pending_confirmation").length, [drafts]);
-  const executedCount = useMemo(() => drafts.filter((draft) => draft.status === "executed").length, [drafts]);
+  const pendingCount = useMemo(
+    () => drafts.filter((draft) => draft.status === "pending_confirmation").length,
+    [drafts],
+  );
+  const executedCount = useMemo(
+    () => drafts.filter((draft) => draft.status === "executed").length,
+    [drafts],
+  );
 
   return (
     <>
-      <PageTitle title="安全草稿与人工确认" description="Agent 的外部写操作先落成可审查草稿；只有具备批准权限的人确认后，系统才执行并写入审计记录。" />
+      <PageTitle
+        title="安全草稿与人工确认"
+        description="Agent 的外部写操作先落成可审查草稿；只有具备批准权限的人确认后，系统才执行并写入审计记录。"
+      />
 
       <section className="grid gap-3 border-y border-line bg-panel px-4 py-4 sm:grid-cols-3">
         <Summary icon={FileText} label="全部草稿" value={drafts.length} />
@@ -105,59 +127,149 @@ export default function ActionDraftsPage() {
 
       <div className="mt-4 grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
         <section className="self-start rounded-md border border-line bg-panel p-5">
-          <div className="flex items-center gap-2 text-sm font-semibold text-ink"><ShieldAlert className="h-4 w-4 text-amber-400" />创建安全草稿</div>
-          <p className="mt-2 text-xs leading-5 text-stone-400">这里只保存建议内容，不会直接写入外部系统。</p>
-          <label className="mt-4 block text-sm font-medium text-stone-200">仓库
-            <select className="mt-2 w-full rounded-md border border-line bg-panel px-3 py-2 outline-none focus:border-sage-500" value={repoId} onChange={(event) => { setRepoId(event.target.value); void load(event.target.value); }}>
-              {repos.map((repo) => <option key={repo.id} value={repo.id}>{repo.full_name}</option>)}
+          <div className="flex items-center gap-2 text-sm font-semibold text-ink">
+            <ShieldAlert className="h-4 w-4 text-amber-400" />
+            创建安全草稿
+          </div>
+          <p className="mt-2 text-xs leading-5 text-stone-400">
+            这里只保存建议内容，不会直接写入外部系统。
+          </p>
+          <label className="mt-4 block text-sm font-medium text-stone-200">
+            仓库
+            <select
+              className="mt-2 w-full rounded-md border border-line bg-panel px-3 py-2 outline-none focus:border-sage-500"
+              value={repoId}
+              onChange={(event) => {
+                setRepoId(event.target.value);
+                void load(event.target.value);
+              }}
+            >
+              {repos.map((repo) => (
+                <option key={repo.id} value={repo.id}>
+                  {repo.full_name}
+                </option>
+              ))}
             </select>
           </label>
-          <label className="mt-4 block text-sm font-medium text-stone-200">标题
-            <input className="mt-2 w-full rounded-md border border-line px-3 py-2 outline-none focus:border-sage-500" value={title} onChange={(event) => setTitle(event.target.value)} />
+          <label className="mt-4 block text-sm font-medium text-stone-200">
+            标题
+            <input
+              className="mt-2 w-full rounded-md border border-line px-3 py-2 outline-none focus:border-sage-500"
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+            />
           </label>
-          <label className="mt-4 block text-sm font-medium text-stone-200">待审查内容
-            <textarea className="mt-2 min-h-40 w-full resize-none rounded-md border border-line px-3 py-2 text-sm leading-6 outline-none focus:border-sage-500" value={content} onChange={(event) => setContent(event.target.value)} placeholder="输入准备发送的报告或评论内容" />
+          <label className="mt-4 block text-sm font-medium text-stone-200">
+            待审查内容
+            <textarea
+              className="mt-2 min-h-40 w-full resize-none rounded-md border border-line px-3 py-2 text-sm leading-6 outline-none focus:border-sage-500"
+              value={content}
+              onChange={(event) => setContent(event.target.value)}
+              placeholder="输入准备发送的报告或评论内容"
+            />
           </label>
-          <PrimaryButton className="mt-4 w-full gap-2" disabled={!repoId || !content.trim() || loading} onClick={createDraft}><FileText className="h-4 w-4" />保存为待确认草稿</PrimaryButton>
+          <PrimaryButton
+            className="mt-4 w-full gap-2"
+            disabled={!repoId || !content.trim() || loading}
+            onClick={createDraft}
+          >
+            <FileText className="h-4 w-4" />
+            保存为待确认草稿
+          </PrimaryButton>
         </section>
 
         <div className="space-y-4">
           {drafts.map((draft) => {
-            const meta = statusMeta[draft.status] || { label: draft.status, className: "bg-panel text-stone-300 border-line" };
+            const meta = statusMeta[draft.status] || {
+              label: draft.status,
+              className: "bg-panel text-stone-300 border-line",
+            };
             return (
               <article key={draft.id} className="rounded-md border border-line bg-panel p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="font-semibold text-ink">{draft.title || draft.draft_type}</h2>
-                      <span className={`rounded-full border px-2.5 py-1 text-xs font-medium ${meta.className}`}>{meta.label}</span>
-                      <span className={`rounded-full px-2.5 py-1 text-xs ${draft.risk_level === "high" ? "bg-rose-900/40 text-rose-300" : "bg-stone-800 text-stone-300"}`}>{draft.risk_level === "high" ? "高风险" : "中低风险"}</span>
+                      <span
+                        className={`rounded-full border px-2.5 py-1 text-xs font-medium ${meta.className}`}
+                      >
+                        {meta.label}
+                      </span>
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-xs ${draft.risk_level === "high" ? "bg-rose-900/40 text-rose-300" : "bg-stone-800 text-stone-300"}`}
+                      >
+                        {draft.risk_level === "high" ? "高风险" : "中低风险"}
+                      </span>
                     </div>
-                    <div className="mt-2 text-xs text-stone-400">{draft.draft_type} · {draft.target_type} · {new Date(draft.created_at).toLocaleString("zh-CN")}</div>
+                    <div className="mt-2 text-xs text-stone-400">
+                      {draft.draft_type} · {draft.target_type} ·{" "}
+                      {new Date(draft.created_at).toLocaleString("zh-CN")}
+                    </div>
                   </div>
                   {draft.status === "pending_confirmation" && (
                     <div className="flex gap-2">
-                      <button className="inline-flex items-center gap-1 rounded-md bg-sage-500 px-3 py-2 text-sm font-medium text-[#062a1d] transition hover:bg-sage-400 disabled:opacity-60" disabled={loading} onClick={() => changeDraft(draft.id, "confirm")}><Check className="h-4 w-4" />确认执行</button>
-                      <button className="inline-flex items-center gap-1 rounded-md border border-line px-3 py-2 text-sm text-stone-300 transition hover:bg-panel disabled:opacity-60" disabled={loading} onClick={() => changeDraft(draft.id, "cancel")}><X className="h-4 w-4" />取消</button>
+                      <button
+                        className="inline-flex items-center gap-1 rounded-md bg-sage-500 px-3 py-2 text-sm font-medium text-[#062a1d] transition hover:bg-sage-400 disabled:opacity-60"
+                        disabled={loading}
+                        onClick={() => changeDraft(draft.id, "confirm")}
+                      >
+                        <Check className="h-4 w-4" />
+                        确认执行
+                      </button>
+                      <button
+                        className="inline-flex items-center gap-1 rounded-md border border-line px-3 py-2 text-sm text-stone-300 transition hover:bg-panel disabled:opacity-60"
+                        disabled={loading}
+                        onClick={() => changeDraft(draft.id, "cancel")}
+                      >
+                        <X className="h-4 w-4" />
+                        取消
+                      </button>
                     </div>
                   )}
                 </div>
-                <div className="mt-4 whitespace-pre-wrap rounded-md border-l-4 border-sage-400 bg-panel px-4 py-3 text-sm leading-7 text-stone-200">{draft.content}</div>
-                {draft.status === "executed" && <div className="mt-3 flex items-center gap-2 text-sm text-emerald-300"><CheckCircle2 className="h-4 w-4" />人工确认完成，执行结果和操作者已经写入审计记录。</div>}
-                {draft.error_message && <div className="mt-3 rounded-md bg-rose-900/40 p-3 text-sm text-rose-300">{draft.error_message}</div>}
+                <div className="mt-4 whitespace-pre-wrap rounded-md border-l-4 border-sage-400 bg-panel px-4 py-3 text-sm leading-7 text-stone-200">
+                  {draft.content}
+                </div>
+                {draft.status === "executed" && (
+                  <div className="mt-3 flex items-center gap-2 text-sm text-emerald-300">
+                    <CheckCircle2 className="h-4 w-4" />
+                    人工确认完成，执行结果和操作者已经写入审计记录。
+                  </div>
+                )}
+                {draft.error_message && (
+                  <div className="mt-3 rounded-md bg-rose-900/40 p-3 text-sm text-rose-300">
+                    {draft.error_message}
+                  </div>
+                )}
               </article>
             );
           })}
-          {drafts.length === 0 && <div className="rounded-md border border-dashed border-line bg-panel p-5 text-sm text-stone-400">暂无安全草稿。</div>}
+          {drafts.length === 0 && (
+            <div className="rounded-md border border-dashed border-line bg-panel p-5 text-sm text-stone-400">
+              暂无安全草稿。
+            </div>
+          )}
 
           <section className="rounded-md border border-line bg-panel p-5">
-            <div className="flex items-center gap-2 font-semibold text-ink"><Send className="h-4 w-4 text-sage-300" />审计时间线</div>
+            <div className="flex items-center gap-2 font-semibold text-ink">
+              <Send className="h-4 w-4 text-sage-300" />
+              审计时间线
+            </div>
             <div className="mt-4 space-y-0">
               {audits.slice(0, 10).map((item, index) => (
                 <div key={item.id} className="relative flex gap-3 pb-4">
-                  {index < Math.min(audits.length, 10) - 1 && <span className="absolute left-[7px] top-4 h-full w-px bg-line" />}
-                  <span className={`relative mt-1 h-4 w-4 shrink-0 rounded-full border-4 border-white ${item.status === "success" ? "bg-emerald-500" : "bg-rose-500"}`} />
-                  <div><div className="text-sm font-medium text-ink">{auditLabel(item.action)}</div><div className="mt-1 text-xs text-stone-400">{item.status} · {new Date(item.created_at).toLocaleString("zh-CN")}</div></div>
+                  {index < Math.min(audits.length, 10) - 1 && (
+                    <span className="absolute left-[7px] top-4 h-full w-px bg-line" />
+                  )}
+                  <span
+                    className={`relative mt-1 h-4 w-4 shrink-0 rounded-full border-4 border-white ${item.status === "success" ? "bg-emerald-500" : "bg-rose-500"}`}
+                  />
+                  <div>
+                    <div className="text-sm font-medium text-ink">{auditLabel(item.action)}</div>
+                    <div className="mt-1 text-xs text-stone-400">
+                      {item.status} · {new Date(item.created_at).toLocaleString("zh-CN")}
+                    </div>
+                  </div>
                 </div>
               ))}
               {audits.length === 0 && <div className="text-sm text-stone-400">暂无审计记录。</div>}
@@ -169,9 +281,28 @@ export default function ActionDraftsPage() {
   );
 }
 
-function Summary({ icon: Icon, label, value, tone = "indigo" }: { icon: typeof FileText; label: string; value: number; tone?: "indigo" | "amber" | "green" }) {
-  const color = tone === "amber" ? "text-amber-400" : tone === "green" ? "text-emerald-400" : "text-sage-300";
-  return <div className="flex items-center gap-3"><Icon className={`h-5 w-5 ${color}`} /><div><div className="text-xs text-stone-400">{label}</div><div className="mt-1 text-xl font-semibold text-ink">{value}</div></div></div>;
+function Summary({
+  icon: Icon,
+  label,
+  value,
+  tone = "indigo",
+}: {
+  icon: typeof FileText;
+  label: string;
+  value: number;
+  tone?: "indigo" | "amber" | "green";
+}) {
+  const color =
+    tone === "amber" ? "text-amber-400" : tone === "green" ? "text-emerald-400" : "text-sage-300";
+  return (
+    <div className="flex items-center gap-3">
+      <Icon className={`h-5 w-5 ${color}`} />
+      <div>
+        <div className="text-xs text-stone-400">{label}</div>
+        <div className="mt-1 text-xl font-semibold text-ink">{value}</div>
+      </div>
+    </div>
+  );
 }
 
 function auditLabel(action: string) {

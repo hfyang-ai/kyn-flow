@@ -10,7 +10,7 @@ export async function apiPost<T>(path: string, body: unknown): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body)
+    body: JSON.stringify(body),
   });
   if (!response.ok) await throwApiError(response);
   return response.json();
@@ -20,7 +20,7 @@ export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body)
+    body: JSON.stringify(body),
   });
   if (!response.ok) await throwApiError(response);
   return response.json();
@@ -29,7 +29,7 @@ export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
 export async function apiUpload<T>(path: string, body: FormData): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: "POST",
-    body
+    body,
   });
   if (!response.ok) await throwApiError(response);
   return response.json();
@@ -39,13 +39,13 @@ export async function apiPostStream(
   path: string,
   body: unknown,
   onEvent: (event: string, data: unknown) => void,
-  options: { signal?: AbortSignal } = {}
+  options: { signal?: AbortSignal } = {},
 ): Promise<void> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
-    signal: options.signal
+    signal: options.signal,
   });
   if (!response.ok) await throwApiError(response);
   if (!response.body) throw new Error("Streaming response body is not available.");
@@ -103,7 +103,8 @@ function readApiErrorMessage(payload: unknown): string | null {
   if (Array.isArray(detail)) {
     const messages = detail
       .map((item) => {
-        if (item && typeof item === "object" && "msg" in item) return String((item as { msg: unknown }).msg);
+        if (item && typeof item === "object" && "msg" in item)
+          return String((item as { msg: unknown }).msg);
         return typeof item === "string" ? item : null;
       })
       .filter(Boolean);

@@ -45,7 +45,7 @@ export default function ReportsPage() {
       const data = await apiPost<WeeklyReportResponse>("/api/reports/weekly", {
         repo_id: repoId,
         start_date: startDate,
-        end_date: endDate
+        end_date: endDate,
       });
       setReport(data.report_markdown);
     } finally {
@@ -55,7 +55,10 @@ export default function ReportsPage() {
 
   return (
     <>
-      <PageTitle title="研发周报生成" description="按时间范围统计 Issues、PRs、Merged PRs、Open PRs 和失败 CI，生成适合发给团队负责人的 Markdown 周报。" />
+      <PageTitle
+        title="研发周报生成"
+        description="按时间范围统计 Issues、PRs、Merged PRs、Open PRs 和失败 CI，生成适合发给团队负责人的 Markdown 周报。"
+      />
 
       <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
         <Card>
@@ -104,9 +107,13 @@ export default function ReportsPage() {
         <Card>
           <h2 className="font-semibold text-ink">Markdown 周报</h2>
           {report ? (
-            <pre className="mt-4 max-h-[640px] overflow-auto rounded-md border border-stone-700 bg-stone-950 p-4 text-sm leading-7 text-stone-100">{report}</pre>
+            <pre className="mt-4 max-h-[640px] overflow-auto rounded-md border border-stone-700 bg-stone-950 p-4 text-sm leading-7 text-stone-100">
+              {report}
+            </pre>
           ) : (
-            <div className="mt-4 rounded-md border border-line bg-panel p-4 text-sm text-stone-300">选择仓库和时间范围后生成周报。</div>
+            <div className="mt-4 rounded-md border border-line bg-panel p-4 text-sm text-stone-300">
+              选择仓库和时间范围后生成周报。
+            </div>
           )}
         </Card>
       </div>

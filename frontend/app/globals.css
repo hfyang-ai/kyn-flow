@@ -55,8 +55,8 @@ pre {
 code,
 kbd,
 samp {
-  font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas,
-    "Liberation Mono", monospace;
+  font-family:
+    ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
 }
 
 /* 终端风格滚动条 */

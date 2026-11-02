@@ -13,7 +13,7 @@ const navItems = [
   { href: "/workspaces", label: "团队工作区" },
   { href: "/reports", label: "研发周报" },
   { href: "/code-graph", label: "Code Graph" },
-  { href: "/evals", label: "Evals" }
+  { href: "/evals", label: "Evals" },
 ];
 
 function BrandMark() {
@@ -45,9 +45,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </span>
           </Link>
 
-          <nav className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto" aria-label="主导航">
+          <nav
+            className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto"
+            aria-label="主导航"
+          >
             {navItems.map((item) => {
-              const active = item.href === "/home" ? pathname === "/home" : pathname.startsWith(item.href);
+              const active =
+                item.href === "/home" ? pathname === "/home" : pathname.startsWith(item.href);
               return (
                 <Link
                   key={item.href}

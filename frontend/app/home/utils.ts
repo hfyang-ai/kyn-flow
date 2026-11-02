@@ -1,4 +1,10 @@
-import type { ChatStreamToolResult, ChatStreamToolUse, ChatTraceItem, Issue, PullRequest } from "./types";
+import type {
+  ChatStreamToolResult,
+  ChatStreamToolUse,
+  ChatTraceItem,
+  Issue,
+  PullRequest,
+} from "./types";
 
 const DRAFT_CONVERSATION_PREFIX = "draft:";
 
@@ -54,7 +60,7 @@ export function makeToolUseTrace(data: ChatStreamToolUse, fallbackId: string): C
     skillSteps: data.skill_steps,
     skillActivationMode: data.skill_activation_mode,
     skillActivationReason: data.skill_activation_reason,
-    skillInstructionDigest: data.skill_instruction_digest
+    skillInstructionDigest: data.skill_instruction_digest,
   };
 }
 
@@ -75,27 +81,42 @@ export function makeToolResultTrace(data: ChatStreamToolResult, fallbackId: stri
     skillSteps: data.skill_steps,
     skillActivationMode: data.skill_activation_mode,
     skillActivationReason: data.skill_activation_reason,
-    skillInstructionDigest: data.skill_instruction_digest
+    skillInstructionDigest: data.skill_instruction_digest,
   };
 }
 
-export function traceItemsFromAgentEvents(events: Array<Record<string, unknown>> = []): ChatTraceItem[] {
+export function traceItemsFromAgentEvents(
+  events: Array<Record<string, unknown>> = [],
+): ChatTraceItem[] {
   const items: ChatTraceItem[] = [];
   events.forEach((event, index) => {
     const type = String(event.type || "");
     if (type === "skill_activated") {
-      const resources = Array.isArray(event.resources) ? event.resources.map((value) => contextRecord(value)) : [];
+      const resources = Array.isArray(event.resources)
+        ? event.resources.map((value) => contextRecord(value))
+        : [];
       items.push({
         id: `history-skill-activated-${index}`,
         kind: "tool",
         title: "Skill 已按需激活",
         content: [
           `方式：${contextString(event.activation_mode) || "unknown"}`,
-          contextString(event.activation_reason) ? `原因：${contextString(event.activation_reason)}` : "",
+          contextString(event.activation_reason)
+            ? `原因：${contextString(event.activation_reason)}`
+            : "",
           contextString(event.entrypoint) ? `入口：${contextString(event.entrypoint)}` : "",
-          contextString(event.instruction_digest) ? `指令摘要：${contextString(event.instruction_digest)}` : "",
-          resources.length ? `按需资源：${resources.map((resource) => contextString(resource.path)).filter(Boolean).join(", ")}` : ""
-        ].filter(Boolean).join("\n"),
+          contextString(event.instruction_digest)
+            ? `指令摘要：${contextString(event.instruction_digest)}`
+            : "",
+          resources.length
+            ? `按需资源：${resources
+                .map((resource) => contextString(resource.path))
+                .filter(Boolean)
+                .join(", ")}`
+            : "",
+        ]
+          .filter(Boolean)
+          .join("\n"),
         status: "done",
         skillName: contextString(event.skill_name),
         skillTitle: contextString(event.skill_title),
@@ -103,30 +124,41 @@ export function traceItemsFromAgentEvents(events: Array<Record<string, unknown>>
         skillSteps: Array.isArray(event.workflow_steps) ? event.workflow_steps.map(String) : [],
         skillActivationMode: contextString(event.activation_mode),
         skillActivationReason: contextString(event.activation_reason),
-        skillInstructionDigest: contextString(event.instruction_digest)
+        skillInstructionDigest: contextString(event.instruction_digest),
       });
       return;
     }
     if (type === "skill_validation") {
       const status = contextString(event.status) || "not_executed";
       const failed = status === "violated" || status === "failed";
-      const violations = Array.isArray(event.tool_contract_violations) ? event.tool_contract_violations.map(String) : [];
+      const violations = Array.isArray(event.tool_contract_violations)
+        ? event.tool_contract_violations.map(String)
+        : [];
       items.push({
         id: `history-skill-validation-${index}`,
         kind: failed ? "error" : "tool",
-        title: status === "violated" ? "Skill 契约校验失败" : status === "failed" ? "Skill 执行失败" : "Skill 运行校验",
+        title:
+          status === "violated"
+            ? "Skill 契约校验失败"
+            : status === "failed"
+              ? "Skill 执行失败"
+              : "Skill 运行校验",
         content: [
           `状态：${status}`,
           `完整指令：${event.instructions_loaded === true ? "已加载" : "未加载"}`,
           `步骤验证：${contextString(event.step_verification) || "unknown"}`,
-          Array.isArray(event.observed_tools) && event.observed_tools.length ? `观察到的工具：${event.observed_tools.map(String).join(", ")}` : "",
-          violations.length ? `越界工具：${violations.join(", ")}` : ""
-        ].filter(Boolean).join("\n"),
+          Array.isArray(event.observed_tools) && event.observed_tools.length
+            ? `观察到的工具：${event.observed_tools.map(String).join(", ")}`
+            : "",
+          violations.length ? `越界工具：${violations.join(", ")}` : "",
+        ]
+          .filter(Boolean)
+          .join("\n"),
         status: failed ? "error" : "done",
         skillName: contextString(event.skill_name),
         skillTitle: contextString(event.skill_title),
         skillVersion: contextString(event.skill_version),
-        skillSteps: Array.isArray(event.declared_steps) ? event.declared_steps.map(String) : []
+        skillSteps: Array.isArray(event.declared_steps) ? event.declared_steps.map(String) : [],
       });
       return;
     }
@@ -138,13 +170,13 @@ export function traceItemsFromAgentEvents(events: Array<Record<string, unknown>>
       const query = contextString(preRetrieval.query);
       const sourceLines = Array.isArray(preRetrieval.sources)
         ? preRetrieval.sources
-          .slice(0, 8)
-          .map((value) => contextRecord(value))
-          .map((source) => {
-            const title = contextString(source.title) || "未命名证据";
-            const sourceType = contextString(source.source_type) || "evidence";
-            return `- [${sourceType}] ${title}`;
-          })
+            .slice(0, 8)
+            .map((value) => contextRecord(value))
+            .map((source) => {
+              const title = contextString(source.title) || "未命名证据";
+              const sourceType = contextString(source.source_type) || "evidence";
+              return `- [${sourceType}] ${title}`;
+            })
         : [];
       items.push({
         id: `history-rag-strategy-${index}`,
@@ -155,12 +187,12 @@ export function traceItemsFromAgentEvents(events: Array<Record<string, unknown>>
           query ? `查询：${query}` : "",
           `调用前检索：${enabled ? `已启用 · 命中 ${evidenceCount} 条证据` : "未启用"}`,
           sourceLines.length ? `证据来源：\n${sourceLines.join("\n")}` : "",
-          `Agent 二次检索：${reasoningRetrieval.enabled === true ? "可用（支持查询改写与多次补查）" : "未启用"}`
+          `Agent 二次检索：${reasoningRetrieval.enabled === true ? "可用（支持查询改写与多次补查）" : "未启用"}`,
         ]
           .filter(Boolean)
           .join("\n"),
         status: "done",
-        evidenceCount
+        evidenceCount,
       });
       return;
     }
@@ -170,7 +202,7 @@ export function traceItemsFromAgentEvents(events: Array<Record<string, unknown>>
         kind: "thinking",
         title: "公开思路",
         content: event.content,
-        status: "done"
+        status: "done",
       });
       return;
     }
@@ -180,17 +212,32 @@ export function traceItemsFromAgentEvents(events: Array<Record<string, unknown>>
           {
             id: typeof event.id === "string" ? event.id : `history-tool-${index}`,
             tool_name: typeof event.tool_name === "string" ? event.tool_name : undefined,
-            arguments: event.arguments && typeof event.arguments === "object" ? (event.arguments as Record<string, unknown>) : undefined,
+            arguments:
+              event.arguments && typeof event.arguments === "object"
+                ? (event.arguments as Record<string, unknown>)
+                : undefined,
             skill_name: typeof event.skill_name === "string" ? event.skill_name : undefined,
             skill_title: typeof event.skill_title === "string" ? event.skill_title : undefined,
-            skill_version: typeof event.skill_version === "string" ? event.skill_version : undefined,
-            skill_steps: Array.isArray(event.skill_steps) ? event.skill_steps.map(String) : undefined,
-            skill_activation_mode: typeof event.skill_activation_mode === "string" ? event.skill_activation_mode : undefined,
-            skill_activation_reason: typeof event.skill_activation_reason === "string" ? event.skill_activation_reason : undefined,
-            skill_instruction_digest: typeof event.skill_instruction_digest === "string" ? event.skill_instruction_digest : undefined
+            skill_version:
+              typeof event.skill_version === "string" ? event.skill_version : undefined,
+            skill_steps: Array.isArray(event.skill_steps)
+              ? event.skill_steps.map(String)
+              : undefined,
+            skill_activation_mode:
+              typeof event.skill_activation_mode === "string"
+                ? event.skill_activation_mode
+                : undefined,
+            skill_activation_reason:
+              typeof event.skill_activation_reason === "string"
+                ? event.skill_activation_reason
+                : undefined,
+            skill_instruction_digest:
+              typeof event.skill_instruction_digest === "string"
+                ? event.skill_instruction_digest
+                : undefined,
           },
-          `history-tool-${index}`
-        )
+          `history-tool-${index}`,
+        ),
       );
       return;
     }
@@ -206,13 +253,24 @@ export function traceItemsFromAgentEvents(events: Array<Record<string, unknown>>
           skill_title: typeof event.skill_title === "string" ? event.skill_title : undefined,
           skill_version: typeof event.skill_version === "string" ? event.skill_version : undefined,
           skill_steps: Array.isArray(event.skill_steps) ? event.skill_steps.map(String) : undefined,
-          skill_activation_mode: typeof event.skill_activation_mode === "string" ? event.skill_activation_mode : undefined,
-          skill_activation_reason: typeof event.skill_activation_reason === "string" ? event.skill_activation_reason : undefined,
-          skill_instruction_digest: typeof event.skill_instruction_digest === "string" ? event.skill_instruction_digest : undefined
+          skill_activation_mode:
+            typeof event.skill_activation_mode === "string"
+              ? event.skill_activation_mode
+              : undefined,
+          skill_activation_reason:
+            typeof event.skill_activation_reason === "string"
+              ? event.skill_activation_reason
+              : undefined,
+          skill_instruction_digest:
+            typeof event.skill_instruction_digest === "string"
+              ? event.skill_instruction_digest
+              : undefined,
         },
-        `history-result-${index}`
+        `history-result-${index}`,
       );
-      const existingIndex = result.toolUseId ? items.findIndex((item) => item.toolUseId === result.toolUseId) : -1;
+      const existingIndex = result.toolUseId
+        ? items.findIndex((item) => item.toolUseId === result.toolUseId)
+        : -1;
       if (existingIndex >= 0) {
         items[existingIndex] = { ...items[existingIndex], ...result, id: items[existingIndex].id };
       } else {
@@ -221,18 +279,20 @@ export function traceItemsFromAgentEvents(events: Array<Record<string, unknown>>
       return;
     }
     if (type === "workflow_replan") {
-      const addedTasks = Array.isArray(event.added_tasks) ? event.added_tasks.map(String).filter(Boolean) : [];
+      const addedTasks = Array.isArray(event.added_tasks)
+        ? event.added_tasks.map(String).filter(Boolean)
+        : [];
       items.push({
         id: `history-workflow-replan-${index}`,
         kind: "tool",
         title: "Planner 重新规划",
         content: [
           typeof event.reason === "string" ? event.reason : "",
-          addedTasks.length ? `新增任务: ${addedTasks.join(", ")}` : ""
+          addedTasks.length ? `新增任务: ${addedTasks.join(", ")}` : "",
         ]
           .filter(Boolean)
           .join("\n"),
-        status: "done"
+        status: "done",
       });
       return;
     }
@@ -251,7 +311,7 @@ export function traceItemsFromAgentEvents(events: Array<Record<string, unknown>>
         skillSteps: Array.isArray(event.skill_steps) ? event.skill_steps.map(String) : [],
         skillActivationMode: contextString(event.skill_activation_mode),
         skillActivationReason: contextString(event.skill_activation_reason),
-        skillInstructionDigest: contextString(event.skill_instruction_digest)
+        skillInstructionDigest: contextString(event.skill_instruction_digest),
       });
       return;
     }
@@ -262,7 +322,7 @@ export function traceItemsFromAgentEvents(events: Array<Record<string, unknown>>
         kind: "thinking",
         title: "Observer 检查",
         content: `confidence=${event.overall_confidence ?? "-"}, findings=${findings}`,
-        status: "done"
+        status: "done",
       });
     }
   });
@@ -271,10 +331,10 @@ export function traceItemsFromAgentEvents(events: Array<Record<string, unknown>>
 
 export function finalizedTraceItems(
   events: Array<Record<string, unknown>> | undefined,
-  fallback: ChatTraceItem[] | undefined
+  fallback: ChatTraceItem[] | undefined,
 ) {
   const finalized = traceItemsFromAgentEvents(events ?? []);
-  return finalized.length > 0 ? finalized : fallback ?? [];
+  return finalized.length > 0 ? finalized : (fallback ?? []);
 }
 
 export function formatRelativeTime(value?: string | null) {
@@ -291,7 +351,9 @@ export function formatRelativeTime(value?: string | null) {
   return `${Math.floor(diffMs / day)} 天`;
 }
 export function contextRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
 }
 
 export function contextNumber(value: unknown): number {
@@ -324,7 +386,9 @@ export function numberFromUnknown(value: unknown) {
 }
 
 export function recordFromUnknown(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
 }
 
 export function formatDateTime(value?: string | null) {
@@ -340,7 +404,7 @@ export function memoryCandidateKindLabel(kind: string) {
     fact: "事实",
     task: "任务",
     preference: "偏好",
-    repo_context: "项目上下文"
+    repo_context: "项目上下文",
   };
   return labels[kind] ?? kind;
 }
@@ -357,17 +421,24 @@ export function knowledgeTypeLabel(sourceType: string) {
 export function classifyIssue(issue: Issue) {
   const labels = (issue.labels ?? []).map((label) => label.toLowerCase());
   const text = `${issue.title} ${issue.body ?? ""}`.toLowerCase();
-  if (labels.some((label) => ["rejected", "wontfix", "invalid", "duplicate"].includes(label)) || text.includes("reject")) return "rejected";
-  if (labels.some((label) => ["accepted", "resolved", "done", "fixed"].includes(label))) return "accepted";
+  if (
+    labels.some((label) => ["rejected", "wontfix", "invalid", "duplicate"].includes(label)) ||
+    text.includes("reject")
+  )
+    return "rejected";
+  if (labels.some((label) => ["accepted", "resolved", "done", "fixed"].includes(label)))
+    return "accepted";
   if (issue.state === "closed") return "closed";
-  if (labels.some((label) => ["decision", "needs-decision", "rfc", "proposal"].includes(label))) return "decision";
+  if (labels.some((label) => ["decision", "needs-decision", "rfc", "proposal"].includes(label)))
+    return "decision";
   if ((issue.assignees?.length ?? 0) === 0 && !issue.body) return "unanswered";
   if (labels.length === 0 && (issue.assignees?.length ?? 0) === 0) return "unanswered";
   return "discussing";
 }
 
 export function classifyPr(pr: PullRequest) {
-  const text = `${pr.title} ${pr.body ?? ""} ${(pr.files ?? []).map((file) => file.patch ?? file.filename).join(" ")}`.toLowerCase();
+  const text =
+    `${pr.title} ${pr.body ?? ""} ${(pr.files ?? []).map((file) => file.patch ?? file.filename).join(" ")}`.toLowerCase();
   if (pr.state === "closed" && !pr.merged_at) return "rejected";
   if (text.includes("conflict")) return "conflict";
   if (pr.merged_at) return "done";
@@ -407,7 +478,7 @@ export function formatDate(value?: string | null) {
     month: "2-digit",
     day: "2-digit",
     hour: "2-digit",
-    minute: "2-digit"
+    minute: "2-digit",
   });
 }
 

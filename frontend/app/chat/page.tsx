@@ -32,15 +32,19 @@ export default function ChatPage() {
     setLoading(true);
     setResult("");
     try {
-      await apiPostStream("/api/chat/stream", { repo_id: repoId, message, context: { time_range: "7d", messages: [] } }, (event, rawData) => {
-        if (event === "delta") {
-          const data = rawData as { content?: string };
-          if (data.content) setResult((current) => current + data.content);
-        }
-        if (event === "final") {
-          setResult(JSON.stringify(rawData, null, 2));
-        }
-      });
+      await apiPostStream(
+        "/api/chat/stream",
+        { repo_id: repoId, message, context: { time_range: "7d", messages: [] } },
+        (event, rawData) => {
+          if (event === "delta") {
+            const data = rawData as { content?: string };
+            if (data.content) setResult((current) => current + data.content);
+          }
+          if (event === "final") {
+            setResult(JSON.stringify(rawData, null, 2));
+          }
+        },
+      );
     } finally {
       setLoading(false);
     }
@@ -59,7 +63,9 @@ export default function ChatPage() {
           onChange={(event) => setRepoId(event.target.value)}
         >
           {repos.map((repo) => (
-            <option key={repo.id} value={repo.id}>{repo.full_name}</option>
+            <option key={repo.id} value={repo.id}>
+              {repo.full_name}
+            </option>
           ))}
         </select>
         <textarea
@@ -80,11 +86,19 @@ export default function ChatPage() {
           ))}
         </div>
 
-        <PrimaryButton onClick={send} disabled={loading || !repoId || !message.trim()} className="mt-4">
+        <PrimaryButton
+          onClick={send}
+          disabled={loading || !repoId || !message.trim()}
+          className="mt-4"
+        >
           {loading ? "Analyzing..." : "Ask Agent"}
         </PrimaryButton>
 
-        {result && <pre className="mt-4 max-h-[560px] overflow-auto rounded-md border border-stone-700 bg-stone-950 p-4 text-xs text-stone-100">{result}</pre>}
+        {result && (
+          <pre className="mt-4 max-h-[560px] overflow-auto rounded-md border border-stone-700 bg-stone-950 p-4 text-xs text-stone-100">
+            {result}
+          </pre>
+        )}
       </Card>
     </>
   );

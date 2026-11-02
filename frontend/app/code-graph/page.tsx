@@ -15,9 +15,29 @@ type PullRequest = {
 
 type CodeGraph = {
   query: string;
-  symbols: Array<{ id: string; path: string; name: string; kind: string; start_line?: number | null; pr_number?: number | null }>;
-  relations: Array<{ id: string; source_name?: string | null; target_name: string; relation_type: string; path?: string | null; pr_number?: number | null }>;
-  documents: Array<{ id: string; title: string; path?: string; snippet: string; pr_number?: number | null }>;
+  symbols: Array<{
+    id: string;
+    path: string;
+    name: string;
+    kind: string;
+    start_line?: number | null;
+    pr_number?: number | null;
+  }>;
+  relations: Array<{
+    id: string;
+    source_name?: string | null;
+    target_name: string;
+    relation_type: string;
+    path?: string | null;
+    pr_number?: number | null;
+  }>;
+  documents: Array<{
+    id: string;
+    title: string;
+    path?: string;
+    snippet: string;
+    pr_number?: number | null;
+  }>;
 };
 
 type PrSnapshot = {
@@ -66,7 +86,9 @@ export default function CodeGraphPage() {
       const params = new URLSearchParams({ q: query });
       const activeSnapshotPrId = snapshotPrId ?? (snapshot?.status === "ready" ? prId : "");
       if (activeSnapshotPrId) params.set("pr_id", activeSnapshotPrId);
-      setGraph(await apiGet<CodeGraph>(`/api/repos/${repoId}/code-graph/search?${params.toString()}`));
+      setGraph(
+        await apiGet<CodeGraph>(`/api/repos/${repoId}/code-graph/search?${params.toString()}`),
+      );
     } finally {
       setLoading(false);
     }
@@ -86,7 +108,10 @@ export default function CodeGraphPage() {
 
   return (
     <>
-      <PageTitle title="代码图谱" description="检索代码 symbol、调用/导入关系，并为 PR 准备独立分支快照。" />
+      <PageTitle
+        title="代码图谱"
+        description="检索代码 symbol、调用/导入关系，并为 PR 准备独立分支快照。"
+      />
       <div className="grid gap-4 lg:grid-cols-[380px_1fr]">
         <Card>
           <label className="text-sm font-medium text-stone-200">
@@ -109,9 +134,17 @@ export default function CodeGraphPage() {
           </label>
           <label className="mt-4 block text-sm font-medium text-stone-200">
             搜索 symbol / path
-            <input className="mt-2 w-full rounded-md border border-line px-3 py-2" value={query} onChange={(event) => setQuery(event.target.value)} />
+            <input
+              className="mt-2 w-full rounded-md border border-line px-3 py-2"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
           </label>
-          <PrimaryButton className="mt-3" disabled={!repoId || loading} onClick={() => searchGraph()}>
+          <PrimaryButton
+            className="mt-3"
+            disabled={!repoId || loading}
+            onClick={() => searchGraph()}
+          >
             搜索图谱
           </PrimaryButton>
           <div className="mt-6 border-t border-line pt-4">
@@ -138,11 +171,15 @@ export default function CodeGraphPage() {
             </PrimaryButton>
             {snapshot && (
               <div className="mt-3 rounded-md border border-line bg-panel p-3 text-sm text-stone-200">
-                <div className="font-medium text-ink">{snapshot.snapshot_name || "PR 分支快照"}</div>
+                <div className="font-medium text-ink">
+                  {snapshot.snapshot_name || "PR 分支快照"}
+                </div>
                 <div className="mt-1">状态：{snapshot.status}</div>
                 {snapshot.branch && <div>分支：{snapshot.branch}</div>}
                 {snapshot.commit_sha && <div>Commit：{snapshot.commit_sha.slice(0, 12)}</div>}
-                {typeof snapshot.indexed_symbols === "number" && <div>代码图符号：{snapshot.indexed_symbols}</div>}
+                {typeof snapshot.indexed_symbols === "number" && (
+                  <div>代码图符号：{snapshot.indexed_symbols}</div>
+                )}
                 {snapshot.message && <div className="mt-1 text-stone-400">{snapshot.message}</div>}
               </div>
             )}
@@ -154,7 +191,10 @@ export default function CodeGraphPage() {
             <h2 className="font-semibold text-ink">Symbols</h2>
             <div className="mt-3 grid gap-2">
               {(graph?.symbols || []).map((item) => (
-                <div key={item.id} className="rounded-md border border-line bg-panel px-3 py-2 text-sm">
+                <div
+                  key={item.id}
+                  className="rounded-md border border-line bg-panel px-3 py-2 text-sm"
+                >
                   <span className="font-medium text-ink">{item.name}</span>
                   <span className="ml-2 text-stone-400">
                     {item.kind} · {item.path}:{item.start_line || 1}
@@ -169,9 +209,15 @@ export default function CodeGraphPage() {
             <h2 className="font-semibold text-ink">Relations</h2>
             <div className="mt-3 grid gap-2">
               {(graph?.relations || []).slice(0, 30).map((item) => (
-                <div key={item.id} className="rounded-md border border-line bg-panel px-3 py-2 text-sm text-stone-200">
-                  {item.source_name || item.path || "module"} - {item.relation_type} - {item.target_name}
-                  {item.pr_number ? <span className="ml-2 text-stone-400">PR #{item.pr_number}</span> : null}
+                <div
+                  key={item.id}
+                  className="rounded-md border border-line bg-panel px-3 py-2 text-sm text-stone-200"
+                >
+                  {item.source_name || item.path || "module"} - {item.relation_type} -{" "}
+                  {item.target_name}
+                  {item.pr_number ? (
+                    <span className="ml-2 text-stone-400">PR #{item.pr_number}</span>
+                  ) : null}
                 </div>
               ))}
             </div>
@@ -179,7 +225,10 @@ export default function CodeGraphPage() {
           <Card>
             <h2 className="font-semibold text-ink">相关代码片段</h2>
             {(graph?.documents || []).map((item) => (
-              <pre key={item.id} className="mt-3 max-h-48 overflow-auto rounded-md border border-stone-700 bg-stone-950 p-3 text-xs text-stone-100">
+              <pre
+                key={item.id}
+                className="mt-3 max-h-48 overflow-auto rounded-md border border-stone-700 bg-stone-950 p-3 text-xs text-stone-100"
+              >
                 {item.title}
                 {"\n\n"}
                 {item.snippet}

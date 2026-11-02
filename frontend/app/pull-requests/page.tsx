@@ -38,16 +38,27 @@ export default function PullRequestsPage() {
 
   return (
     <>
-      <PageTitle title="PR Review 助手" description="读取 changed files 和 diff，生成 PR 摘要、风险点、Review Checklist 与测试建议。" />
+      <PageTitle
+        title="PR Review 助手"
+        description="读取 changed files 和 diff，生成 PR 摘要、风险点、Review Checklist 与测试建议。"
+      />
       <div className="grid gap-4 lg:grid-cols-[380px_1fr]">
         <Card>
           <div className="flex items-center justify-between">
             <h2 className="font-semibold text-ink">Pull Requests</h2>
-            <span className="rounded-full bg-panel px-2.5 py-1 text-xs text-stone-400">{prs.length} 个</span>
+            <span className="rounded-full bg-panel px-2.5 py-1 text-xs text-stone-400">
+              {prs.length} 个
+            </span>
           </div>
           <div className="mt-4 space-y-2">
             {prs.map((pr) => (
-              <GhostButton key={pr.id} onClick={() => setSelected(pr)} className={selected?.id === pr.id ? "border-sage-600 bg-sage-900 text-sage-100" : ""}>
+              <GhostButton
+                key={pr.id}
+                onClick={() => setSelected(pr)}
+                className={
+                  selected?.id === pr.id ? "border-sage-600 bg-sage-900 text-sage-100" : ""
+                }
+              >
                 #{pr.number} {pr.title}
               </GhostButton>
             ))}
@@ -58,19 +69,32 @@ export default function PullRequestsPage() {
           <h2 className="font-semibold text-ink">Review 报告</h2>
           {selected && (
             <div className="mt-3 rounded-md bg-panel p-3">
-              <div className="text-sm font-medium text-ink">#{selected.number} {selected.title}</div>
+              <div className="text-sm font-medium text-ink">
+                #{selected.number} {selected.title}
+              </div>
               <div className="mt-3 grid gap-2">
                 {selected.files.map((file) => (
-                  <div key={file.filename} className="flex items-center justify-between rounded-md bg-panel px-3 py-2 text-sm text-stone-300">
+                  <div
+                    key={file.filename}
+                    className="flex items-center justify-between rounded-md bg-panel px-3 py-2 text-sm text-stone-300"
+                  >
                     <span className="truncate">{file.filename}</span>
-                    <span className="ml-3 whitespace-nowrap text-xs text-stone-400">+{file.additions} / -{file.deletions}</span>
+                    <span className="ml-3 whitespace-nowrap text-xs text-stone-400">
+                      +{file.additions} / -{file.deletions}
+                    </span>
                   </div>
                 ))}
               </div>
             </div>
           )}
-          <PrimaryButton onClick={analyze} disabled={!selected} className="mt-4">生成 PR 分析</PrimaryButton>
-          {analysis && <pre className="mt-4 max-h-[520px] overflow-auto rounded-md border border-stone-700 bg-stone-950 p-4 text-xs text-stone-100">{analysis}</pre>}
+          <PrimaryButton onClick={analyze} disabled={!selected} className="mt-4">
+            生成 PR 分析
+          </PrimaryButton>
+          {analysis && (
+            <pre className="mt-4 max-h-[520px] overflow-auto rounded-md border border-stone-700 bg-stone-950 p-4 text-xs text-stone-100">
+              {analysis}
+            </pre>
+          )}
         </Card>
       </div>
     </>

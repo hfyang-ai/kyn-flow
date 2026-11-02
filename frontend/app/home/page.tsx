@@ -2,23 +2,107 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
-import { AlertTriangle, CheckCircle2, ChevronDown, Folder, GitPullRequest, ListTodo, PanelLeftClose, PanelLeftOpen, Plus, RefreshCw, Send, Square, Trash2, XCircle } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  ChevronDown,
+  Folder,
+  GitPullRequest,
+  ListTodo,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Plus,
+  RefreshCw,
+  Send,
+  Square,
+  Trash2,
+  XCircle,
+} from "lucide-react";
 
 import { apiDelete, apiGet, apiPost, apiPostStream, apiUpload } from "@/lib/api";
 import type { Repository } from "@/lib/types";
 import { FeedbackControls, type ChatFeedbackRecord } from "@/components/feedback-controls";
 
-import type { AddProjectSource, AddProjectStatus, ChatHistoryMessage, ChatMessage, ChatPlanResponse, ChatStreamDelta, ChatStreamFinal, ChatStreamToolResult, ChatStreamToolUse, ChatTraceItem, ConversationDeleteResult, Issue, IssueAnalysisResponse, IssueAnalysisTraceItem, KnowledgeGraphResponse, KnowledgeItem, McpRuntime, MemoryNote, MemoryNoteDraft, PRAnalysisResponse, CIAnalysisResponse, ProjectConversation, ProjectIndexState, PromptRecommendationsResponse, PromptSuggestionState, PullRequest, RepoConnectResult, SkillResponse, TeamMember, TeamMemberDraft, WorkspaceSelection, WorkflowRun } from "./types";
+import type {
+  AddProjectSource,
+  AddProjectStatus,
+  ChatHistoryMessage,
+  ChatMessage,
+  ChatPlanResponse,
+  ChatStreamDelta,
+  ChatStreamFinal,
+  ChatStreamToolResult,
+  ChatStreamToolUse,
+  ChatTraceItem,
+  ConversationDeleteResult,
+  Issue,
+  IssueAnalysisResponse,
+  IssueAnalysisTraceItem,
+  KnowledgeGraphResponse,
+  KnowledgeItem,
+  McpRuntime,
+  MemoryNote,
+  MemoryNoteDraft,
+  PRAnalysisResponse,
+  CIAnalysisResponse,
+  ProjectConversation,
+  ProjectIndexState,
+  PromptRecommendationsResponse,
+  PromptSuggestionState,
+  PullRequest,
+  RepoConnectResult,
+  SkillResponse,
+  TeamMember,
+  TeamMemberDraft,
+  WorkspaceSelection,
+  WorkflowRun,
+} from "./types";
 import { issueCategoryMeta, prCategoryMeta, workspaceTabs, type WorkspaceTab } from "./constants";
-import { classifyIssue, classifyPr, finalizedTraceItems, formatRelativeTime, getFriendlyError, isDraftConversationId, makeDraftConversationId, makeToolResultTrace, makeToolUseTrace, matchesOwner, matchesQuery, matchesStatus, matchesTime, parseRepositoryInput, summarizeConversationTitle, traceItemsFromAgentEvents, wait } from "./utils";
+import {
+  classifyIssue,
+  classifyPr,
+  finalizedTraceItems,
+  formatRelativeTime,
+  getFriendlyError,
+  isDraftConversationId,
+  makeDraftConversationId,
+  makeToolResultTrace,
+  makeToolUseTrace,
+  matchesOwner,
+  matchesQuery,
+  matchesStatus,
+  matchesTime,
+  parseRepositoryInput,
+  summarizeConversationTitle,
+  traceItemsFromAgentEvents,
+  wait,
+} from "./utils";
 
-import { ChatTraceInline, ContextDiagnostics, MarkdownMessage, WorkflowPlanCard } from "./components/chat";
+import {
+  ChatTraceInline,
+  ContextDiagnostics,
+  MarkdownMessage,
+  WorkflowPlanCard,
+} from "./components/chat";
 import { SkillMcpWorkspace } from "./components/skill-mcp";
 import { CIAnalysisOverlay, IssueAnalysisOverlay, PRAnalysisOverlay } from "./components/analysis";
 import { AddProjectOverlay } from "./components/add-project";
-import { CategoryGroup, EmptyWorkspaceState, MetricCard, TeamWorkspace, WorkspaceControls, WorkspaceDetail, WorkspaceItemButton } from "./components/workspace";
+import {
+  CategoryGroup,
+  EmptyWorkspaceState,
+  MetricCard,
+  TeamWorkspace,
+  WorkspaceControls,
+  WorkspaceDetail,
+  WorkspaceItemButton,
+} from "./components/workspace";
 import { MemoryHubWorkspace, MemoryIndexPromptCard } from "./components/memory";
-import { KnowledgeGraphWorkspace, knowledgeGraphNodeKey, openGraphNodeInWorkspace, workspaceSelectionToGraphCenter } from "./components/knowledge-graph";
+import {
+  KnowledgeGraphWorkspace,
+  knowledgeGraphNodeKey,
+  openGraphNodeInWorkspace,
+  workspaceSelectionToGraphCenter,
+} from "./components/knowledge-graph";
 
 export default function DashboardPage() {
   const [repos, setRepos] = useState<Repository[]>([]);
@@ -37,10 +121,17 @@ export default function DashboardPage() {
   const [workspaceStatus, setWorkspaceStatus] = useState("all");
   const [workspaceOwner, setWorkspaceOwner] = useState("all");
   const [workspaceTime, setWorkspaceTime] = useState("all");
-  const [selectedWorkspaceItem, setSelectedWorkspaceItem] = useState<WorkspaceSelection | null>(null);
+  const [selectedWorkspaceItem, setSelectedWorkspaceItem] = useState<WorkspaceSelection | null>(
+    null,
+  );
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-  const [memberDraft, setMemberDraft] = useState<TeamMemberDraft>({ name: "", role: "", strengths: "", techStack: "" });
+  const [memberDraft, setMemberDraft] = useState<TeamMemberDraft>({
+    name: "",
+    role: "",
+    strengths: "",
+    techStack: "",
+  });
   const [memoryNotes, setMemoryNotes] = useState<MemoryNote[]>([]);
   const [memoryDraft, setMemoryDraft] = useState<MemoryNoteDraft>({ title: "", content: "" });
   const [knowledgeItems, setKnowledgeItems] = useState<KnowledgeItem[]>([]);
@@ -50,10 +141,14 @@ export default function DashboardPage() {
   const [selectedSkillName, setSelectedSkillName] = useState("project-investigation");
   const [skillRuntimeLoading, setSkillRuntimeLoading] = useState(false);
   const [skillRuntimeError, setSkillRuntimeError] = useState<string | null>(null);
-  const [projectIndexByRepo, setProjectIndexByRepo] = useState<Record<string, ProjectIndexState>>({});
+  const [projectIndexByRepo, setProjectIndexByRepo] = useState<Record<string, ProjectIndexState>>(
+    {},
+  );
   const [indexScanningRepoId, setIndexScanningRepoId] = useState<string | null>(null);
   const [indexActionError, setIndexActionError] = useState<string | null>(null);
-  const [knowledgeGraphByRepo, setKnowledgeGraphByRepo] = useState<Record<string, KnowledgeGraphResponse | null>>({});
+  const [knowledgeGraphByRepo, setKnowledgeGraphByRepo] = useState<
+    Record<string, KnowledgeGraphResponse | null>
+  >({});
   const [graphLoadingRepoId, setGraphLoadingRepoId] = useState<string | null>(null);
   const [graphError, setGraphError] = useState<string | null>(null);
   const [graphQuery, setGraphQuery] = useState("");
@@ -74,21 +169,31 @@ export default function DashboardPage() {
   const [connectingProject, setConnectingProject] = useState(false);
   const [loading, setLoading] = useState(false);
   const [planMode, setPlanMode] = useState(false);
-  const [promptStateByRepo, setPromptStateByRepo] = useState<Record<string, PromptSuggestionState>>({});
+  const [promptStateByRepo, setPromptStateByRepo] = useState<Record<string, PromptSuggestionState>>(
+    {},
+  );
   const [loadingPromptRepoId, setLoadingPromptRepoId] = useState<string | null>(null);
   const [promptLoadingDots, setPromptLoadingDots] = useState(".");
-  const [issueAnalysisById, setIssueAnalysisById] = useState<Record<string, IssueAnalysisResponse>>({});
-  const [issueAnalysisTraceById, setIssueAnalysisTraceById] = useState<Record<string, IssueAnalysisTraceItem[]>>({});
+  const [issueAnalysisById, setIssueAnalysisById] = useState<Record<string, IssueAnalysisResponse>>(
+    {},
+  );
+  const [issueAnalysisTraceById, setIssueAnalysisTraceById] = useState<
+    Record<string, IssueAnalysisTraceItem[]>
+  >({});
   const [analysisModalIssueId, setAnalysisModalIssueId] = useState<string | null>(null);
   const [analyzingIssueId, setAnalyzingIssueId] = useState<string | null>(null);
   const [issueAnalysisError, setIssueAnalysisError] = useState<string | null>(null);
   const [prAnalysisById, setPrAnalysisById] = useState<Record<string, PRAnalysisResponse>>({});
-  const [prAnalysisTraceById, setPrAnalysisTraceById] = useState<Record<string, IssueAnalysisTraceItem[]>>({});
+  const [prAnalysisTraceById, setPrAnalysisTraceById] = useState<
+    Record<string, IssueAnalysisTraceItem[]>
+  >({});
   const [analysisModalPrId, setAnalysisModalPrId] = useState<string | null>(null);
   const [analyzingPrId, setAnalyzingPrId] = useState<string | null>(null);
   const [prAnalysisError, setPrAnalysisError] = useState<string | null>(null);
   const [ciAnalysisById, setCiAnalysisById] = useState<Record<string, CIAnalysisResponse>>({});
-  const [ciAnalysisTraceById, setCiAnalysisTraceById] = useState<Record<string, IssueAnalysisTraceItem[]>>({});
+  const [ciAnalysisTraceById, setCiAnalysisTraceById] = useState<
+    Record<string, IssueAnalysisTraceItem[]>
+  >({});
   const [analysisModalRunId, setAnalysisModalRunId] = useState<string | null>(null);
   const [analyzingRunId, setAnalyzingRunId] = useState<string | null>(null);
   const [ciAnalysisError, setCiAnalysisError] = useState<string | null>(null);
@@ -101,12 +206,16 @@ export default function DashboardPage() {
   const promptMeasureRef = useRef<HTMLDivElement>(null);
   const [visiblePromptCount, setVisiblePromptCount] = useState(5);
 
-  const selectedRepo = useMemo(() => repos.find((repo) => repo.id === selectedRepoId) ?? repos[0], [repos, selectedRepoId]);
-  const selectedRepoConversations = selectedRepo ? conversationMap[selectedRepo.id] ?? [] : [];
+  const selectedRepo = useMemo(
+    () => repos.find((repo) => repo.id === selectedRepoId) ?? repos[0],
+    [repos, selectedRepoId],
+  );
+  const selectedRepoConversations = selectedRepo ? (conversationMap[selectedRepo.id] ?? []) : [];
   const isDraftConversation = isDraftConversationId(selectedConversationId);
   const selectedConversation = isDraftConversation
     ? undefined
-    : selectedRepoConversations.find((item) => item.id === selectedConversationId) ?? selectedRepoConversations[0];
+    : (selectedRepoConversations.find((item) => item.id === selectedConversationId) ??
+      selectedRepoConversations[0]);
   const selectedPromptState = selectedRepo ? promptStateByRepo[selectedRepo.id] : undefined;
   const selectedProjectIndexState = selectedRepo ? projectIndexByRepo[selectedRepo.id] : undefined;
   const selectedKnowledgeGraph = selectedRepo ? knowledgeGraphByRepo[selectedRepo.id] : null;
@@ -118,7 +227,15 @@ export default function DashboardPage() {
     const items = await apiGet<Repository[]>("/api/repos");
     setRepos(items);
     const pairs = await Promise.all(
-      items.map(async (repo) => [repo.id, await apiGet<ProjectConversation[]>(`/api/repos/${repo.id}/conversations`).catch(() => [])] as const)
+      items.map(
+        async (repo) =>
+          [
+            repo.id,
+            await apiGet<ProjectConversation[]>(`/api/repos/${repo.id}/conversations`).catch(
+              () => [],
+            ),
+          ] as const,
+      ),
     );
     const nextMap = Object.fromEntries(pairs);
     setConversationMap(nextMap);
@@ -127,11 +244,15 @@ export default function DashboardPage() {
       return firstRepoId && Object.keys(current).length === 0 ? { [firstRepoId]: true } : current;
     });
     setSelectedRepoId((current) => current || items[0]?.id || "");
-    setSelectedConversationId((current) => current || (items[0] ? nextMap[items[0].id]?.[0]?.id ?? "" : ""));
+    setSelectedConversationId(
+      (current) => current || (items[0] ? (nextMap[items[0].id]?.[0]?.id ?? "") : ""),
+    );
   }
 
   async function loadRepoConversations(repoId: string) {
-    const conversations = await apiGet<ProjectConversation[]>(`/api/repos/${repoId}/conversations`).catch(() => []);
+    const conversations = await apiGet<ProjectConversation[]>(
+      `/api/repos/${repoId}/conversations`,
+    ).catch(() => []);
     setConversationMap((items) => ({ ...items, [repoId]: conversations }));
     return conversations;
   }
@@ -140,7 +261,7 @@ export default function DashboardPage() {
     const [issueItems, prItems, runItems] = await Promise.all([
       apiGet<Issue[]>(`/api/repos/${repoId}/issues`).catch(() => []),
       apiGet<PullRequest[]>(`/api/repos/${repoId}/pull-requests`).catch(() => []),
-      apiGet<WorkflowRun[]>(`/api/repos/${repoId}/workflow-runs`).catch(() => [])
+      apiGet<WorkflowRun[]>(`/api/repos/${repoId}/workflow-runs`).catch(() => []),
     ]);
     setIssues(issueItems);
     setPrs(prItems);
@@ -153,14 +274,14 @@ export default function DashboardPage() {
     try {
       const [skillList, runtime] = await Promise.all([
         apiGet<{ skills: SkillResponse[] }>("/api/skills"),
-        apiGet<McpRuntime>("/api/skills/mcp-status")
+        apiGet<McpRuntime>("/api/skills/mcp-status"),
       ]);
       setSkills(skillList.skills);
       setMcpRuntime(runtime);
       setSelectedSkillName((current) =>
         skillList.skills.some((item) => item.manifest.name === current)
           ? current
-          : skillList.skills[0]?.manifest.name ?? ""
+          : (skillList.skills[0]?.manifest.name ?? ""),
       );
     } catch (error) {
       setSkillRuntimeError(getFriendlyError(error));
@@ -175,7 +296,7 @@ export default function DashboardPage() {
       const result = await apiPost<PromptRecommendationsResponse>("/api/chat/recommendations", {
         repo_id: repoId,
         exclude,
-        limit: 5
+        limit: 5,
       });
       const nextSuggestions = result.suggestions;
       setPromptStateByRepo((items) => {
@@ -185,8 +306,8 @@ export default function DashboardPage() {
           [repoId]: {
             ...current,
             suggestions: nextSuggestions.length ? nextSuggestions : current.suggestions,
-            exclude: nextSuggestions.length ? [...exclude, ...nextSuggestions] : []
-          }
+            exclude: nextSuggestions.length ? [...exclude, ...nextSuggestions] : [],
+          },
         };
       });
     } catch {
@@ -196,8 +317,8 @@ export default function DashboardPage() {
           ...items,
           [repoId]: {
             ...current,
-            exclude
-          }
+            exclude,
+          },
         };
       });
     } finally {
@@ -221,23 +342,29 @@ export default function DashboardPage() {
           kind: "step",
           title: "准备分析",
           content: `准备分析 Issue #${issue.number}，将流式展示可见的分析过程。`,
-          status: "running"
-        }
-      ]
+          status: "running",
+        },
+      ],
     }));
     setAnalyzingIssueId(issue.id);
     try {
-      const conversationQuery = selectedConversation?.id && !isDraftConversation ? `?conversation_id=${selectedConversation.id}` : "";
+      const conversationQuery =
+        selectedConversation?.id && !isDraftConversation
+          ? `?conversation_id=${selectedConversation.id}`
+          : "";
       await apiPostStream(
         `/api/issues/${issue.id}/analyze/stream${conversationQuery}`,
         {},
         (event, data) => {
           if (event === "trace") {
             const payload = data as Omit<IssueAnalysisTraceItem, "id">;
-            const item: IssueAnalysisTraceItem = { id: `${Date.now()}-${Math.random()}`, ...payload };
+            const item: IssueAnalysisTraceItem = {
+              id: `${Date.now()}-${Math.random()}`,
+              ...payload,
+            };
             setIssueAnalysisTraceById((items) => ({
               ...items,
-              [issue.id]: [...(items[issue.id] ?? []), item]
+              [issue.id]: [...(items[issue.id] ?? []), item],
             }));
             return;
           }
@@ -251,7 +378,10 @@ export default function DashboardPage() {
               if (last?.kind === "thinking" && last.status === "running") {
                 return {
                   ...items,
-                  [issue.id]: [...current.slice(0, -1), { ...last, content: `${last.content}${content}` }]
+                  [issue.id]: [
+                    ...current.slice(0, -1),
+                    { ...last, content: `${last.content}${content}` },
+                  ],
                 };
               }
               return {
@@ -263,9 +393,9 @@ export default function DashboardPage() {
                     kind: "thinking",
                     title: "LLM 公开分析过程",
                     content,
-                    status: "running"
-                  }
-                ]
+                    status: "running",
+                  },
+                ],
               };
             });
             return;
@@ -274,7 +404,9 @@ export default function DashboardPage() {
             const result = data as IssueAnalysisResponse;
             setIssueAnalysisById((items) => ({ ...items, [issue.id]: result }));
             setIssueAnalysisTraceById((items) => {
-              const current = (items[issue.id] ?? []).map((item) => (item.kind === "thinking" ? { ...item, status: "done" } : item));
+              const current = (items[issue.id] ?? []).map((item) =>
+                item.kind === "thinking" ? { ...item, status: "done" } : item,
+              );
               return {
                 ...items,
                 [issue.id]: [
@@ -284,9 +416,9 @@ export default function DashboardPage() {
                     kind: "result",
                     title: "分析完成",
                     content: `已生成结构化结论：${result.result.conclusion}，优先级 ${result.result.priority}，复杂度 ${result.result.complexity}。`,
-                    status: "done"
-                  }
-                ]
+                    status: "done",
+                  },
+                ],
               };
             });
             return;
@@ -299,11 +431,17 @@ export default function DashboardPage() {
               ...items,
               [issue.id]: [
                 ...(items[issue.id] ?? []),
-                { id: `${Date.now()}-error`, kind: "error", title: "分析失败", content: message, status: "error" }
-              ]
+                {
+                  id: `${Date.now()}-error`,
+                  kind: "error",
+                  title: "分析失败",
+                  content: message,
+                  status: "error",
+                },
+              ],
             }));
           }
-        }
+        },
       );
     } catch (error) {
       setIssueAnalysisError(getFriendlyError(error));
@@ -311,8 +449,14 @@ export default function DashboardPage() {
         ...items,
         [issue.id]: [
           ...(items[issue.id] ?? []),
-          { id: `${Date.now()}-error`, kind: "error", title: "请求失败", content: getFriendlyError(error), status: "error" }
-        ]
+          {
+            id: `${Date.now()}-error`,
+            kind: "error",
+            title: "请求失败",
+            content: getFriendlyError(error),
+            status: "error",
+          },
+        ],
       }));
     } finally {
       setAnalyzingIssueId((current) => (current === issue.id ? null : current));
@@ -335,23 +479,29 @@ export default function DashboardPage() {
           kind: "step",
           title: "准备分析",
           content: `准备分析 PR #${pr.number}，将按 plan-and-execute 方式展示 Review 计划、执行过程和合入建议。`,
-          status: "running"
-        }
-      ]
+          status: "running",
+        },
+      ],
     }));
     setAnalyzingPrId(pr.id);
     try {
-      const conversationQuery = selectedConversation?.id && !isDraftConversation ? `?conversation_id=${selectedConversation.id}` : "";
+      const conversationQuery =
+        selectedConversation?.id && !isDraftConversation
+          ? `?conversation_id=${selectedConversation.id}`
+          : "";
       await apiPostStream(
         `/api/pull-requests/${pr.id}/analyze/stream${conversationQuery}`,
         {},
         (event, data) => {
           if (event === "trace") {
             const payload = data as Omit<IssueAnalysisTraceItem, "id">;
-            const item: IssueAnalysisTraceItem = { id: `${Date.now()}-${Math.random()}`, ...payload };
+            const item: IssueAnalysisTraceItem = {
+              id: `${Date.now()}-${Math.random()}`,
+              ...payload,
+            };
             setPrAnalysisTraceById((items) => ({
               ...items,
-              [pr.id]: [...(items[pr.id] ?? []), item]
+              [pr.id]: [...(items[pr.id] ?? []), item],
             }));
             return;
           }
@@ -365,7 +515,10 @@ export default function DashboardPage() {
               if (last?.kind === "thinking" && last.status === "running") {
                 return {
                   ...items,
-                  [pr.id]: [...current.slice(0, -1), { ...last, content: `${last.content}${content}` }]
+                  [pr.id]: [
+                    ...current.slice(0, -1),
+                    { ...last, content: `${last.content}${content}` },
+                  ],
                 };
               }
               return {
@@ -377,9 +530,9 @@ export default function DashboardPage() {
                     kind: "thinking",
                     title: "LLM 公开执行过程",
                     content,
-                    status: "running"
-                  }
-                ]
+                    status: "running",
+                  },
+                ],
               };
             });
             return;
@@ -388,7 +541,9 @@ export default function DashboardPage() {
             const result = data as PRAnalysisResponse;
             setPrAnalysisById((items) => ({ ...items, [pr.id]: result }));
             setPrAnalysisTraceById((items) => {
-              const current = (items[pr.id] ?? []).map((item) => (item.kind === "thinking" ? { ...item, status: "done" } : item));
+              const current = (items[pr.id] ?? []).map((item) =>
+                item.kind === "thinking" ? { ...item, status: "done" } : item,
+              );
               return {
                 ...items,
                 [pr.id]: [
@@ -398,9 +553,9 @@ export default function DashboardPage() {
                     kind: "result",
                     title: "分析完成",
                     content: `已生成 PR 合入建议：${result.result.merge_recommendation}，风险点 ${(result.result.risk_points ?? []).length} 个，阻塞项 ${(result.result.blocking_issues ?? []).length} 个。`,
-                    status: "done"
-                  }
-                ]
+                    status: "done",
+                  },
+                ],
               };
             });
             return;
@@ -413,11 +568,17 @@ export default function DashboardPage() {
               ...items,
               [pr.id]: [
                 ...(items[pr.id] ?? []),
-                { id: `${Date.now()}-error`, kind: "error", title: "分析失败", content: message, status: "error" }
-              ]
+                {
+                  id: `${Date.now()}-error`,
+                  kind: "error",
+                  title: "分析失败",
+                  content: message,
+                  status: "error",
+                },
+              ],
             }));
           }
-        }
+        },
       );
     } catch (error) {
       setPrAnalysisError(getFriendlyError(error));
@@ -425,8 +586,14 @@ export default function DashboardPage() {
         ...items,
         [pr.id]: [
           ...(items[pr.id] ?? []),
-          { id: `${Date.now()}-error`, kind: "error", title: "请求失败", content: getFriendlyError(error), status: "error" }
-        ]
+          {
+            id: `${Date.now()}-error`,
+            kind: "error",
+            title: "请求失败",
+            content: getFriendlyError(error),
+            status: "error",
+          },
+        ],
       }));
     } finally {
       setAnalyzingPrId((current) => (current === pr.id ? null : current));
@@ -449,23 +616,29 @@ export default function DashboardPage() {
           kind: "step",
           title: "准备排查",
           content: `准备排查 CI「${run.name}」，将按 plan-and-execute 方式展示排查计划、执行过程、根因和阻塞判断。`,
-          status: "running"
-        }
-      ]
+          status: "running",
+        },
+      ],
     }));
     setAnalyzingRunId(run.id);
     try {
-      const conversationQuery = selectedConversation?.id && !isDraftConversation ? `?conversation_id=${selectedConversation.id}` : "";
+      const conversationQuery =
+        selectedConversation?.id && !isDraftConversation
+          ? `?conversation_id=${selectedConversation.id}`
+          : "";
       await apiPostStream(
         `/api/workflow-runs/${run.id}/analyze/stream${conversationQuery}`,
         {},
         (event, data) => {
           if (event === "trace") {
             const payload = data as Omit<IssueAnalysisTraceItem, "id">;
-            const item: IssueAnalysisTraceItem = { id: `${Date.now()}-${Math.random()}`, ...payload };
+            const item: IssueAnalysisTraceItem = {
+              id: `${Date.now()}-${Math.random()}`,
+              ...payload,
+            };
             setCiAnalysisTraceById((items) => ({
               ...items,
-              [run.id]: [...(items[run.id] ?? []), item]
+              [run.id]: [...(items[run.id] ?? []), item],
             }));
             return;
           }
@@ -479,7 +652,10 @@ export default function DashboardPage() {
               if (last?.kind === "thinking" && last.status === "running") {
                 return {
                   ...items,
-                  [run.id]: [...current.slice(0, -1), { ...last, content: `${last.content}${content}` }]
+                  [run.id]: [
+                    ...current.slice(0, -1),
+                    { ...last, content: `${last.content}${content}` },
+                  ],
                 };
               }
               return {
@@ -491,9 +667,9 @@ export default function DashboardPage() {
                     kind: "thinking",
                     title: "LLM 公开排查过程",
                     content,
-                    status: "running"
-                  }
-                ]
+                    status: "running",
+                  },
+                ],
               };
             });
             return;
@@ -502,7 +678,9 @@ export default function DashboardPage() {
             const result = data as CIAnalysisResponse;
             setCiAnalysisById((items) => ({ ...items, [run.id]: result }));
             setCiAnalysisTraceById((items) => {
-              const current = (items[run.id] ?? []).map((item) => (item.kind === "thinking" ? { ...item, status: "done" } : item));
+              const current = (items[run.id] ?? []).map((item) =>
+                item.kind === "thinking" ? { ...item, status: "done" } : item,
+              );
               return {
                 ...items,
                 [run.id]: [
@@ -512,9 +690,9 @@ export default function DashboardPage() {
                     kind: "result",
                     title: "排查完成",
                     content: `已生成 CI 根因判断：${result.result.failure_type}；${result.result.is_merge_blocking ? "阻塞合并" : "不阻塞合并"}。`,
-                    status: "done"
-                  }
-                ]
+                    status: "done",
+                  },
+                ],
               };
             });
             return;
@@ -527,11 +705,17 @@ export default function DashboardPage() {
               ...items,
               [run.id]: [
                 ...(items[run.id] ?? []),
-                { id: `${Date.now()}-error`, kind: "error", title: "排查失败", content: message, status: "error" }
-              ]
+                {
+                  id: `${Date.now()}-error`,
+                  kind: "error",
+                  title: "排查失败",
+                  content: message,
+                  status: "error",
+                },
+              ],
             }));
           }
-        }
+        },
       );
     } catch (error) {
       setCiAnalysisError(getFriendlyError(error));
@@ -539,8 +723,14 @@ export default function DashboardPage() {
         ...items,
         [run.id]: [
           ...(items[run.id] ?? []),
-          { id: `${Date.now()}-error`, kind: "error", title: "请求失败", content: getFriendlyError(error), status: "error" }
-        ]
+          {
+            id: `${Date.now()}-error`,
+            kind: "error",
+            title: "请求失败",
+            content: getFriendlyError(error),
+            status: "error",
+          },
+        ],
       }));
     } finally {
       setAnalyzingRunId((current) => (current === run.id ? null : current));
@@ -550,7 +740,7 @@ export default function DashboardPage() {
   async function loadProjectKnowledge(repoId: string) {
     const [members, knowledge] = await Promise.all([
       apiGet<TeamMember[]>(`/api/repos/${repoId}/team-members`).catch(() => []),
-      apiGet<KnowledgeItem[]>(`/api/repos/${repoId}/knowledge`).catch(() => [])
+      apiGet<KnowledgeItem[]>(`/api/repos/${repoId}/knowledge`).catch(() => []),
     ]);
     setTeamMembers(members);
     setKnowledgeItems(knowledge);
@@ -560,13 +750,15 @@ export default function DashboardPage() {
         .map((item) => ({
           id: item.id,
           title: item.title,
-          content: item.content_preview
-        }))
+          content: item.content_preview,
+        })),
     );
   }
 
   async function loadProjectIndexState(repoId: string) {
-    const state = await apiGet<ProjectIndexState>(`/api/repos/${repoId}/memory-index/state`).catch(() => null);
+    const state = await apiGet<ProjectIndexState>(`/api/repos/${repoId}/memory-index/state`).catch(
+      () => null,
+    );
     if (state) {
       setProjectIndexByRepo((items) => ({ ...items, [repoId]: state }));
     }
@@ -582,9 +774,13 @@ export default function DashboardPage() {
         params.set("center_type", center.type);
         params.set("center_id", center.id);
       }
-      const graph = await apiGet<KnowledgeGraphResponse>(`/api/repos/${repoId}/knowledge/graph?${params.toString()}`);
+      const graph = await apiGet<KnowledgeGraphResponse>(
+        `/api/repos/${repoId}/knowledge/graph?${params.toString()}`,
+      );
       setKnowledgeGraphByRepo((items) => ({ ...items, [repoId]: graph }));
-      const preferred = center ? graph.nodes.find((node) => node.type === center.type && node.id === center.id) : graph.nodes[0];
+      const preferred = center
+        ? graph.nodes.find((node) => node.type === center.type && node.id === center.id)
+        : graph.nodes[0];
       setSelectedGraphNodeKey(preferred ? knowledgeGraphNodeKey(preferred) : null);
       return graph;
     } catch (error) {
@@ -626,8 +822,8 @@ export default function DashboardPage() {
         error_message: null,
         summary_json: items[repoId]?.summary_json ?? null,
         snoozed_until: null,
-        last_scan_at: items[repoId]?.last_scan_at ?? null
-      }
+        last_scan_at: items[repoId]?.last_scan_at ?? null,
+      },
     }));
     try {
       await apiPost(`/api/repos/${repoId}/memory-index/scan`, {});
@@ -667,7 +863,7 @@ export default function DashboardPage() {
     return {
       id: `welcome-${repo.id}-${conversation?.id ?? "default"}`,
       role: "assistant",
-      content: `已切换到仓库 ${repo.full_name}${conversation ? ` / ${conversation.title}` : ""}。你可以直接问我 Issue、PR、CI 或周报相关问题。`
+      content: `已切换到仓库 ${repo.full_name}${conversation ? ` / ${conversation.title}` : ""}。你可以直接问我 Issue、PR、CI 或周报相关问题。`,
     };
   }
 
@@ -679,7 +875,7 @@ export default function DashboardPage() {
       while (true) {
         const cursor = beforeMessageId ? `&before_message_id=${beforeMessageId}` : "";
         const page = await apiGet<ChatHistoryMessage[]>(
-          `/api/chat/history?repo_id=${repo.id}&conversation_id=${conversation.id}&limit=${pageSize}${cursor}`
+          `/api/chat/history?repo_id=${repo.id}&conversation_id=${conversation.id}&limit=${pageSize}${cursor}`,
         );
         history.unshift(...page);
         if (page.length < pageSize) break;
@@ -692,13 +888,17 @@ export default function DashboardPage() {
 
     const [history, feedbackRows] = await Promise.all([
       loadCompleteHistory(),
-      apiGet<ChatFeedbackRecord[]>(`/api/chat/feedback?repo_id=${repo.id}&conversation_id=${conversation.id}&limit=200`)
+      apiGet<ChatFeedbackRecord[]>(
+        `/api/chat/feedback?repo_id=${repo.id}&conversation_id=${conversation.id}&limit=200`,
+      ),
     ]);
     if (!history.length) {
       setMessages([welcomeMessage(repo, conversation)]);
       return;
     }
-    const feedbackByMessage = new Map(feedbackRows.map((item) => [item.assistant_message_id, item]));
+    const feedbackByMessage = new Map(
+      feedbackRows.map((item) => [item.assistant_message_id, item]),
+    );
     setMessages(
       history
         .filter((item) => item.role === "user" || item.role === "assistant")
@@ -717,8 +917,8 @@ export default function DashboardPage() {
           contextDiagnostics: item.context_diagnostics,
           contextCollapsed: true,
           responsePending: false,
-          feedback: feedbackByMessage.get(item.id)
-        }))
+          feedback: feedbackByMessage.get(item.id),
+        })),
     );
   }
 
@@ -776,7 +976,9 @@ export default function DashboardPage() {
     const conversations = conversationMap[selectedRepo.id] ?? [];
     if (conversations.length === 0) {
       loadRepoConversations(selectedRepo.id).then((items) => {
-        setSelectedConversationId((current) => (items.some((item) => item.id === current) ? current : items[0]?.id || ""));
+        setSelectedConversationId((current) =>
+          items.some((item) => item.id === current) ? current : items[0]?.id || "",
+        );
       });
       return;
     }
@@ -792,7 +994,9 @@ export default function DashboardPage() {
       return;
     }
     if (selectedRepo?.id && selectedConversation?.id) {
-      loadChatHistory(selectedRepo, selectedConversation).catch(() => setMessages([welcomeMessage(selectedRepo, selectedConversation)]));
+      loadChatHistory(selectedRepo, selectedConversation).catch(() =>
+        setMessages([welcomeMessage(selectedRepo, selectedConversation)]),
+      );
     }
   }, [selectedRepo?.id, selectedConversation?.id, isDraftConversation]);
 
@@ -835,7 +1039,9 @@ export default function DashboardPage() {
       const measure = promptMeasureRef.current;
       if (!row || !measure) return;
       const rowWidth = row.clientWidth;
-      const chips = Array.from(measure.querySelectorAll<HTMLButtonElement>("[data-prompt-chip-measure]"));
+      const chips = Array.from(
+        measure.querySelectorAll<HTMLButtonElement>("[data-prompt-chip-measure]"),
+      );
       if (!rowWidth || chips.length === 0) return;
 
       const gap = 8;
@@ -894,8 +1100,12 @@ export default function DashboardPage() {
   async function selectProject(repo: Repository) {
     setSelectedRepoId(repo.id);
     setExpandedRepoIds((items) => ({ ...items, [repo.id]: !items[repo.id] }));
-    const conversations = conversationMap[repo.id]?.length ? conversationMap[repo.id] : await loadRepoConversations(repo.id);
-    setSelectedConversationId((current) => (conversations.some((item) => item.id === current) ? current : conversations[0]?.id || ""));
+    const conversations = conversationMap[repo.id]?.length
+      ? conversationMap[repo.id]
+      : await loadRepoConversations(repo.id);
+    setSelectedConversationId((current) =>
+      conversations.some((item) => item.id === current) ? current : conversations[0]?.id || "",
+    );
   }
 
   async function selectConversation(repo: Repository, conversation: ProjectConversation) {
@@ -914,9 +1124,13 @@ export default function DashboardPage() {
   }
 
   async function removeConversation(repo: Repository, conversation: ProjectConversation) {
-    const confirmed = window.confirm(`确定删除会话“${conversation.title}”吗？\n\n只会删除这个会话的聊天上下文，不会删除项目知识库。`);
+    const confirmed = window.confirm(
+      `确定删除会话“${conversation.title}”吗？\n\n只会删除这个会话的聊天上下文，不会删除项目知识库。`,
+    );
     if (!confirmed) return;
-    const result = await apiDelete<ConversationDeleteResult>(`/api/repos/${repo.id}/conversations/${conversation.id}`);
+    const result = await apiDelete<ConversationDeleteResult>(
+      `/api/repos/${repo.id}/conversations/${conversation.id}`,
+    );
     setConversationMap((items) => ({ ...items, [repo.id]: result.conversations }));
     if (selectedConversationId === conversation.id) {
       setSelectedRepoId(repo.id);
@@ -930,7 +1144,7 @@ export default function DashboardPage() {
       name: memberDraft.name.trim(),
       role: memberDraft.role.trim(),
       strengths: memberDraft.strengths.trim(),
-      techStack: memberDraft.techStack.trim()
+      techStack: memberDraft.techStack.trim(),
     });
     setTeamMembers((items) => [...items.filter((item) => item.id !== created.id), created]);
     setMemberDraft({ name: "", role: "", strengths: "", techStack: "" });
@@ -950,7 +1164,7 @@ export default function DashboardPage() {
     if (!selectedRepo || (!memoryDraft.title.trim() && !memoryDraft.content.trim())) return;
     await apiPost<KnowledgeItem>(`/api/repos/${selectedRepo.id}/knowledge/notes`, {
       title: memoryDraft.title.trim(),
-      content: memoryDraft.content.trim()
+      content: memoryDraft.content.trim(),
     });
     setMemoryDraft({ title: "", content: "" });
     await loadProjectKnowledge(selectedRepo.id);
@@ -981,7 +1195,9 @@ export default function DashboardPage() {
 
   async function removeKnowledgeItem(item: KnowledgeItem) {
     if (!selectedRepo) return;
-    await apiDelete(`/api/repos/${selectedRepo.id}/knowledge/${item.id}?source_type=${encodeURIComponent(item.source_type)}`);
+    await apiDelete(
+      `/api/repos/${selectedRepo.id}/knowledge/${item.id}?source_type=${encodeURIComponent(item.source_type)}`,
+    );
     await loadProjectKnowledge(selectedRepo.id);
     await loadKnowledgeGraph(selectedRepo.id);
   }
@@ -994,7 +1210,7 @@ export default function DashboardPage() {
         sync_issues: true,
         sync_pull_requests: true,
         sync_workflow_runs: true,
-        limit: 50
+        limit: 50,
       });
       await Promise.all([
         loadRepos(),
@@ -1002,7 +1218,7 @@ export default function DashboardPage() {
         loadProjectKnowledge(selectedRepo.id),
         loadProjectIndexState(selectedRepo.id),
         loadKnowledgeGraph(selectedRepo.id),
-        loadRepoConversations(selectedRepo.id)
+        loadRepoConversations(selectedRepo.id),
       ]);
       setPromptStateByRepo((items) => {
         const next = { ...items };
@@ -1032,7 +1248,8 @@ export default function DashboardPage() {
       setAddProjectStatus({
         type: "error",
         title: "连接失败",
-        detail: "请输入 GitHub 仓库地址，或 owner/repo 格式，例如 https://github.com/openai/codex。"
+        detail:
+          "请输入 GitHub 仓库地址，或 owner/repo 格式，例如 https://github.com/openai/codex。",
       });
       return;
     }
@@ -1040,7 +1257,7 @@ export default function DashboardPage() {
       setAddProjectStatus({
         type: "error",
         title: "连接失败",
-        detail: "请输入本地 Git 仓库路径。"
+        detail: "请输入本地 Git 仓库路径。",
       });
       return;
     }
@@ -1052,17 +1269,18 @@ export default function DashboardPage() {
         owner: parsed?.owner,
         repo: parsed?.repo,
         local_path: isLocalSource ? projectLocalPath.trim() : undefined,
-        clone_parent_dir: !isLocalSource && projectCloneParentDir.trim() ? projectCloneParentDir.trim() : undefined,
+        clone_parent_dir:
+          !isLocalSource && projectCloneParentDir.trim() ? projectCloneParentDir.trim() : undefined,
         provider: projectProvider,
         api_base_url: projectProvider === "github" ? undefined : projectApiBaseUrl.trim(),
         token: projectToken.trim() || undefined,
-        demo_mode: false
+        demo_mode: false,
       });
       await Promise.all([
         loadRepos(),
         loadRepoData(connected.repo_id),
         loadProjectKnowledge(connected.repo_id),
-        loadProjectIndexState(connected.repo_id)
+        loadProjectIndexState(connected.repo_id),
       ]);
       const conversations = await loadRepoConversations(connected.repo_id);
       setSelectedRepoId(connected.repo_id);
@@ -1085,17 +1303,19 @@ export default function DashboardPage() {
                 : connected.sync_status === "failed"
                   ? `仓库已连接，但业务数据同步失败。${connected.message}`
                   : "已连接仓库，业务数据尚未同步";
-      const codePathDetail = connected.local_path ? `代码路径：${connected.local_path}` : "代码同步和代码图分析已在后台启动";
+      const codePathDetail = connected.local_path
+        ? `代码路径：${connected.local_path}`
+        : "代码同步和代码图分析已在后台启动";
       setAddProjectStatus({
         type: "success",
         title: "连接成功",
-        detail: `${connected.full_name} 已添加为当前项目，${syncDetail}。${codePathDetail}。`
+        detail: `${connected.full_name} 已添加为当前项目，${syncDetail}。${codePathDetail}。`,
       });
     } catch (error) {
       setAddProjectStatus({
         type: "error",
         title: "连接失败",
-        detail: getFriendlyError(error)
+        detail: getFriendlyError(error),
       });
     } finally {
       setConnectingProject(false);
@@ -1103,7 +1323,9 @@ export default function DashboardPage() {
   }
 
   async function removeRepo(repo: Repository) {
-    const confirmed = window.confirm(`确定移除项目「${repo.full_name}」吗？\n\n这会删除本地保存的项目、Issue、PR、CI、分析结果和对话记录。`);
+    const confirmed = window.confirm(
+      `确定移除项目「${repo.full_name}」吗？\n\n这会删除本地保存的项目、Issue、PR、CI、分析结果和对话记录。`,
+    );
     if (!confirmed) return;
 
     try {
@@ -1132,7 +1354,9 @@ export default function DashboardPage() {
     });
     if (selectedRepoId === repo.id) {
       setSelectedRepoId(remainingRepos[0]?.id || "");
-      setSelectedConversationId(remainingRepos[0] ? conversationMap[remainingRepos[0].id]?.[0]?.id || "" : "");
+      setSelectedConversationId(
+        remainingRepos[0] ? conversationMap[remainingRepos[0].id]?.[0]?.id || "" : "",
+      );
       setIssues([]);
       setPrs([]);
       setRuns([]);
@@ -1154,9 +1378,11 @@ export default function DashboardPage() {
     setMessages((items) =>
       items.map((item) => {
         if (item.id !== assistantId) return item;
-        const content = item.content.trim() ? `${item.content.trim()}\n\n已停止响应。` : "已停止响应。";
+        const content = item.content.trim()
+          ? `${item.content.trim()}\n\n已停止响应。`
+          : "已停止响应。";
         return { ...item, content, responsePending: false, traceCollapsed: true };
-      })
+      }),
     );
   }
 
@@ -1168,9 +1394,14 @@ export default function DashboardPage() {
     setMessages((items) =>
       items.map((item) =>
         item.id === assistantId
-          ? { ...item, traceItems: [...(item.traceItems ?? []), traceItem], traceCollapsed: false, responsePending: true }
-          : item
-      )
+          ? {
+              ...item,
+              traceItems: [...(item.traceItems ?? []), traceItem],
+              traceCollapsed: false,
+              responsePending: true,
+            }
+          : item,
+      ),
     );
   }
 
@@ -1179,35 +1410,42 @@ export default function DashboardPage() {
       items.map((item) => {
         if (item.id !== assistantId) return item;
         const traceItems = item.traceItems ?? [];
-        const existingIndex = result.toolUseId ? traceItems.findIndex((trace) => trace.toolUseId === result.toolUseId) : -1;
+        const existingIndex = result.toolUseId
+          ? traceItems.findIndex((trace) => trace.toolUseId === result.toolUseId)
+          : -1;
         if (existingIndex < 0) {
-          return { ...item, traceItems: [...traceItems, result], traceCollapsed: false, responsePending: true };
+          return {
+            ...item,
+            traceItems: [...traceItems, result],
+            traceCollapsed: false,
+            responsePending: true,
+          };
         }
         return {
           ...item,
           traceCollapsed: false,
           responsePending: true,
           traceItems: traceItems.map((trace, index) =>
-            index === existingIndex ? { ...trace, ...result, id: trace.id } : trace
-          )
+            index === existingIndex ? { ...trace, ...result, id: trace.id } : trace,
+          ),
         };
-      })
+      }),
     );
   }
 
   function toggleAssistantTrace(messageId: string) {
     setMessages((items) =>
       items.map((item) =>
-        item.id === messageId ? { ...item, traceCollapsed: !item.traceCollapsed } : item
-      )
+        item.id === messageId ? { ...item, traceCollapsed: !item.traceCollapsed } : item,
+      ),
     );
   }
 
   function toggleContextDiagnostics(messageId: string) {
     setMessages((items) =>
       items.map((item) =>
-        item.id === messageId ? { ...item, contextCollapsed: !item.contextCollapsed } : item
-      )
+        item.id === messageId ? { ...item, contextCollapsed: !item.contextCollapsed } : item,
+      ),
     );
   }
 
@@ -1222,8 +1460,13 @@ export default function DashboardPage() {
     return {
       time_range: "7d",
       messages: chatHistory,
-      team_members: teamMembers.map(({ name, role, strengths, techStack }) => ({ name, role, strengths, techStack })),
-      project_memory: memoryNotes.map(({ title, content }) => ({ title, content }))
+      team_members: teamMembers.map(({ name, role, strengths, techStack }) => ({
+        name,
+        role,
+        strengths,
+        techStack,
+      })),
+      project_memory: memoryNotes.map(({ title, content }) => ({ title, content })),
     };
   }
 
@@ -1231,15 +1474,21 @@ export default function DashboardPage() {
     if (!selectedRepo) return null;
     let activeConversation = selectedConversation;
     if (!activeConversation) {
-      activeConversation = await apiPost<ProjectConversation>(`/api/repos/${selectedRepo.id}/conversations`, {
-        title: summarizeConversationTitle(initialMessage)
-      });
+      activeConversation = await apiPost<ProjectConversation>(
+        `/api/repos/${selectedRepo.id}/conversations`,
+        {
+          title: summarizeConversationTitle(initialMessage),
+        },
+      );
       skipHistoryLoadRef.current = true;
       setConversationMap((items) => {
         const existing = items[selectedRepo.id] ?? [];
         return {
           ...items,
-          [selectedRepo.id]: [activeConversation!, ...existing.filter((item) => item.id !== activeConversation!.id)]
+          [selectedRepo.id]: [
+            activeConversation!,
+            ...existing.filter((item) => item.id !== activeConversation!.id),
+          ],
         };
       });
       setExpandedRepoIds((items) => ({ ...items, [selectedRepo.id]: true }));
@@ -1254,7 +1503,11 @@ export default function DashboardPage() {
     const activeConversation = await ensureActiveConversation(trimmedText);
     if (!activeConversation) return;
 
-    const userMessage: ChatMessage = { id: crypto.randomUUID(), role: "user", content: trimmedText };
+    const userMessage: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content: trimmedText,
+    };
     const assistantId = crypto.randomUUID();
     const chatHistory = recentChatHistory();
     setMessages((items) => [...items, userMessage]);
@@ -1270,75 +1523,88 @@ export default function DashboardPage() {
           role: "assistant",
           content: "",
           traceCollapsed: false,
-          responsePending: true
-        }
+          responsePending: true,
+        },
       ]);
-      await apiPostStream("/api/chat/stream", {
-        repo_id: selectedRepo.id,
-        conversation_id: activeConversation.id,
-        message: trimmedText,
-        context: chatRequestContext(chatHistory)
-      }, (event, rawData) => {
-        if (event === "thought") {
-          const data = rawData as { content?: string };
-          if (data.content?.trim()) {
-            appendAssistantTrace(assistantId, {
-              id: crypto.randomUUID(),
-              kind: "thinking",
-              title: "公开思路",
-              content: data.content,
-              status: "done"
-            });
+      await apiPostStream(
+        "/api/chat/stream",
+        {
+          repo_id: selectedRepo.id,
+          conversation_id: activeConversation.id,
+          message: trimmedText,
+          context: chatRequestContext(chatHistory),
+        },
+        (event, rawData) => {
+          if (event === "thought") {
+            const data = rawData as { content?: string };
+            if (data.content?.trim()) {
+              appendAssistantTrace(assistantId, {
+                id: crypto.randomUUID(),
+                kind: "thinking",
+                title: "公开思路",
+                content: data.content,
+                status: "done",
+              });
+            }
+            return;
           }
-          return;
-        }
-        if (event === "tool_use") {
-          appendAssistantTrace(assistantId, makeToolUseTrace(rawData as ChatStreamToolUse, crypto.randomUUID()));
-          return;
-        }
-        if (event === "tool_result") {
-          updateAssistantToolTrace(assistantId, makeToolResultTrace(rawData as ChatStreamToolResult, crypto.randomUUID()));
-          return;
-        }
-        if (event === "delta") {
-          const data = rawData as ChatStreamDelta;
-          if (!data.content) return;
-          setMessages((items) =>
-            items.map((item) =>
-              item.id === assistantId ? { ...item, content: item.content + data.content, responsePending: true } : item
-            )
-          );
-          return;
-        }
-        if (event === "final") {
-          const data = rawData as ChatStreamFinal;
-          setMessages((items) =>
-            items.map((item) =>
-              item.id === assistantId
-                ? {
-                  ...item,
-                  content: data.answer,
-                  route: data.route,
-                  toolCalls: data.tool_calls,
-                  traceItems: finalizedTraceItems(data.agent_events, item.traceItems),
-                  compressionStats: data.compression_stats,
-                  progressiveCompaction: data.progressive_compaction,
-                  modelUsage: data.model_usage,
-                  contextDiagnostics: data.context_diagnostics,
-                  messageId: data.message_id,
-                  contextCollapsed: true,
-                  traceCollapsed: true,
-                  responsePending: false
-                }
-                : item
-            )
-          );
-          if (data.route === "weekly_report") {
-            void loadProjectKnowledge(selectedRepo.id);
+          if (event === "tool_use") {
+            appendAssistantTrace(
+              assistantId,
+              makeToolUseTrace(rawData as ChatStreamToolUse, crypto.randomUUID()),
+            );
+            return;
           }
-          void loadRepoConversations(selectedRepo.id);
-        }
-      }, { signal: abortController.signal });
+          if (event === "tool_result") {
+            updateAssistantToolTrace(
+              assistantId,
+              makeToolResultTrace(rawData as ChatStreamToolResult, crypto.randomUUID()),
+            );
+            return;
+          }
+          if (event === "delta") {
+            const data = rawData as ChatStreamDelta;
+            if (!data.content) return;
+            setMessages((items) =>
+              items.map((item) =>
+                item.id === assistantId
+                  ? { ...item, content: item.content + data.content, responsePending: true }
+                  : item,
+              ),
+            );
+            return;
+          }
+          if (event === "final") {
+            const data = rawData as ChatStreamFinal;
+            setMessages((items) =>
+              items.map((item) =>
+                item.id === assistantId
+                  ? {
+                      ...item,
+                      content: data.answer,
+                      route: data.route,
+                      toolCalls: data.tool_calls,
+                      traceItems: finalizedTraceItems(data.agent_events, item.traceItems),
+                      compressionStats: data.compression_stats,
+                      progressiveCompaction: data.progressive_compaction,
+                      modelUsage: data.model_usage,
+                      contextDiagnostics: data.context_diagnostics,
+                      messageId: data.message_id,
+                      contextCollapsed: true,
+                      traceCollapsed: true,
+                      responsePending: false,
+                    }
+                  : item,
+              ),
+            );
+            if (data.route === "weekly_report") {
+              void loadProjectKnowledge(selectedRepo.id);
+            }
+            void loadRepoConversations(selectedRepo.id);
+          }
+        },
+        { signal: abortController.signal },
+      );
     } catch (error) {
       if (isAbortError(error)) {
         markAssistantStopped(assistantId);
@@ -1346,14 +1612,23 @@ export default function DashboardPage() {
       }
       setMessages((items) =>
         items.map((item) =>
-          item.id === assistantId ? { ...item, content: `请求失败：${getFriendlyError(error)}`, responsePending: false, traceCollapsed: true } : item
-        )
+          item.id === assistantId
+            ? {
+                ...item,
+                content: `请求失败：${getFriendlyError(error)}`,
+                responsePending: false,
+                traceCollapsed: true,
+              }
+            : item,
+        ),
       );
     } finally {
       setMessages((items) =>
         items.map((item) =>
-          item.id === assistantId ? { ...item, traceCollapsed: true, responsePending: false } : item
-        )
+          item.id === assistantId
+            ? { ...item, traceCollapsed: true, responsePending: false }
+            : item,
+        ),
       );
       if (streamAbortRef.current === abortController) {
         streamAbortRef.current = null;
@@ -1368,7 +1643,11 @@ export default function DashboardPage() {
     const activeConversation = await ensureActiveConversation(trimmedText);
     if (!activeConversation) return;
 
-    const userMessage: ChatMessage = { id: crypto.randomUUID(), role: "user", content: trimmedText };
+    const userMessage: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content: trimmedText,
+    };
     const assistantId = crypto.randomUUID();
     const chatHistory = recentChatHistory();
     setMessages((items) => [
@@ -1380,8 +1659,8 @@ export default function DashboardPage() {
         content: "正在创建执行计划...",
         route: "engineering_plan",
         traceCollapsed: false,
-        responsePending: true
-      }
+        responsePending: true,
+      },
     ]);
     setMessage("");
     setLoading(true);
@@ -1390,25 +1669,25 @@ export default function DashboardPage() {
         repo_id: selectedRepo.id,
         conversation_id: activeConversation.id,
         message: trimmedText,
-        context: chatRequestContext(chatHistory)
+        context: chatRequestContext(chatHistory),
       });
       setMessages((items) =>
         items.map((item) =>
           item.id === assistantId
             ? {
-              ...item,
-              content: data.answer,
-              route: data.route,
-              toolCalls: data.tool_calls,
-              traceItems: traceItemsFromAgentEvents(data.agent_events ?? []),
-              workflowPlan: data.plan,
-              planSourceMessage: trimmedText,
-              planStatus: "ready",
-              traceCollapsed: true,
-              responsePending: false
-            }
-            : item
-        )
+                ...item,
+                content: data.answer,
+                route: data.route,
+                toolCalls: data.tool_calls,
+                traceItems: traceItemsFromAgentEvents(data.agent_events ?? []),
+                workflowPlan: data.plan,
+                planSourceMessage: trimmedText,
+                planStatus: "ready",
+                traceCollapsed: true,
+                responsePending: false,
+              }
+            : item,
+        ),
       );
       void loadRepoConversations(selectedRepo.id);
     } catch (error) {
@@ -1416,14 +1695,14 @@ export default function DashboardPage() {
         items.map((item) =>
           item.id === assistantId
             ? {
-              ...item,
-              content: `创建计划失败：${getFriendlyError(error)}`,
-              planStatus: "error",
-              responsePending: false,
-              traceCollapsed: true
-            }
-            : item
-        )
+                ...item,
+                content: `创建计划失败：${getFriendlyError(error)}`,
+                planStatus: "error",
+                responsePending: false,
+                traceCollapsed: true,
+              }
+            : item,
+        ),
       );
     } finally {
       setLoading(false);
@@ -1447,65 +1726,78 @@ export default function DashboardPage() {
       items.map((item) =>
         item.id === messageId
           ? {
-            ...item,
-            content: "",
-            route: "engineering_workflow",
-            traceItems: [],
-            traceCollapsed: false,
-            responsePending: true,
-            planStatus: "executing"
-          }
-          : item
-      )
+              ...item,
+              content: "",
+              route: "engineering_workflow",
+              traceItems: [],
+              traceCollapsed: false,
+              responsePending: true,
+              planStatus: "executing",
+            }
+          : item,
+      ),
     );
     try {
-      await apiPostStream("/api/chat/plan/execute/stream", {
-        repo_id: selectedRepo.id,
-        conversation_id: activeConversation.id,
-        message: sourceMessage,
-        workflow_spec: workflowPlan,
-        context: chatRequestContext(chatHistory)
-      }, (event, rawData) => {
-        if (event === "tool_use") {
-          appendAssistantTrace(messageId, makeToolUseTrace(rawData as ChatStreamToolUse, crypto.randomUUID()));
-          return;
-        }
-        if (event === "tool_result") {
-          updateAssistantToolTrace(messageId, makeToolResultTrace(rawData as ChatStreamToolResult, crypto.randomUUID()));
-          return;
-        }
-        if (event === "delta") {
-          const data = rawData as ChatStreamDelta;
-          if (!data.content) return;
-          setMessages((items) =>
-            items.map((item) =>
-              item.id === messageId ? { ...item, content: item.content + data.content, responsePending: true } : item
-            )
-          );
-          return;
-        }
-        if (event === "final") {
-          const data = rawData as ChatStreamFinal;
-          setMessages((items) =>
-            items.map((item) =>
-              item.id === messageId
-                ? {
-                  ...item,
-                  content: data.answer,
-                  route: data.route,
-                  toolCalls: data.tool_calls,
-                  traceItems: finalizedTraceItems(data.agent_events, item.traceItems),
-                  messageId: data.message_id,
-                  traceCollapsed: true,
-                  responsePending: false,
-                  planStatus: data.route === "error" ? "error" : "done"
-                }
-                : item
-            )
-          );
-          void loadRepoConversations(selectedRepo.id);
-        }
-      }, { signal: abortController.signal });
+      await apiPostStream(
+        "/api/chat/plan/execute/stream",
+        {
+          repo_id: selectedRepo.id,
+          conversation_id: activeConversation.id,
+          message: sourceMessage,
+          workflow_spec: workflowPlan,
+          context: chatRequestContext(chatHistory),
+        },
+        (event, rawData) => {
+          if (event === "tool_use") {
+            appendAssistantTrace(
+              messageId,
+              makeToolUseTrace(rawData as ChatStreamToolUse, crypto.randomUUID()),
+            );
+            return;
+          }
+          if (event === "tool_result") {
+            updateAssistantToolTrace(
+              messageId,
+              makeToolResultTrace(rawData as ChatStreamToolResult, crypto.randomUUID()),
+            );
+            return;
+          }
+          if (event === "delta") {
+            const data = rawData as ChatStreamDelta;
+            if (!data.content) return;
+            setMessages((items) =>
+              items.map((item) =>
+                item.id === messageId
+                  ? { ...item, content: item.content + data.content, responsePending: true }
+                  : item,
+              ),
+            );
+            return;
+          }
+          if (event === "final") {
+            const data = rawData as ChatStreamFinal;
+            setMessages((items) =>
+              items.map((item) =>
+                item.id === messageId
+                  ? {
+                      ...item,
+                      content: data.answer,
+                      route: data.route,
+                      toolCalls: data.tool_calls,
+                      traceItems: finalizedTraceItems(data.agent_events, item.traceItems),
+                      messageId: data.message_id,
+                      traceCollapsed: true,
+                      responsePending: false,
+                      planStatus: data.route === "error" ? "error" : "done",
+                    }
+                  : item,
+              ),
+            );
+            void loadRepoConversations(selectedRepo.id);
+          }
+        },
+        { signal: abortController.signal },
+      );
     } catch (error) {
       if (isAbortError(error)) {
         markAssistantStopped(messageId);
@@ -1515,20 +1807,20 @@ export default function DashboardPage() {
         items.map((item) =>
           item.id === messageId
             ? {
-              ...item,
-              content: `执行计划失败：${getFriendlyError(error)}`,
-              planStatus: "error",
-              responsePending: false,
-              traceCollapsed: true
-            }
-            : item
-        )
+                ...item,
+                content: `执行计划失败：${getFriendlyError(error)}`,
+                planStatus: "error",
+                responsePending: false,
+                traceCollapsed: true,
+              }
+            : item,
+        ),
       );
     } finally {
       setMessages((items) =>
         items.map((item) =>
-          item.id === messageId ? { ...item, traceCollapsed: true, responsePending: false } : item
-        )
+          item.id === messageId ? { ...item, traceCollapsed: true, responsePending: false } : item,
+        ),
       );
       if (streamAbortRef.current === abortController) {
         streamAbortRef.current = null;
@@ -1554,13 +1846,18 @@ export default function DashboardPage() {
       issues.filter((issue) => {
         const people = [...(issue.assignees ?? []), issue.author ?? ""];
         return (
-          matchesQuery(workspaceQuery, [issue.title, issue.body, issue.state, ...(issue.labels ?? [])]) &&
+          matchesQuery(workspaceQuery, [
+            issue.title,
+            issue.body,
+            issue.state,
+            ...(issue.labels ?? []),
+          ]) &&
           matchesStatus(workspaceStatus, issue.state) &&
           matchesOwner(workspaceOwner, people) &&
           matchesTime(workspaceTime, issue.updated_at ?? issue.created_at)
         );
       }),
-    [issues, workspaceOwner, workspaceQuery, workspaceStatus, workspaceTime]
+    [issues, workspaceOwner, workspaceQuery, workspaceStatus, workspaceTime],
   );
 
   const filteredPrs = useMemo(
@@ -1569,13 +1866,21 @@ export default function DashboardPage() {
         const derivedStatus = pr.merged_at ? "merged" : pr.state;
         const fileNames = pr.files?.map((file) => file.filename) ?? [];
         return (
-          matchesQuery(workspaceQuery, [pr.title, pr.body, derivedStatus, pr.author, pr.base_branch, pr.head_branch, ...fileNames]) &&
+          matchesQuery(workspaceQuery, [
+            pr.title,
+            pr.body,
+            derivedStatus,
+            pr.author,
+            pr.base_branch,
+            pr.head_branch,
+            ...fileNames,
+          ]) &&
           matchesStatus(workspaceStatus, derivedStatus) &&
           matchesOwner(workspaceOwner, [pr.author ?? ""]) &&
           matchesTime(workspaceTime, pr.updated_at ?? pr.created_at ?? pr.merged_at)
         );
       }),
-    [prs, workspaceOwner, workspaceQuery, workspaceStatus, workspaceTime]
+    [prs, workspaceOwner, workspaceQuery, workspaceStatus, workspaceTime],
   );
 
   const filteredRuns = useMemo(
@@ -1588,7 +1893,7 @@ export default function DashboardPage() {
           matchesTime(workspaceTime, run.updated_at ?? run.created_at)
         );
       }),
-    [runs, workspaceQuery, workspaceStatus, workspaceTime]
+    [runs, workspaceQuery, workspaceStatus, workspaceTime],
   );
 
   const openIssues = issues.filter((item) => item.state === "open");
@@ -1596,17 +1901,36 @@ export default function DashboardPage() {
   const failedRuns = runs.filter((item) => item.conclusion === "failure");
   const mergedPrs = prs.filter((item) => item.merged_at);
   const rejectedIssues = issues.filter((item) => classifyIssue(item) === "rejected");
-  const handledIssues = issues.filter((item) => ["accepted", "closed"].includes(classifyIssue(item)));
-  const selectedIssue = selectedWorkspaceItem?.type === "issue" ? issues.find((item) => item.id === selectedWorkspaceItem.id) : undefined;
-  const selectedPr = selectedWorkspaceItem?.type === "pr" ? prs.find((item) => item.id === selectedWorkspaceItem.id) : undefined;
-  const selectedRun = selectedWorkspaceItem?.type === "ci" ? runs.find((item) => item.id === selectedWorkspaceItem.id) : undefined;
+  const handledIssues = issues.filter((item) =>
+    ["accepted", "closed"].includes(classifyIssue(item)),
+  );
+  const selectedIssue =
+    selectedWorkspaceItem?.type === "issue"
+      ? issues.find((item) => item.id === selectedWorkspaceItem.id)
+      : undefined;
+  const selectedPr =
+    selectedWorkspaceItem?.type === "pr"
+      ? prs.find((item) => item.id === selectedWorkspaceItem.id)
+      : undefined;
+  const selectedRun =
+    selectedWorkspaceItem?.type === "ci"
+      ? runs.find((item) => item.id === selectedWorkspaceItem.id)
+      : undefined;
   const hasWorkspaceDetail = Boolean(selectedIssue || selectedPr || selectedRun);
-  const analysisModalIssue = analysisModalIssueId ? issues.find((item) => item.id === analysisModalIssueId) : undefined;
-  const analysisModalPr = analysisModalPrId ? prs.find((item) => item.id === analysisModalPrId) : undefined;
-  const analysisModalRun = analysisModalRunId ? runs.find((item) => item.id === analysisModalRunId) : undefined;
-  const isEmptyConversation = messages.length === 0 || (messages.length === 1 && messages[0]?.id.startsWith("welcome-"));
+  const analysisModalIssue = analysisModalIssueId
+    ? issues.find((item) => item.id === analysisModalIssueId)
+    : undefined;
+  const analysisModalPr = analysisModalPrId
+    ? prs.find((item) => item.id === analysisModalPrId)
+    : undefined;
+  const analysisModalRun = analysisModalRunId
+    ? runs.find((item) => item.id === analysisModalRunId)
+    : undefined;
+  const isEmptyConversation =
+    messages.length === 0 || (messages.length === 1 && messages[0]?.id.startsWith("welcome-"));
   const indexSnoozed = Boolean(
-    selectedProjectIndexState?.snoozed_until && new Date(selectedProjectIndexState.snoozed_until).getTime() > Date.now()
+    selectedProjectIndexState?.snoozed_until &&
+    new Date(selectedProjectIndexState.snoozed_until).getTime() > Date.now(),
   );
 
   return (
@@ -1616,17 +1940,23 @@ export default function DashboardPage() {
         gridTemplateColumns: isMobileViewport
           ? "minmax(0,1fr)"
           : `${isSidebarCollapsed ? "56px" : "300px"} minmax(0,1fr)`,
-        transition: "grid-template-columns 260ms ease"
+        transition: "grid-template-columns 260ms ease",
       }}
     >
-      <aside className={`${isMobileViewport ? "hidden" : "flex"} min-h-0 min-w-0 flex-col overflow-hidden border-r border-line bg-[#0e1a16] transition-all duration-300`}>
+      <aside
+        className={`${isMobileViewport ? "hidden" : "flex"} min-h-0 min-w-0 flex-col overflow-hidden border-r border-line bg-[#0e1a16] transition-all duration-300`}
+      >
         <div className={`border-b border-line ${isSidebarCollapsed ? "p-2" : "p-4"}`}>
           <div className={`flex items-center ${isSidebarCollapsed ? "flex-col gap-3" : "gap-3"}`}>
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-accent text-sm font-bold text-[#062a1d]">DF</div>
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-accent text-sm font-bold text-[#062a1d]">
+              DF
+            </div>
             {!isSidebarCollapsed && (
               <div className="min-w-0 flex-1">
                 <div className="text-sm font-semibold text-ink">Kynflow</div>
-                <div className="truncate text-xs text-stone-400">研发团队 PR / Issue 智能协作 Agent</div>
+                <div className="truncate text-xs text-stone-400">
+                  研发团队 PR / Issue 智能协作 Agent
+                </div>
               </div>
             )}
             <button
@@ -1634,13 +1964,21 @@ export default function DashboardPage() {
               className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-line bg-panel text-stone-300 transition hover:bg-sage-900"
               title={isSidebarCollapsed ? "展开项目侧边栏" : "隐藏项目侧边栏"}
             >
-              {isSidebarCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+              {isSidebarCollapsed ? (
+                <PanelLeftOpen className="h-4 w-4" />
+              ) : (
+                <PanelLeftClose className="h-4 w-4" />
+              )}
             </button>
           </div>
 
           {isSidebarCollapsed ? (
             <div className="mt-4 flex flex-col items-center gap-3">
-              <button onClick={openAddProject} className="inline-flex h-8 w-8 items-center justify-center rounded-md text-stone-200 transition hover:bg-panel" title="添加项目">
+              <button
+                onClick={openAddProject}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-md text-stone-200 transition hover:bg-panel"
+                title="添加项目"
+              >
                 <Plus className="h-4 w-4" />
               </button>
               <button
@@ -1655,10 +1993,15 @@ export default function DashboardPage() {
           ) : (
             <div className="mt-5 flex items-center justify-between">
               <div>
-                <div className="text-xs font-medium uppercase tracking-[0.18em] text-accent">Projects</div>
+                <div className="text-xs font-medium uppercase tracking-[0.18em] text-accent">
+                  Projects
+                </div>
                 <h2 className="mt-1 text-lg font-semibold text-ink">项目</h2>
               </div>
-              <button onClick={openAddProject} className="inline-flex items-center gap-1 rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-[#062a1d]">
+              <button
+                onClick={openAddProject}
+                className="inline-flex items-center gap-1 rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-[#062a1d]"
+              >
                 <Plus className="h-3.5 w-3.5" />
                 添加项目
               </button>
@@ -1666,9 +2009,17 @@ export default function DashboardPage() {
           )}
         </div>
 
-        <div className={`min-h-0 flex-1 overflow-y-auto ${isSidebarCollapsed ? "p-2" : "px-3 py-2"}`}>
-          {repos.length === 0 && !isSidebarCollapsed && <div className="rounded-md bg-panel p-3 text-sm leading-6 text-stone-300">还没有项目。请先添加一个项目。</div>}
-          {!isSidebarCollapsed && repos.length > 0 && <div className="mb-2 px-1 text-xs text-stone-500">项目</div>}
+        <div
+          className={`min-h-0 flex-1 overflow-y-auto ${isSidebarCollapsed ? "p-2" : "px-3 py-2"}`}
+        >
+          {repos.length === 0 && !isSidebarCollapsed && (
+            <div className="rounded-md bg-panel p-3 text-sm leading-6 text-stone-300">
+              还没有项目。请先添加一个项目。
+            </div>
+          )}
+          {!isSidebarCollapsed && repos.length > 0 && (
+            <div className="mb-2 px-1 text-xs text-stone-500">项目</div>
+          )}
           {repos.map((repo) => {
             const conversations = conversationMap[repo.id] ?? [];
             const isExpanded = expandedRepoIds[repo.id] ?? selectedRepo?.id === repo.id;
@@ -1677,19 +2028,30 @@ export default function DashboardPage() {
               <button
                 key={repo.id}
                 onClick={() => selectProject(repo).catch(() => undefined)}
-                className={`mb-2 inline-flex h-9 w-9 items-center justify-center rounded-md transition ${isSelectedRepo ? "bg-panel text-ink shadow-sm" : "text-stone-300 hover:bg-panel"
-                  }`}
+                className={`mb-2 inline-flex h-9 w-9 items-center justify-center rounded-md transition ${
+                  isSelectedRepo ? "bg-panel text-ink shadow-sm" : "text-stone-300 hover:bg-panel"
+                }`}
                 title={repo.full_name}
               >
                 <Folder className="h-4 w-4" />
               </button>
             ) : (
               <div key={repo.id} className="mb-1">
-                <div className={`group flex h-9 items-center gap-1 rounded-md px-1 transition ${isSelectedRepo ? "bg-[#16271f]" : "hover:bg-[#16271f]"}`}>
-                  <button onClick={() => selectProject(repo).catch(() => undefined)} className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-stone-400 transition hover:bg-panel">
-                    <ChevronDown className={`h-3.5 w-3.5 transition ${isExpanded ? "" : "-rotate-90"}`} />
+                <div
+                  className={`group flex h-9 items-center gap-1 rounded-md px-1 transition ${isSelectedRepo ? "bg-[#16271f]" : "hover:bg-[#16271f]"}`}
+                >
+                  <button
+                    onClick={() => selectProject(repo).catch(() => undefined)}
+                    className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-stone-400 transition hover:bg-panel"
+                  >
+                    <ChevronDown
+                      className={`h-3.5 w-3.5 transition ${isExpanded ? "" : "-rotate-90"}`}
+                    />
                   </button>
-                  <button onClick={() => selectProject(repo).catch(() => undefined)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+                  <button
+                    onClick={() => selectProject(repo).catch(() => undefined)}
+                    className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                  >
                     <Folder className="h-4 w-4 shrink-0 text-stone-400" />
                     <span className="truncate text-sm text-stone-200" title={repo.full_name}>
                       {repo.name || repo.full_name}
@@ -1718,20 +2080,34 @@ export default function DashboardPage() {
                 </div>
                 {isExpanded && (
                   <div className="ml-7 mt-1 space-y-0.5">
-                    {conversations.length === 0 && <div className="px-2 py-1.5 text-xs text-stone-500">暂无会话</div>}
+                    {conversations.length === 0 && (
+                      <div className="px-2 py-1.5 text-xs text-stone-500">暂无会话</div>
+                    )}
                     {conversations.map((conversation) => (
-                      <div key={conversation.id} className="group/conversation flex items-center gap-1">
+                      <div
+                        key={conversation.id}
+                        className="group/conversation flex items-center gap-1"
+                      >
                         <button
-                          onClick={() => selectConversation(repo, conversation).catch(() => undefined)}
-                          className={`flex h-8 min-w-0 flex-1 items-center justify-between gap-2 rounded-md px-2 text-left text-sm transition ${selectedConversationId === conversation.id ? "bg-panel text-ink shadow-sm" : "text-stone-300 hover:bg-panel"
-                            }`}
+                          onClick={() =>
+                            selectConversation(repo, conversation).catch(() => undefined)
+                          }
+                          className={`flex h-8 min-w-0 flex-1 items-center justify-between gap-2 rounded-md px-2 text-left text-sm transition ${
+                            selectedConversationId === conversation.id
+                              ? "bg-panel text-ink shadow-sm"
+                              : "text-stone-300 hover:bg-panel"
+                          }`}
                           title={conversation.title}
                         >
                           <span className="truncate">{conversation.title}</span>
-                          <span className="shrink-0 text-xs text-stone-500">{formatRelativeTime(conversation.updated_at)}</span>
+                          <span className="shrink-0 text-xs text-stone-500">
+                            {formatRelativeTime(conversation.updated_at)}
+                          </span>
                         </button>
                         <button
-                          onClick={() => removeConversation(repo, conversation).catch(() => undefined)}
+                          onClick={() =>
+                            removeConversation(repo, conversation).catch(() => undefined)
+                          }
                           className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-stone-500 opacity-0 transition hover:bg-rose-900/40 hover:text-rose-400 group-hover/conversation:opacity-100"
                           title="删除会话"
                         >
@@ -1763,8 +2139,10 @@ export default function DashboardPage() {
       <section
         className="grid min-h-0 min-w-0 bg-[#0d1612]"
         style={{
-          gridTemplateColumns: isMobileViewport ? "minmax(0,1fr)" : `minmax(460px,1fr) 8px ${workspaceWidth}px`,
-          gridTemplateRows: "auto minmax(0,1fr)"
+          gridTemplateColumns: isMobileViewport
+            ? "minmax(0,1fr)"
+            : `minmax(460px,1fr) 8px ${workspaceWidth}px`,
+          gridTemplateRows: "auto minmax(0,1fr)",
         }}
       >
         <section className="col-start-1 row-start-1 shrink-0 border-b border-line bg-panel/90 px-4 py-2">
@@ -1800,12 +2178,20 @@ export default function DashboardPage() {
               <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
                 <h2 className="font-semibold text-ink">总览</h2>
                 <span className="text-xs text-stone-400">当前代码仓</span>
-                <span className="truncate text-sm font-semibold text-ink">{selectedRepo?.full_name || "未选择仓库"}</span>
-                {selectedConversation && <span className="rounded-full bg-panel px-2 py-0.5 text-xs text-stone-300">会话：{selectedConversation.title}</span>}
+                <span className="truncate text-sm font-semibold text-ink">
+                  {selectedRepo?.full_name || "未选择仓库"}
+                </span>
+                {selectedConversation && (
+                  <span className="rounded-full bg-panel px-2 py-0.5 text-xs text-stone-300">
+                    会话：{selectedConversation.title}
+                  </span>
+                )}
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-3">
-              <div className="rounded-full border border-sage-700 bg-sage-900 px-3 py-1 text-xs font-medium text-sage-200">Production Workspace</div>
+              <div className="rounded-full border border-sage-700 bg-sage-900 px-3 py-1 text-xs font-medium text-sage-200">
+                Production Workspace
+              </div>
               <button onClick={openAddProject} className="text-xs text-accent hover:underline">
                 管理项目
               </button>
@@ -1821,9 +2207,15 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        <div className={`${isMobileViewport ? "hidden" : ""} col-start-2 row-span-2 row-start-1 cursor-col-resize border-x border-line bg-stone-800 transition hover:bg-sage-900`} onMouseDown={startResize} title="拖拽调整 Workspace 宽度" />
+        <div
+          className={`${isMobileViewport ? "hidden" : ""} col-start-2 row-span-2 row-start-1 cursor-col-resize border-x border-line bg-stone-800 transition hover:bg-sage-900`}
+          onMouseDown={startResize}
+          title="拖拽调整 Workspace 宽度"
+        />
 
-        <aside className={`${isMobileViewport ? "hidden" : "flex"} col-start-3 row-span-2 row-start-1 min-h-0 min-w-0 flex-col bg-[#0d1612]`}>
+        <aside
+          className={`${isMobileViewport ? "hidden" : "flex"} col-start-3 row-span-2 row-start-1 min-h-0 min-w-0 flex-col bg-[#0d1612]`}
+        >
           <div className="border-b border-line bg-panel/80 px-4 py-3">
             <div className="flex items-center justify-between gap-3">
               <h2 className="font-semibold text-ink">Workspace</h2>
@@ -1854,8 +2246,11 @@ export default function DashboardPage() {
                     }
                     setWorkspaceTab(tab);
                   }}
-                  className={`shrink-0 rounded-md px-3 py-1.5 text-xs font-medium transition ${workspaceTab === tab ? "bg-accent text-[#062a1d]" : "bg-panel text-stone-300 hover:bg-sage-900"
-                    }`}
+                  className={`shrink-0 rounded-md px-3 py-1.5 text-xs font-medium transition ${
+                    workspaceTab === tab
+                      ? "bg-accent text-[#062a1d]"
+                      : "bg-panel text-stone-300 hover:bg-sage-900"
+                  }`}
                 >
                   {tab}
                 </button>
@@ -1864,32 +2259,33 @@ export default function DashboardPage() {
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto p-4">
-            {!hasWorkspaceDetail && (workspaceTab === "Issue" || workspaceTab === "PR" || workspaceTab === "CI") && (
-              <WorkspaceControls
-                query={workspaceQuery}
-                status={workspaceStatus}
-                owner={workspaceOwner}
-                time={workspaceTime}
-                owners={ownerOptions}
-                activeTab={workspaceTab}
-                onQueryChange={(value) => {
-                  setWorkspaceQuery(value);
-                  setSelectedWorkspaceItem(null);
-                }}
-                onStatusChange={(value) => {
-                  setWorkspaceStatus(value);
-                  setSelectedWorkspaceItem(null);
-                }}
-                onOwnerChange={(value) => {
-                  setWorkspaceOwner(value);
-                  setSelectedWorkspaceItem(null);
-                }}
-                onTimeChange={(value) => {
-                  setWorkspaceTime(value);
-                  setSelectedWorkspaceItem(null);
-                }}
-              />
-            )}
+            {!hasWorkspaceDetail &&
+              (workspaceTab === "Issue" || workspaceTab === "PR" || workspaceTab === "CI") && (
+                <WorkspaceControls
+                  query={workspaceQuery}
+                  status={workspaceStatus}
+                  owner={workspaceOwner}
+                  time={workspaceTime}
+                  owners={ownerOptions}
+                  activeTab={workspaceTab}
+                  onQueryChange={(value) => {
+                    setWorkspaceQuery(value);
+                    setSelectedWorkspaceItem(null);
+                  }}
+                  onStatusChange={(value) => {
+                    setWorkspaceStatus(value);
+                    setSelectedWorkspaceItem(null);
+                  }}
+                  onOwnerChange={(value) => {
+                    setWorkspaceOwner(value);
+                    setSelectedWorkspaceItem(null);
+                  }}
+                  onTimeChange={(value) => {
+                    setWorkspaceTime(value);
+                    setSelectedWorkspaceItem(null);
+                  }}
+                />
+              )}
 
             {hasWorkspaceDetail && (
               <WorkspaceDetail
@@ -1909,7 +2305,9 @@ export default function DashboardPage() {
             {!hasWorkspaceDetail && workspaceTab === "Issue" && (
               <div className="mt-4 space-y-3">
                 {issueCategoryMeta.map((category) => {
-                  const items = filteredIssues.filter((item) => classifyIssue(item) === category.key);
+                  const items = filteredIssues.filter(
+                    (item) => classifyIssue(item) === category.key,
+                  );
                   const groupKey = `issue-${category.key}`;
                   return (
                     <CategoryGroup
@@ -1925,8 +2323,10 @@ export default function DashboardPage() {
                         meta: item.state,
                         detail: item.body,
                         badges: item.labels,
-                        selected: selectedWorkspaceItem?.type === "issue" && selectedWorkspaceItem.id === item.id,
-                        onClick: () => setSelectedWorkspaceItem({ type: "issue", id: item.id })
+                        selected:
+                          selectedWorkspaceItem?.type === "issue" &&
+                          selectedWorkspaceItem.id === item.id,
+                        onClick: () => setSelectedWorkspaceItem({ type: "issue", id: item.id }),
                       }))}
                     />
                   );
@@ -1953,8 +2353,10 @@ export default function DashboardPage() {
                         meta: item.merged_at ? "merged" : item.state,
                         detail: item.body,
                         badges: [item.author, item.head_branch].filter(Boolean) as string[],
-                        selected: selectedWorkspaceItem?.type === "pr" && selectedWorkspaceItem.id === item.id,
-                        onClick: () => setSelectedWorkspaceItem({ type: "pr", id: item.id })
+                        selected:
+                          selectedWorkspaceItem?.type === "pr" &&
+                          selectedWorkspaceItem.id === item.id,
+                        onClick: () => setSelectedWorkspaceItem({ type: "pr", id: item.id }),
                       }))}
                     />
                   );
@@ -1973,8 +2375,10 @@ export default function DashboardPage() {
                       title: item.name,
                       meta: item.conclusion || item.status,
                       detail: item.logs_text,
-                      selected: selectedWorkspaceItem?.type === "ci" && selectedWorkspaceItem.id === item.id,
-                      onClick: () => setSelectedWorkspaceItem({ type: "ci", id: item.id })
+                      selected:
+                        selectedWorkspaceItem?.type === "ci" &&
+                        selectedWorkspaceItem.id === item.id,
+                      onClick: () => setSelectedWorkspaceItem({ type: "ci", id: item.id }),
                     }}
                   />
                 ))}
@@ -2030,12 +2434,26 @@ export default function DashboardPage() {
                 hiddenRelations={hiddenGraphRelations}
                 onQueryChange={setGraphQuery}
                 onSelectNode={setSelectedGraphNodeKey}
-                onToggleNodeType={(type) => setHiddenGraphNodeTypes((items) => ({ ...items, [type]: !items[type] }))}
-                onToggleRelation={(relation) => setHiddenGraphRelations((items) => ({ ...items, [relation]: !items[relation] }))}
+                onToggleNodeType={(type) =>
+                  setHiddenGraphNodeTypes((items) => ({ ...items, [type]: !items[type] }))
+                }
+                onToggleRelation={(relation) =>
+                  setHiddenGraphRelations((items) => ({ ...items, [relation]: !items[relation] }))
+                }
                 onRefresh={() => selectedRepo && loadKnowledgeGraph(selectedRepo.id)}
                 onRebuild={rebuildSelectedKnowledgeGraph}
-                onFocusNode={(node) => selectedRepo && loadKnowledgeGraph(selectedRepo.id, { type: node.type, id: node.id })}
-                onOpenNode={(node) => openGraphNodeInWorkspace(node, setWorkspaceTab, setSelectedWorkspaceItem, preserveWorkspaceSelectionRef)}
+                onFocusNode={(node) =>
+                  selectedRepo &&
+                  loadKnowledgeGraph(selectedRepo.id, { type: node.type, id: node.id })
+                }
+                onOpenNode={(node) =>
+                  openGraphNodeInWorkspace(
+                    node,
+                    setWorkspaceTab,
+                    setSelectedWorkspaceItem,
+                    preserveWorkspaceSelectionRef,
+                  )
+                }
               />
             )}
           </div>
@@ -2047,13 +2465,23 @@ export default function DashboardPage() {
               {messages.map((item) => {
                 const isWelcome = item.id.startsWith("welcome-");
                 const traceItems = item.traceItems ?? [];
-                const failedTools = (item.toolCalls ?? []).filter((call) => call.status === "error");
-                const failedToolTitle = failedTools.map((call) => `${call.tool_name}: ${call.error ?? "failed"}`).join("\n");
+                const failedTools = (item.toolCalls ?? []).filter(
+                  (call) => call.status === "error",
+                );
+                const failedToolTitle = failedTools
+                  .map((call) => `${call.tool_name}: ${call.error ?? "failed"}`)
+                  .join("\n");
                 return (
-                  <div key={item.id} className={`flex ${item.role === "user" ? "justify-end" : "justify-start"}`}>
+                  <div
+                    key={item.id}
+                    className={`flex ${item.role === "user" ? "justify-end" : "justify-start"}`}
+                  >
                     <div
-                      className={`${isWelcome ? "w-full max-w-none rounded-md" : "max-w-[80%] rounded-2xl"} px-4 py-3 text-sm leading-7 shadow-sm ${item.role === "user" ? "bg-[#3a1a10] text-stone-100" : "border border-line bg-panel text-stone-200"
-                        }`}
+                      className={`${isWelcome ? "w-full max-w-none rounded-md" : "max-w-[80%] rounded-2xl"} px-4 py-3 text-sm leading-7 shadow-sm ${
+                        item.role === "user"
+                          ? "bg-[#3a1a10] text-stone-100"
+                          : "border border-line bg-panel text-stone-200"
+                      }`}
                     >
                       {item.role === "assistant" ? (
                         <>
@@ -2061,7 +2489,11 @@ export default function DashboardPage() {
                             <WorkflowPlanCard
                               plan={item.workflowPlan}
                               status={item.planStatus ?? "ready"}
-                              disabled={loading || Boolean(item.responsePending) || item.planStatus === "done"}
+                              disabled={
+                                loading ||
+                                Boolean(item.responsePending) ||
+                                item.planStatus === "done"
+                              }
                               onExecute={() => executeWorkflowPlan(item.id)}
                             />
                           )}
@@ -2087,16 +2519,18 @@ export default function DashboardPage() {
                           )}
                         </div>
                       )}
-                      {item.role === "assistant" && item.compressionStats && Object.keys(item.compressionStats).length > 0 && (
-                        <ContextDiagnostics
-                          compressionStats={item.compressionStats}
-                          progressiveCompaction={item.progressiveCompaction ?? {}}
-                          modelUsage={item.modelUsage ?? []}
-                          contextDiagnostics={item.contextDiagnostics ?? {}}
-                          collapsed={item.contextCollapsed !== false}
-                          onToggle={() => toggleContextDiagnostics(item.id)}
-                        />
-                      )}
+                      {item.role === "assistant" &&
+                        item.compressionStats &&
+                        Object.keys(item.compressionStats).length > 0 && (
+                          <ContextDiagnostics
+                            compressionStats={item.compressionStats}
+                            progressiveCompaction={item.progressiveCompaction ?? {}}
+                            modelUsage={item.modelUsage ?? []}
+                            contextDiagnostics={item.contextDiagnostics ?? {}}
+                            collapsed={item.contextCollapsed !== false}
+                            onToggle={() => toggleContextDiagnostics(item.id)}
+                          />
+                        )}
                       {item.role === "assistant" && traceItems.length > 0 && (
                         <div className="mt-3">
                           <ChatTraceInline
@@ -2107,39 +2541,54 @@ export default function DashboardPage() {
                           />
                         </div>
                       )}
-                      {item.role === "assistant" && item.responsePending && (traceItems.length > 0 || item.content.trim()) && (
-                        <div className="mt-3 flex items-center gap-2 rounded-md border border-sage-800 bg-sage-900 px-3 py-2 text-xs text-stone-300">
-                          <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-accent" />
-                          <span>Agent 正在回复，工具结果已收集，正在整理最终回答...</span>
-                        </div>
-                      )}
-                      {item.role === "assistant" && item.messageId && !item.responsePending && selectedRepo && selectedConversation && (
-                        <FeedbackControls
-                          repoId={selectedRepo.id}
-                          conversationId={selectedConversation.id}
-                          messageId={item.messageId}
-                          initialFeedback={item.feedback}
-                          onSaved={(feedback) =>
-                            setMessages((current) =>
-                              current.map((message) => (message.id === item.id ? { ...message, feedback } : message))
-                            )
-                          }
-                        />
-                      )}
+                      {item.role === "assistant" &&
+                        item.responsePending &&
+                        (traceItems.length > 0 || item.content.trim()) && (
+                          <div className="mt-3 flex items-center gap-2 rounded-md border border-sage-800 bg-sage-900 px-3 py-2 text-xs text-stone-300">
+                            <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-accent" />
+                            <span>Agent 正在回复，工具结果已收集，正在整理最终回答...</span>
+                          </div>
+                        )}
+                      {item.role === "assistant" &&
+                        item.messageId &&
+                        !item.responsePending &&
+                        selectedRepo &&
+                        selectedConversation && (
+                          <FeedbackControls
+                            repoId={selectedRepo.id}
+                            conversationId={selectedConversation.id}
+                            messageId={item.messageId}
+                            initialFeedback={item.feedback}
+                            onSaved={(feedback) =>
+                              setMessages((current) =>
+                                current.map((message) =>
+                                  message.id === item.id ? { ...message, feedback } : message,
+                                ),
+                              )
+                            }
+                          />
+                        )}
                     </div>
                   </div>
                 );
               })}
-              {selectedRepo && isEmptyConversation && selectedProjectIndexState && !indexSnoozed && selectedProjectIndexState.status !== "ready" && (
-                <MemoryIndexPromptCard
-                  repo={selectedRepo}
-                  state={selectedProjectIndexState}
-                  scanning={indexScanningRepoId === selectedRepo.id || selectedProjectIndexState.status === "building"}
-                  error={indexActionError}
-                  onStartScan={startProjectIndexScan}
-                  onSnooze={snoozeProjectIndexPrompt}
-                />
-              )}
+              {selectedRepo &&
+                isEmptyConversation &&
+                selectedProjectIndexState &&
+                !indexSnoozed &&
+                selectedProjectIndexState.status !== "ready" && (
+                  <MemoryIndexPromptCard
+                    repo={selectedRepo}
+                    state={selectedProjectIndexState}
+                    scanning={
+                      indexScanningRepoId === selectedRepo.id ||
+                      selectedProjectIndexState.status === "building"
+                    }
+                    error={indexActionError}
+                    onStartScan={startProjectIndexScan}
+                    onSnooze={snoozeProjectIndexPrompt}
+                  />
+                )}
             </div>
           </div>
 
@@ -2199,8 +2648,9 @@ export default function DashboardPage() {
               )}
               <div className="flex items-stretch gap-3">
                 <textarea
-                  className={`max-h-40 min-h-[5.5rem] flex-1 resize-none rounded-md border bg-panel px-3 py-3 text-sm leading-6 outline-none transition focus:border-sage-500 focus:ring-2 focus:ring-sage-100 ${planMode ? "border-sage-700" : "border-line"
-                    }`}
+                  className={`max-h-40 min-h-[5.5rem] flex-1 resize-none rounded-md border bg-panel px-3 py-3 text-sm leading-6 outline-none transition focus:border-sage-500 focus:ring-2 focus:ring-sage-100 ${
+                    planMode ? "border-sage-700" : "border-line"
+                  }`}
                   value={message}
                   onChange={(event) => setMessage(event.target.value)}
                   placeholder="输入消息，询问当前代码仓..."
@@ -2219,28 +2669,34 @@ export default function DashboardPage() {
                     onClick={() => setPlanMode((value) => !value)}
                     disabled={loading}
                     aria-pressed={planMode}
-                    className={`inline-flex h-8 w-12 items-center justify-center rounded-md border transition disabled:opacity-60 ${planMode
-                      ? "border-sage-500 bg-sage-500 text-[#062a1d] shadow-sm"
-                      : "border-line bg-panel text-stone-400 hover:border-sage-700 hover:bg-sage-900"
-                      }`}
+                    className={`inline-flex h-8 w-12 items-center justify-center rounded-md border transition disabled:opacity-60 ${
+                      planMode
+                        ? "border-sage-500 bg-sage-500 text-[#062a1d] shadow-sm"
+                        : "border-line bg-panel text-stone-400 hover:border-sage-700 hover:bg-sage-900"
+                    }`}
                     title={planMode ? "切换到对话模式" : "切换到计划模式"}
                   >
                     <ListTodo className="h-4 w-4" />
                   </button>
                   <button
-                    onClick={() => (loading ? stopAgentResponse() : planMode ? createWorkflowPlan() : askAgent())}
+                    onClick={() =>
+                      loading ? stopAgentResponse() : planMode ? createWorkflowPlan() : askAgent()
+                    }
                     disabled={!selectedRepo || (!loading && !message.trim())}
                     className="inline-flex min-h-12 flex-1 items-center justify-center rounded-md bg-accent text-[#062a1d] transition hover:bg-sage-400 disabled:opacity-60"
                     title={loading ? "停止响应" : "发送"}
                   >
-                    {loading ? <Square className="h-4 w-4 fill-current" /> : <Send className="h-5 w-5" />}
+                    {loading ? (
+                      <Square className="h-4 w-4 fill-current" />
+                    ) : (
+                      <Send className="h-5 w-5" />
+                    )}
                   </button>
                 </div>
               </div>
             </div>
           </div>
         </section>
-
       </section>
       {isAddProjectOpen && (
         <AddProjectOverlay

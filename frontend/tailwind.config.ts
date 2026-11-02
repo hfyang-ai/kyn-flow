@@ -32,7 +32,7 @@ const config: Config = {
           600: "#0d9488",
           700: "#0f766e",
           800: "#115e59",
-          900: "#134e4a"
+          900: "#134e4a",
         },
 
         // 深色中性灰（小=浅，大=深）
@@ -47,8 +47,8 @@ const config: Config = {
           700: "#27403a",
           800: "#1b2e29",
           900: "#101c17",
-          950: "#060a08"
-        }
+          950: "#060a08",
+        },
       },
       fontFamily: {
         sans: [
@@ -61,7 +61,7 @@ const config: Config = {
           '"PingFang SC"',
           '"Hiragino Sans GB"',
           '"Microsoft YaHei"',
-          "sans-serif"
+          "sans-serif",
         ],
         mono: [
           "ui-monospace",
@@ -70,24 +70,24 @@ const config: Config = {
           "Menlo",
           "Consolas",
           '"Liberation Mono"',
-          "monospace"
-        ]
+          "monospace",
+        ],
       },
       boxShadow: {
         // 克制的阴影：仅用于浮层 / 弹窗
         panel: "0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.35)",
         popover: "0 2px 8px rgba(0, 0, 0, 0.5), 0 12px 32px rgba(0, 0, 0, 0.45)",
-        glow: "0 0 0 1px rgba(45, 212, 167, 0.35)"
+        glow: "0 0 0 1px rgba(45, 212, 167, 0.35)",
       },
       borderRadius: {
         // 更锐利的圆角，强化终端感
         sm: "2px",
         md: "4px",
-        lg: "6px"
-      }
-    }
+        lg: "6px",
+      },
+    },
   },
-  plugins: []
+  plugins: [],
 };
 
 export default config;

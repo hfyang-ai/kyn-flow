@@ -20,7 +20,7 @@ export type LocalDirsResponse = {
 
 export function DirectoryPicker({
   onSelect,
-  onClose
+  onClose,
 }: {
   onSelect: (path: string) => void;
   onClose: () => void;
@@ -35,7 +35,9 @@ export function DirectoryPicker({
     setLoading(true);
     setError(null);
     try {
-      const data = await apiGet<LocalDirsResponse>(`/api/repos/local-dirs?path=${encodeURIComponent(path)}`);
+      const data = await apiGet<LocalDirsResponse>(
+        `/api/repos/local-dirs?path=${encodeURIComponent(path)}`,
+      );
       setCurrent(data.current);
       setParent(data.parent);
       setDirs(data.dirs);
@@ -157,7 +159,7 @@ export function AddProjectOverlay({
   onApiBaseUrlChange,
   onTokenChange,
   onConnect,
-  onClose
+  onClose,
 }: {
   source: AddProjectSource;
   repoUrl: string;
@@ -188,7 +190,9 @@ export function AddProjectOverlay({
   }, []);
 
   const localPathPlaceholder = isWindows ? "例如 D:\\code\\my-repo" : "例如 ~/code/my-repo";
-  const cloneParentPlaceholder = isWindows ? "例如 D:\\code\\repos，留空则使用默认缓存目录" : "例如 ~/code/repos，留空则使用默认缓存目录";
+  const cloneParentPlaceholder = isWindows
+    ? "例如 D:\\code\\repos，留空则使用默认缓存目录"
+    : "例如 ~/code/repos，留空则使用默认缓存目录";
 
   return (
     <div className="absolute inset-0 z-50 flex items-center justify-center bg-stone-950/35 p-6 backdrop-blur-sm">
@@ -200,7 +204,9 @@ export function AddProjectOverlay({
       >
         <div className="flex items-start justify-between gap-4 border-b border-sage-800 bg-[#134e4a] px-5 py-4">
           <div className="min-w-0">
-            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">Add Project</div>
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
+              Add Project
+            </div>
             <h2 id="add-project-title" className="mt-1 text-xl font-semibold text-ink">
               添加项目
             </h2>
@@ -223,16 +229,22 @@ export function AddProjectOverlay({
                   <button
                     type="button"
                     onClick={() => onSourceChange("remote")}
-                    className={`h-9 rounded px-3 text-sm font-medium transition ${source === "remote" ? "bg-panel text-ink shadow-sm" : "text-stone-300 hover:text-ink"
-                      }`}
+                    className={`h-9 rounded px-3 text-sm font-medium transition ${
+                      source === "remote"
+                        ? "bg-panel text-ink shadow-sm"
+                        : "text-stone-300 hover:text-ink"
+                    }`}
                   >
                     GitHub 地址
                   </button>
                   <button
                     type="button"
                     onClick={() => onSourceChange("local")}
-                    className={`h-9 rounded px-3 text-sm font-medium transition ${source === "local" ? "bg-panel text-ink shadow-sm" : "text-stone-300 hover:text-ink"
-                      }`}
+                    className={`h-9 rounded px-3 text-sm font-medium transition ${
+                      source === "local"
+                        ? "bg-panel text-ink shadow-sm"
+                        : "text-stone-300 hover:text-ink"
+                    }`}
                   >
                     本地仓库
                   </button>
@@ -341,8 +353,11 @@ export function AddProjectOverlay({
 
                 {status && (
                   <div
-                    className={`rounded-md border px-3 py-2 text-sm leading-6 ${status.type === "success" ? "border-emerald-800/60 bg-emerald-900/40 text-emerald-200" : "border-rose-800/60 bg-rose-900/40 text-rose-200"
-                      }`}
+                    className={`rounded-md border px-3 py-2 text-sm leading-6 ${
+                      status.type === "success"
+                        ? "border-emerald-800/60 bg-emerald-900/40 text-emerald-200"
+                        : "border-rose-800/60 bg-rose-900/40 text-rose-200"
+                    }`}
                   >
                     <div className="font-semibold">{status.title}</div>
                     {status.detail && <div className="mt-1 break-words">{status.detail}</div>}
@@ -374,19 +389,27 @@ export function AddProjectOverlay({
                 {source === "remote" ? (
                   <>
                     <div>
-                      Owner: <span className="font-medium text-ink">{parsed?.owner || "待识别"}</span>
+                      Owner:{" "}
+                      <span className="font-medium text-ink">{parsed?.owner || "待识别"}</span>
                     </div>
                     <div>
-                      Repository: <span className="font-medium text-ink">{parsed?.repo || "待识别"}</span>
+                      Repository:{" "}
+                      <span className="font-medium text-ink">{parsed?.repo || "待识别"}</span>
                     </div>
                     <div>
-                      下载到: <span className="break-all font-medium text-ink">{cloneParentDir.trim() || "默认缓存目录"}</span>
+                      下载到:{" "}
+                      <span className="break-all font-medium text-ink">
+                        {cloneParentDir.trim() || "默认缓存目录"}
+                      </span>
                     </div>
                   </>
                 ) : (
                   <>
                     <div>
-                      本地路径: <span className="break-all font-medium text-ink">{localPath.trim() || "待选择"}</span>
+                      本地路径:{" "}
+                      <span className="break-all font-medium text-ink">
+                        {localPath.trim() || "待选择"}
+                      </span>
                     </div>
                     <div>
                       远程仓库: <span className="font-medium text-ink">提交后从 origin 识别</span>
@@ -396,7 +419,10 @@ export function AddProjectOverlay({
               </div>
               <div className="mt-4 space-y-2 text-xs leading-6 text-stone-400">
                 {source === "remote" ? (
-                  <div>支持 `https://github.com/owner/repo`、`git@github.com:owner/repo.git`、`owner/repo`。</div>
+                  <div>
+                    支持
+                    `https://github.com/owner/repo`、`git@github.com:owner/repo.git`、`owner/repo`。
+                  </div>
                 ) : (
                   <div>本地仓库需要已配置 `origin` 远程地址。</div>
                 )}

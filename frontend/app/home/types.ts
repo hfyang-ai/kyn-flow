@@ -205,7 +205,8 @@ export type PRAnalysisResponse = {
 
 export type CIAnalysisResult = {
   failure_summary: string;
-  failure_type: "test" | "build" | "lint" | "dependency" | "permission" | "environment" | "unknown" | string;
+  failure_type:
+    "test" | "build" | "lint" | "dependency" | "permission" | "environment" | "unknown" | string;
   plan?: string[];
   executed_steps?: string[];
   first_error?: string | null;
@@ -368,9 +369,7 @@ export type McpRuntime = {
 };
 
 export type WorkspaceSelection =
-  | { type: "issue"; id: string }
-  | { type: "pr"; id: string }
-  | { type: "ci"; id: string };
+  { type: "issue"; id: string } | { type: "pr"; id: string } | { type: "ci"; id: string };
 
 export type WorkspaceItem = {
   id: string;

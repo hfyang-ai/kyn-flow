@@ -129,7 +129,7 @@ export const statusLabel: Record<KnowledgeDocument["status"], string> = {
   splitting: "分段中",
   embedding: "向量化",
   completed: "可用",
-  failed: "失败"
+  failed: "失败",
 };
 
 export function formatNumber(value: number) {
@@ -144,7 +144,10 @@ export function formatBytes(value: number) {
 
 export function formatDate(value?: string) {
   if (!value) return "-";
-  return new Intl.DateTimeFormat("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }).format(
-    new Date(value)
-  );
+  return new Intl.DateTimeFormat("zh-CN", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
 }

@@ -41,7 +41,7 @@ const REASONS: Array<{ value: FeedbackReason; label: string }> = [
   { value: "missing_context", label: "缺少关键上下文" },
   { value: "unreliable_citation", label: "引用不可靠" },
   { value: "tool_error", label: "工具执行异常" },
-  { value: "other", label: "其他" }
+  { value: "other", label: "其他" },
 ];
 
 export function FeedbackControls({
@@ -49,11 +49,13 @@ export function FeedbackControls({
   conversationId,
   messageId,
   initialFeedback,
-  onSaved
+  onSaved,
 }: FeedbackControlsProps) {
   const [feedback, setFeedback] = useState(initialFeedback);
   const [panelOpen, setPanelOpen] = useState(false);
-  const [reason, setReason] = useState<FeedbackReason | undefined>(initialFeedback?.reason ?? undefined);
+  const [reason, setReason] = useState<FeedbackReason | undefined>(
+    initialFeedback?.reason ?? undefined,
+  );
   const [comment, setComment] = useState(initialFeedback?.comment ?? "");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
@@ -74,7 +76,7 @@ export function FeedbackControls({
         assistant_message_id: messageId,
         rating,
         reason: rating === "unhelpful" ? reason : null,
-        comment: rating === "unhelpful" ? comment.trim() || null : null
+        comment: rating === "unhelpful" ? comment.trim() || null : null,
       });
       setFeedback(result);
       setPanelOpen(false);
@@ -97,10 +99,16 @@ export function FeedbackControls({
           disabled={pending}
           onClick={() => void submit("helpful")}
           className={`flex h-8 w-8 items-center justify-center rounded-md transition disabled:cursor-not-allowed disabled:opacity-50 ${
-            feedback?.rating === "helpful" ? "bg-emerald-900/40 text-emerald-300" : "text-stone-500 hover:bg-stone-700 hover:text-stone-200"
+            feedback?.rating === "helpful"
+              ? "bg-emerald-900/40 text-emerald-300"
+              : "text-stone-500 hover:bg-stone-700 hover:text-stone-200"
           }`}
         >
-          {pending && !panelOpen ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <ThumbsUp className="h-4 w-4" />}
+          {pending && !panelOpen ? (
+            <LoaderCircle className="h-4 w-4 animate-spin" />
+          ) : (
+            <ThumbsUp className="h-4 w-4" />
+          )}
         </button>
         <button
           type="button"
@@ -113,7 +121,9 @@ export function FeedbackControls({
             setError("");
           }}
           className={`flex h-8 w-8 items-center justify-center rounded-md transition disabled:cursor-not-allowed disabled:opacity-50 ${
-            feedback?.rating === "unhelpful" ? "bg-rose-900/40 text-rose-300" : "text-stone-500 hover:bg-stone-700 hover:text-stone-200"
+            feedback?.rating === "unhelpful"
+              ? "bg-rose-900/40 text-rose-300"
+              : "text-stone-500 hover:bg-stone-700 hover:text-stone-200"
           }`}
         >
           <ThumbsDown className="h-4 w-4" />
@@ -122,7 +132,11 @@ export function FeedbackControls({
           <span className="ml-1 flex min-w-0 items-center gap-1 text-xs text-stone-400">
             <Check className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
             已记录
-            {feedback.run_id && <span className="truncate font-mono text-[11px]">trace {feedback.run_id.slice(0, 8)}</span>}
+            {feedback.run_id && (
+              <span className="truncate font-mono text-[11px]">
+                trace {feedback.run_id.slice(0, 8)}
+              </span>
+            )}
           </span>
         )}
       </div>
