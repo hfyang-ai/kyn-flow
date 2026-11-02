@@ -118,8 +118,19 @@ export default function RAGPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [alertDismissed, setAlertDismissed] = useState(false);
+  const [alertHidden, setAlertHidden] = useState(true);
   const fileInput = useRef<HTMLInputElement>(null);
   const qaScrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (error || notice) {
+      setAlertHidden(false);
+      setAlertDismissed(false);
+      const timer = setTimeout(() => setAlertDismissed(true), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error, notice]);
 
   const currentRepo = useMemo(() => repos.find((repo) => repo.id === repoId) ?? null, [repos, repoId]);
   const availableSourceTypes = useMemo(() => Object.keys(status?.source_types ?? {}).sort(), [status]);
@@ -306,9 +317,22 @@ export default function RAGPage() {
         <StatusItem label="生成" value={status?.generation.llm_configured ? status.generation.model ?? "LLM" : "本地证据模式"} />
       </div>
 
-      {(error || notice) && (
-        <div className={`border-b px-4 py-2 text-sm ${error ? "border-red-800/60 bg-red-900/40 text-red-300" : "border-emerald-800/60 bg-emerald-900/40 text-emerald-200"}`}>
-          {error ?? notice}
+      {!alertHidden && (
+        <div
+          className={`flex items-center justify-between border-b px-4 py-2 text-sm transition-opacity duration-300 ${alertDismissed ? "opacity-0" : "opacity-100"} ${error ? "border-red-800/60 bg-red-900/40 text-red-300" : "border-emerald-800/60 bg-emerald-900/40 text-emerald-200"}`}
+          onTransitionEnd={() => {
+            if (alertDismissed) setAlertHidden(true);
+          }}
+        >
+          <span>{error ?? notice}</span>
+          <button
+            type="button"
+            onClick={() => setAlertDismissed(true)}
+            className="ml-3 flex h-5 w-5 shrink-0 items-center justify-center rounded text-current opacity-60 hover:opacity-100"
+            aria-label="关闭"
+          >
+            ✕
+          </button>
         </div>
       )}
 
