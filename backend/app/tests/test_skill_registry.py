@@ -23,7 +23,11 @@ class IssueSkillModel:
             return AIMessage(
                 content="",
                 tool_calls=[
-                    {"name": "issue_agent__analyze_issue", "args": {"message": "triage the latest issue"}, "id": "call_issue"},
+                    {
+                        "name": "issue_agent__analyze_issue",
+                        "args": {"message": "triage the latest issue"},
+                        "id": "call_issue",
+                    },
                 ],
             )
         return AIMessage(content="Issue triage completed.")
@@ -35,7 +39,9 @@ class MemoryPrefetchModel:
 
     async def ainvoke(self, messages: list[Any]) -> AIMessage:
         self.calls += 1
-        return AIMessage(content="根据 MCP 返回的历史证据，Access Token 的有效期为 15 分钟。")
+        return AIMessage(
+            content="根据 MCP 返回的历史证据，Access Token 的有效期为 15 分钟。"
+        )
 
 
 class SkillRuntimeModel:
@@ -49,9 +55,14 @@ class SkillRuntimeModel:
 
     async def ainvoke(self, messages: list[Any]) -> AIMessage:
         self.calls += 1
-        self.prompts.append("\n".join(str(getattr(message, "content", "")) for message in messages))
+        self.prompts.append(
+            "\n".join(str(getattr(message, "content", "")) for message in messages)
+        )
         if self.calls == 1 and self.tool_name:
-            return AIMessage(content="", tool_calls=[{"name": self.tool_name, "args": {}, "id": "skill_call"}])
+            return AIMessage(
+                content="",
+                tool_calls=[{"name": self.tool_name, "args": {}, "id": "skill_call"}],
+            )
         return AIMessage(content="Skill runtime completed.")
 
 
@@ -67,9 +78,18 @@ def test_skill_registry_loads_builtin_skills() -> None:
         "safety-draft",
         "project-investigation",
     } <= names
-    assert registry.skill_for_entrypoint("pr_review_agent.analyze_pr").manifest.name == "pr-review"
-    assert registry.skill_for_entrypoint("kynflow_search_evidence").manifest.name == "project-investigation"
-    assert registry.get_skill("ci-debug").manifest.workflow_steps[0] == "collect_failed_jobs_and_logs"
+    assert (
+        registry.skill_for_entrypoint("pr_review_agent.analyze_pr").manifest.name
+        == "pr-review"
+    )
+    assert (
+        registry.skill_for_entrypoint("kynflow_search_evidence").manifest.name
+        == "project-investigation"
+    )
+    assert (
+        registry.get_skill("ci-debug").manifest.workflow_steps[0]
+        == "collect_failed_jobs_and_logs"
+    )
     assert "ci-debug" in registry.prompt_context()
 
 
@@ -101,7 +121,9 @@ def test_skill_registry_loads_only_referenced_safe_resources(tmp_path) -> None:
     skill_dir = tmp_path / "resource-skill"
     references = skill_dir / "references"
     references.mkdir(parents=True)
-    (references / "checklist.md").write_text("# Runtime checklist\nVerify evidence.", encoding="utf-8")
+    (references / "checklist.md").write_text(
+        "# Runtime checklist\nVerify evidence.", encoding="utf-8"
+    )
     (skill_dir / "SKILL.md").write_text(
         """---
 name: resource-skill
@@ -162,7 +184,11 @@ def test_skill_registry_annotates_entrypoint_tool_calls() -> None:
     registry = get_skill_registry()
 
     annotated = registry.annotate_tool_call(
-        {"tool_name": "safety_agent.classify_action_risk", "arguments": {"action": "comment"}, "status": "success"}
+        {
+            "tool_name": "safety_agent.classify_action_risk",
+            "arguments": {"action": "comment"},
+            "status": "success",
+        }
     )
 
     assert annotated["skill_name"] == "safety-draft"
@@ -174,7 +200,10 @@ def test_skill_registry_annotates_entrypoint_tool_calls() -> None:
 async def test_stdio_mcp_client_inspects_real_server_and_tools() -> None:
     inspection = await StdioMcpClient().inspect_server()
 
-    assert inspection["initialize"]["serverInfo"] == {"name": "kynflow-memory-mcp", "version": "0.1.0"}
+    assert inspection["initialize"]["serverInfo"] == {
+        "name": "kynflow-memory-mcp",
+        "version": "0.1.0",
+    }
     assert inspection["initialize"]["protocolVersion"] == "2024-11-05"
     assert {tool["name"] for tool in inspection["tools"]} == {
         "kynflow_search_evidence",
@@ -188,12 +217,16 @@ async def test_chat_agent_executes_explicit_memory_tool_before_model_answer() ->
     registry = get_skill_registry()
     model = MemoryPrefetchModel()
 
-    async def evidence_tool(input_data: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+    async def evidence_tool(
+        input_data: dict[str, Any], context: dict[str, Any]
+    ) -> dict[str, Any]:
         return {
             "route": "memory_search",
             "tool_calls": [],
             "answer": "历史决策：Access Token 固定为 15 分钟，减少泄露后的暴露窗口。",
-            "citations": [{"type": "memory", "id": "AUTH-ADR-007", "title": "令牌生命周期评审"}],
+            "citations": [
+                {"type": "memory", "id": "AUTH-ADR-007", "title": "令牌生命周期评审"}
+            ],
         }
 
     events = [
@@ -222,10 +255,18 @@ async def test_chat_agent_adds_skill_trace_to_tool_events_and_calls() -> None:
     registry = get_skill_registry()
     model = IssueSkillModel()
 
-    async def issue_tool(input_data: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+    async def issue_tool(
+        input_data: dict[str, Any], context: dict[str, Any]
+    ) -> dict[str, Any]:
         return {
             "route": "issue_analysis",
-            "tool_calls": [{"tool_name": "issue_agent.analyze_issue", "arguments": input_data, "status": "success"}],
+            "tool_calls": [
+                {
+                    "tool_name": "issue_agent.analyze_issue",
+                    "arguments": input_data,
+                    "status": "success",
+                }
+            ],
             "answer": "Issue category: Bug",
             "citations": [],
         }
@@ -260,13 +301,21 @@ async def test_chat_agent_auto_loads_full_skill_and_records_validation() -> None
     registry = get_skill_registry()
     model = SkillRuntimeModel(tool_name="pr_review_agent__analyze_pr")
 
-    async def pr_tool(input_data: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+    async def pr_tool(
+        input_data: dict[str, Any], context: dict[str, Any]
+    ) -> dict[str, Any]:
         active = context.get("active_skills") or []
         assert active[0]["skill_name"] == "pr-review"
         assert "不能用「looks good」" in active[0]["instructions"]
         return {
             "route": "pr_review",
-            "tool_calls": [{"tool_name": "pr_review_agent.analyze_pr", "arguments": {}, "status": "success"}],
+            "tool_calls": [
+                {
+                    "tool_name": "pr_review_agent.analyze_pr",
+                    "arguments": {},
+                    "status": "success",
+                }
+            ],
             "answer": "PR reviewed.",
             "citations": [],
         }
@@ -285,8 +334,12 @@ async def test_chat_agent_auto_loads_full_skill_and_records_validation() -> None
     assert any("不能用「looks good」" in prompt for prompt in model.prompts)
     assert any("PR 风险检查清单" in prompt for prompt in model.prompts)
     assert all("优先提取首个关键错误块" not in prompt for prompt in model.prompts)
-    activation = next(event for event in final["agent_events"] if event["type"] == "skill_activated")
-    validation = next(event for event in final["agent_events"] if event["type"] == "skill_validation")
+    activation = next(
+        event for event in final["agent_events"] if event["type"] == "skill_activated"
+    )
+    validation = next(
+        event for event in final["agent_events"] if event["type"] == "skill_validation"
+    )
     assert activation["skill_name"] == "pr-review"
     assert activation["activation_mode"] == "automatic"
     assert validation["status"] == "completed"
@@ -311,9 +364,13 @@ async def test_chat_agent_does_not_load_unmatched_skill_body() -> None:
     )
 
     assert final["route"] == "direct_answer"
-    assert any("本轮没有匹配到需要加载完整正文的 Skill" in prompt for prompt in model.prompts)
+    assert any(
+        "本轮没有匹配到需要加载完整正文的 Skill" in prompt for prompt in model.prompts
+    )
     assert all("不能用「looks good」" not in prompt for prompt in model.prompts)
-    assert not any(event["type"] == "skill_activated" for event in final["agent_events"])
+    assert not any(
+        event["type"] == "skill_activated" for event in final["agent_events"]
+    )
 
 
 @pytest.mark.asyncio
@@ -322,13 +379,27 @@ async def test_explicit_skill_rejects_tools_outside_its_contract() -> None:
     model = SkillRuntimeModel(tool_name="issue_agent__analyze_issue")
     issue_called = False
 
-    async def issue_tool(input_data: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+    async def issue_tool(
+        input_data: dict[str, Any], context: dict[str, Any]
+    ) -> dict[str, Any]:
         nonlocal issue_called
         issue_called = True
-        return {"route": "issue_analysis", "tool_calls": [], "answer": "unexpected", "citations": []}
+        return {
+            "route": "issue_analysis",
+            "tool_calls": [],
+            "answer": "unexpected",
+            "citations": [],
+        }
 
-    async def pr_tool(input_data: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
-        return {"route": "pr_review", "tool_calls": [], "answer": "unused", "citations": []}
+    async def pr_tool(
+        input_data: dict[str, Any], context: dict[str, Any]
+    ) -> dict[str, Any]:
+        return {
+            "route": "pr_review",
+            "tool_calls": [],
+            "answer": "unused",
+            "citations": [],
+        }
 
     final = await ChatAgent(model=model).run(
         {"message": "使用 pr-review Skill 审查这个变更"},
@@ -347,13 +418,17 @@ async def test_explicit_skill_rejects_tools_outside_its_contract() -> None:
     assert issue_called is False
     assert final["tool_calls"][0]["status"] == "error"
     assert final["tool_calls"][0]["error_kind"] == "permission_denied"
-    validation = next(event for event in final["agent_events"] if event["type"] == "skill_validation")
+    validation = next(
+        event for event in final["agent_events"] if event["type"] == "skill_validation"
+    )
     assert validation["status"] == "violated"
     assert validation["tool_contract_violations"] == ["issue_agent.analyze_issue"]
 
 
 @pytest.mark.asyncio
-async def test_chat_agent_reports_unknown_explicit_skill_without_calling_model() -> None:
+async def test_chat_agent_reports_unknown_explicit_skill_without_calling_model() -> (
+    None
+):
     registry = get_skill_registry()
     model = SkillRuntimeModel()
 

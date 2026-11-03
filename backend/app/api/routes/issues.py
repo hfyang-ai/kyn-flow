@@ -55,7 +55,9 @@ def _document_evidence(items: list[dict], default_source_type: str) -> list[dict
 def _fallback_project_documents(db: Session, repo_id: UUID) -> list[dict]:
     rows = (
         db.query(Document)
-        .filter(Document.repo_id == repo_id, Document.source_type.in_(PROJECT_DOC_TYPES))
+        .filter(
+            Document.repo_id == repo_id, Document.source_type.in_(PROJECT_DOC_TYPES)
+        )
         .order_by(Document.created_at.desc())
         .limit(4)
         .all()
@@ -73,7 +75,9 @@ def _fallback_project_documents(db: Session, repo_id: UUID) -> list[dict]:
     ]
 
 
-def _conversation_evidence(db: Session, issue: Issue, conversation_id: UUID | None, query: str) -> list[dict]:
+def _conversation_evidence(
+    db: Session, issue: Issue, conversation_id: UUID | None, query: str
+) -> list[dict]:
     if not conversation_id:
         return []
     conversation = db.get(Conversation, conversation_id)
@@ -108,7 +112,9 @@ def _issue_payload(issue: Issue) -> dict:
     }
 
 
-def _build_issue_analysis_context(db: Session, issue: Issue, conversation_id: UUID | None = None) -> tuple[str, dict, dict]:
+def _build_issue_analysis_context(
+    db: Session, issue: Issue, conversation_id: UUID | None = None
+) -> tuple[str, dict, dict]:
     query = f"{issue.title}\n{issue.body or ''}"
     repo = db.get(Repository, issue.repo_id)
     similar_docs = search_similar_documents(db, str(issue.repo_id), query, "issue", 4)
@@ -140,12 +146,17 @@ def _build_issue_analysis_context(db: Session, issue: Issue, conversation_id: UU
     chat_evidence = _conversation_evidence(db, issue, conversation_id, query)
     team_members = [
         {
-            "name": (doc.meta or {}).get("name") or doc.title.replace("团队成员：", "").replace("Team member: ", ""),
+            "name": (doc.meta or {}).get("name")
+            or doc.title.replace("团队成员：", "").replace("Team member: ", ""),
             "role": (doc.meta or {}).get("role") or "",
             "strengths": (doc.meta or {}).get("strengths") or "",
             "techStack": (doc.meta or {}).get("tech_stack") or "",
         }
-        for doc in db.query(Document).filter(Document.repo_id == issue.repo_id, Document.source_type == "team_member").all()
+        for doc in db.query(Document)
+        .filter(
+            Document.repo_id == issue.repo_id, Document.source_type == "team_member"
+        )
+        .all()
     ]
     context = {
         "repo_id": str(issue.repo_id),
@@ -209,7 +220,9 @@ def _public_reasoning_fallback(issue: Issue, context: dict) -> list[str]:
     ]
 
 
-async def _stream_public_reasoning(agent: IssueAgent, issue: Issue, payload: dict, context: dict) -> AsyncIterator[str]:
+async def _stream_public_reasoning(
+    agent: IssueAgent, issue: Issue, payload: dict, context: dict
+) -> AsyncIterator[str]:
     streamed = False
     user_payload = {
         "issue": payload,
@@ -240,7 +253,9 @@ async def _stream_public_reasoning(agent: IssueAgent, issue: Issue, payload: dic
         yield line
 
 
-async def _issue_analysis_sse(issue_id: UUID, conversation_id: UUID | None, db: Session) -> AsyncIterator[str]:
+async def _issue_analysis_sse(
+    issue_id: UUID, conversation_id: UUID | None, db: Session
+) -> AsyncIterator[str]:
     issue = db.get(Issue, issue_id)
     if issue is None:
         yield _encode_sse("error", {"message": "未找到 Issue"})
@@ -248,19 +263,74 @@ async def _issue_analysis_sse(issue_id: UUID, conversation_id: UUID | None, db: 
     agent = IssueAgent()
     payload = _issue_payload(issue)
     try:
-        yield _encode_sse("trace", _trace_item("step", "读取 Issue", f"读取 Issue #{issue.number} 的标题、正文、标签、状态和已分配人员。", "running"))
-        _query, context, counts = _build_issue_analysis_context(db, issue, conversation_id)
-        yield _encode_sse("trace", _trace_item("tool", "检索相似历史", f"找到 {counts['duplicates']} 个相似 Issue 候选。"))
-        yield _encode_sse("trace", _trace_item("tool", "检索代码与文档", f"找到 {counts['code']} 条代码线索、{counts['documents']} 条项目文档/记忆线索。"))
-        yield _encode_sse("trace", _trace_item("tool", "读取团队画像", f"读取 {counts['team_members']} 位团队成员，用于建议负责人。"))
+        yield _encode_sse(
+            "trace",
+            _trace_item(
+                "step",
+                "读取 Issue",
+                f"读取 Issue #{issue.number} 的标题、正文、标签、状态和已分配人员。",
+                "running",
+            ),
+        )
+        _query, context, counts = _build_issue_analysis_context(
+            db, issue, conversation_id
+        )
+        yield _encode_sse(
+            "trace",
+            _trace_item(
+                "tool",
+                "检索相似历史",
+                f"找到 {counts['duplicates']} 个相似 Issue 候选。",
+            ),
+        )
+        yield _encode_sse(
+            "trace",
+            _trace_item(
+                "tool",
+                "检索代码与文档",
+                f"找到 {counts['code']} 条代码线索、{counts['documents']} 条项目文档/记忆线索。",
+            ),
+        )
+        yield _encode_sse(
+            "trace",
+            _trace_item(
+                "tool",
+                "读取团队画像",
+                f"读取 {counts['team_members']} 位团队成员，用于建议负责人。",
+            ),
+        )
         if counts["conversation"]:
-            yield _encode_sse("trace", _trace_item("tool", "读取会话上下文", f"找到 {counts['conversation']} 条与当前会话相关的证据。"))
-        yield _encode_sse("trace", _trace_item("thinking", "LLM 公开分析过程", "开始综合 Issue、证据和团队画像。", "running"))
+            yield _encode_sse(
+                "trace",
+                _trace_item(
+                    "tool",
+                    "读取会话上下文",
+                    f"找到 {counts['conversation']} 条与当前会话相关的证据。",
+                ),
+            )
+        yield _encode_sse(
+            "trace",
+            _trace_item(
+                "thinking",
+                "LLM 公开分析过程",
+                "开始综合 Issue、证据和团队画像。",
+                "running",
+            ),
+        )
         async for chunk in _stream_public_reasoning(agent, issue, payload, context):
             yield _encode_sse("thinking_delta", {"content": chunk})
         result = await agent.run(payload, context)
-        analysis = _persist_issue_analysis(db, issue, result, agent.llm.model, conversation_id, counts)
-        yield _encode_sse("trace", _trace_item("result", "生成结构化结论", f"结论：{result.get('conclusion')}；优先级：{result.get('priority')}；复杂度：{result.get('complexity')}；负责人：{result.get('suggested_owner')}。"))
+        analysis = _persist_issue_analysis(
+            db, issue, result, agent.llm.model, conversation_id, counts
+        )
+        yield _encode_sse(
+            "trace",
+            _trace_item(
+                "result",
+                "生成结构化结论",
+                f"结论：{result.get('conclusion')}；优先级：{result.get('priority')}；复杂度：{result.get('complexity')}；负责人：{result.get('suggested_owner')}。",
+            ),
+        )
         yield _encode_sse("final", {"analysis_id": str(analysis.id), "result": result})
     except Exception as exc:
         db.rollback()
@@ -269,7 +339,12 @@ async def _issue_analysis_sse(issue_id: UUID, conversation_id: UUID | None, db: 
 
 @router.get("/repos/{repo_id}/issues", response_model=list[IssueResponse])
 async def list_issues(repo_id: UUID, db: Session = Depends(get_db)) -> list[Issue]:
-    return db.query(Issue).filter(Issue.repo_id == repo_id).order_by(Issue.number.desc()).all()
+    return (
+        db.query(Issue)
+        .filter(Issue.repo_id == repo_id)
+        .order_by(Issue.number.desc())
+        .all()
+    )
 
 
 @router.get("/issues/{issue_id}", response_model=IssueResponse)
@@ -292,7 +367,9 @@ async def analyze_issue(
     agent = IssueAgent()
     _query, context, counts = _build_issue_analysis_context(db, issue, conversation_id)
     result = await agent.run(_issue_payload(issue), context)
-    analysis = _persist_issue_analysis(db, issue, result, agent.llm.model, conversation_id, counts)
+    analysis = _persist_issue_analysis(
+        db, issue, result, agent.llm.model, conversation_id, counts
+    )
     return IssueAnalysisResponse(analysis_id=analysis.id, result=result)
 
 
@@ -302,7 +379,10 @@ async def analyze_issue_stream(
     conversation_id: UUID | None = Query(default=None),
     db: Session = Depends(get_db),
 ) -> StreamingResponse:
-    return StreamingResponse(_issue_analysis_sse(issue_id, conversation_id, db), media_type="text/event-stream")
+    return StreamingResponse(
+        _issue_analysis_sse(issue_id, conversation_id, db),
+        media_type="text/event-stream",
+    )
 
 
 @router.get("/issues/{issue_id}/similar")
@@ -310,4 +390,6 @@ async def similar_issues(issue_id: UUID, db: Session = Depends(get_db)) -> list[
     issue = db.get(Issue, issue_id)
     if issue is None:
         raise HTTPException(status_code=404, detail="未找到 Issue")
-    return search_similar_documents(db, str(issue.repo_id), f"{issue.title}\n{issue.body or ''}", "issue", 5)
+    return search_similar_documents(
+        db, str(issue.repo_id), f"{issue.title}\n{issue.body or ''}", "issue", 5
+    )

@@ -33,15 +33,23 @@ def _in_range(value: datetime | None, start_at: datetime, end_at: datetime) -> b
 
 
 def _issue_in_range(issue: Issue, start_at: datetime, end_at: datetime) -> bool:
-    return any(_in_range(value, start_at, end_at) for value in [issue.created_at, issue.updated_at, issue.closed_at])
+    return any(
+        _in_range(value, start_at, end_at)
+        for value in [issue.created_at, issue.updated_at, issue.closed_at]
+    )
 
 
 def _pr_in_range(pr: PullRequest, start_at: datetime, end_at: datetime) -> bool:
-    return any(_in_range(value, start_at, end_at) for value in [pr.created_at, pr.updated_at, pr.merged_at])
+    return any(
+        _in_range(value, start_at, end_at)
+        for value in [pr.created_at, pr.updated_at, pr.merged_at]
+    )
 
 
 @router.post("/weekly", response_model=WeeklyReportResponse)
-async def weekly_report(payload: WeeklyReportRequest, db: Session = Depends(get_db)) -> dict:
+async def weekly_report(
+    payload: WeeklyReportRequest, db: Session = Depends(get_db)
+) -> dict:
     repo = db.get(Repository, payload.repo_id)
     if repo is None:
         raise HTTPException(status_code=404, detail="未找到仓库")
@@ -53,25 +61,45 @@ async def weekly_report(payload: WeeklyReportRequest, db: Session = Depends(get_
     ]
     prs = [
         item
-        for item in db.query(PullRequest).filter(PullRequest.repo_id == payload.repo_id).all()
+        for item in db.query(PullRequest)
+        .filter(PullRequest.repo_id == payload.repo_id)
+        .all()
         if _pr_in_range(item, start_at, end_at)
     ]
     runs = [
         item
-        for item in db.query(WorkflowRun).filter(WorkflowRun.repo_id == payload.repo_id).all()
-        if _in_range(item.created_at, start_at, end_at) or _in_range(item.updated_at, start_at, end_at)
+        for item in db.query(WorkflowRun)
+        .filter(WorkflowRun.repo_id == payload.repo_id)
+        .all()
+        if _in_range(item.created_at, start_at, end_at)
+        or _in_range(item.updated_at, start_at, end_at)
     ]
     merged_prs = [item for item in prs if item.merged_at]
     open_prs = [item for item in prs if item.state == "open"]
     failed_ci = [item for item in runs if item.conclusion == "failure"]
     result = await ReportAgent().run(
         {
-            "issues": [{"number": item.number, "title": item.title, "state": item.state, "closed_at": item.closed_at} for item in issues],
+            "issues": [
+                {
+                    "number": item.number,
+                    "title": item.title,
+                    "state": item.state,
+                    "closed_at": item.closed_at,
+                }
+                for item in issues
+            ],
             "pull_requests": [
-                {"number": item.number, "title": item.title, "state": item.state, "merged_at": item.merged_at}
+                {
+                    "number": item.number,
+                    "title": item.title,
+                    "state": item.state,
+                    "merged_at": item.merged_at,
+                }
                 for item in prs
             ],
-            "workflow_runs": [{"name": item.name, "conclusion": item.conclusion} for item in runs],
+            "workflow_runs": [
+                {"name": item.name, "conclusion": item.conclusion} for item in runs
+            ],
             "metrics": {
                 "issues": len(issues),
                 "pull_requests": len(prs),
@@ -106,12 +134,33 @@ async def weekly_report(payload: WeeklyReportRequest, db: Session = Depends(get_
 
 
 @router.post("/repo-health")
-async def repo_health(payload: WeeklyReportRequest, db: Session = Depends(get_db)) -> dict:
-    open_issues = db.query(Issue).filter(Issue.repo_id == payload.repo_id, Issue.state == "open").count()
-    open_prs = db.query(PullRequest).filter(PullRequest.repo_id == payload.repo_id, PullRequest.state == "open").count()
-    failed_ci = db.query(WorkflowRun).filter(WorkflowRun.repo_id == payload.repo_id, WorkflowRun.conclusion == "failure").count()
+async def repo_health(
+    payload: WeeklyReportRequest, db: Session = Depends(get_db)
+) -> dict:
+    open_issues = (
+        db.query(Issue)
+        .filter(Issue.repo_id == payload.repo_id, Issue.state == "open")
+        .count()
+    )
+    open_prs = (
+        db.query(PullRequest)
+        .filter(PullRequest.repo_id == payload.repo_id, PullRequest.state == "open")
+        .count()
+    )
+    failed_ci = (
+        db.query(WorkflowRun)
+        .filter(
+            WorkflowRun.repo_id == payload.repo_id, WorkflowRun.conclusion == "failure"
+        )
+        .count()
+    )
     return {
         "summary": "仓库健康度以 demo 指标估算，建议结合近期失败 CI 和高风险 PR 判断。",
-        "metrics": {"open_issues": open_issues, "open_prs": open_prs, "failed_ci_runs": failed_ci, "merged_prs_7d": 0},
+        "metrics": {
+            "open_issues": open_issues,
+            "open_prs": open_prs,
+            "failed_ci_runs": failed_ci,
+            "merged_prs_7d": 0,
+        },
         "risks": ["存在失败 CI，需要排查"] if failed_ci else [],
     }

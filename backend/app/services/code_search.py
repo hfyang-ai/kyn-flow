@@ -77,7 +77,9 @@ TEXT_FILENAMES = {
     "pyproject.toml",
 }
 
-_QUERY_TOKEN_RE = re.compile(r"[A-Za-z_$][A-Za-z0-9_.$:/\\-]*|[0-9]{3,}|[\u4e00-\u9fff]{2,}")
+_QUERY_TOKEN_RE = re.compile(
+    r"[A-Za-z_$][A-Za-z0-9_.$:/\\-]*|[0-9]{3,}|[\u4e00-\u9fff]{2,}"
+)
 _STOP_TERMS = {
     "about",
     "after",
@@ -121,13 +123,17 @@ def repository_checkout_path(repo: Repository) -> Path:
     return _repo_checkout_path(repo).resolve()
 
 
-def resolve_search_root(checkout_path: str | Path, relative_path: str | None = None) -> tuple[Path, Path]:
+def resolve_search_root(
+    checkout_path: str | Path, relative_path: str | None = None
+) -> tuple[Path, Path]:
     checkout = Path(checkout_path).expanduser().resolve()
     if not checkout.exists() or not checkout.is_dir():
         raise ValueError("仓库代码还没有同步到本地。")
 
     requested = str(relative_path or ".").strip()
-    requested = "." if requested in {"", ".", "./", "/", "\\"} else requested.lstrip("/\\")
+    requested = (
+        "." if requested in {"", ".", "./", "/", "\\"} else requested.lstrip("/\\")
+    )
     root = (checkout / requested).resolve()
     try:
         root.relative_to(checkout)
@@ -154,7 +160,10 @@ def query_terms(query: str, limit: int = 16) -> list[str]:
         seen.add(normalized)
         code_like = bool(
             re.search(r"[_.$:/\\\-0-9]", value)
-            or (any(char.islower() for char in value) and any(char.isupper() for char in value))
+            or (
+                any(char.islower() for char in value)
+                and any(char.isupper() for char in value)
+            )
         )
         candidate = (1 if code_like else 0, len(value), normalized)
         fallback_candidates.append(candidate)
@@ -166,9 +175,18 @@ def query_terms(query: str, limit: int = 16) -> list[str]:
 
 
 def _is_text_file(path: Path) -> bool:
-    if path.name in SECRET_FILENAMES or path.suffix.lower() in {".log", ".db", ".sqlite", ".sqlite3"}:
+    if path.name in SECRET_FILENAMES or path.suffix.lower() in {
+        ".log",
+        ".db",
+        ".sqlite",
+        ".sqlite3",
+    }:
         return False
-    return path.name in TEXT_FILENAMES or path.suffix.lower() in TEXT_EXTENSIONS or path.name.lower().endswith("dockerfile")
+    return (
+        path.name in TEXT_FILENAMES
+        or path.suffix.lower() in TEXT_EXTENSIONS
+        or path.name.lower().endswith("dockerfile")
+    )
 
 
 def _read_text(path: Path, max_bytes: int = 180_000) -> str | None:
@@ -186,7 +204,9 @@ def _read_text(path: Path, max_bytes: int = 180_000) -> str | None:
     return None
 
 
-def read_code_excerpt(checkout_path: str | Path, relative_path: str, start_line: int, line_count: int = 7) -> str:
+def read_code_excerpt(
+    checkout_path: str | Path, relative_path: str, start_line: int, line_count: int = 7
+) -> str:
     checkout, path = resolve_search_root(checkout_path, relative_path)
     if not path.is_file() or not _is_text_file(path):
         return ""
@@ -200,7 +220,8 @@ def read_code_excerpt(checkout_path: str | Path, relative_path: str, start_line:
         return ""
     relative = path.relative_to(checkout).as_posix()
     return f"{relative}:{start}-{end}\n" + "\n".join(
-        f"{line_number}: {lines[line_number - 1]}" for line_number in range(start, end + 1)
+        f"{line_number}: {lines[line_number - 1]}"
+        for line_number in range(start, end + 1)
     )
 
 
@@ -213,7 +234,9 @@ def _score_match(relative_path: str, line: str, terms: list[str]) -> float:
     return float(matched * 4 + occurrences + path_hits * 2)
 
 
-def _ripgrep_matches(checkout: Path, root: Path, terms: list[str], max_matches: int) -> list[tuple[float, str, int, str]]:
+def _ripgrep_matches(
+    checkout: Path, root: Path, terms: list[str], max_matches: int
+) -> list[tuple[float, str, int, str]]:
     pattern = "|".join(re.escape(term) for term in terms)
     command = [
         "rg",
@@ -267,7 +290,10 @@ def _ripgrep_matches(checkout: Path, root: Path, terms: list[str], max_matches: 
             relative = path.resolve().relative_to(checkout).as_posix()
         except ValueError:
             continue
-        if any(part in SKIP_DIRS for part in Path(relative).parts) or Path(relative).name in SECRET_FILENAMES:
+        if (
+            any(part in SKIP_DIRS for part in Path(relative).parts)
+            or Path(relative).name in SECRET_FILENAMES
+        ):
             continue
         line_number = int(data.get("line_number") or 1)
         line = str((data.get("lines") or {}).get("text") or "").strip()[:320]
@@ -281,7 +307,9 @@ def _ripgrep_matches(checkout: Path, root: Path, terms: list[str], max_matches: 
     return list(best_by_file.values())
 
 
-def _python_matches(checkout: Path, root: Path, terms: list[str], max_files: int = 1000) -> list[tuple[float, str, int, str]]:
+def _python_matches(
+    checkout: Path, root: Path, terms: list[str], max_files: int = 1000
+) -> list[tuple[float, str, int, str]]:
     paths = [root] if root.is_file() else root.rglob("*")
     matches: list[tuple[float, str, int, str]] = []
     files_seen = 0
@@ -327,7 +355,9 @@ def search_checkout_code(
     search_tool = "python_scan"
     if shutil.which("rg"):
         try:
-            matches = _ripgrep_matches(checkout, root, terms, max_matches=max(capped_limit * 8, 80))
+            matches = _ripgrep_matches(
+                checkout, root, terms, max_matches=max(capped_limit * 8, 80)
+            )
             search_tool = "ripgrep"
         except (OSError, RuntimeError, subprocess.TimeoutExpired):
             matches = _python_matches(checkout, root, terms)
@@ -372,7 +402,11 @@ def search_repository_code(
     checkout_path: str | Path | None = None,
     metadata: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
-    root = Path(checkout_path).resolve() if checkout_path else repository_checkout_path(repo)
+    root = (
+        Path(checkout_path).resolve()
+        if checkout_path
+        else repository_checkout_path(repo)
+    )
     if not root.exists():
         return []
     try:

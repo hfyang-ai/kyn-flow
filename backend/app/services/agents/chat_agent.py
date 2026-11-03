@@ -51,15 +51,25 @@ class GenericToolArgs(BaseModel):
     conversation_id: str | None = Field(default=None, description="会话 UUID")
     session_id: str | None = Field(default=None, description="会话片段 UUID")
     message_id: str | None = Field(default=None, description="需要精确读取的消息 UUID")
-    before_message_id: str | None = Field(default=None, description="只读取该消息之前的记录")
-    after_message_id: str | None = Field(default=None, description="只读取该消息之后的记录")
-    offset: int | None = Field(default=None, description="从消息正文的字符偏移量开始读取")
+    before_message_id: str | None = Field(
+        default=None, description="只读取该消息之前的记录"
+    )
+    after_message_id: str | None = Field(
+        default=None, description="只读取该消息之后的记录"
+    )
+    offset: int | None = Field(
+        default=None, description="从消息正文的字符偏移量开始读取"
+    )
     max_chars: int | None = Field(default=None, description="本次最多返回的正文字符数")
-    include_transcript: bool | None = Field(default=None, description="读取封存会话时是否包含原始 transcript")
+    include_transcript: bool | None = Field(
+        default=None, description="读取封存会话时是否包含原始 transcript"
+    )
     route: str | None = Field(default=None, description="仓库路由或意图")
     path: str | None = Field(default=None, description="相对工作区的文件或目录路径")
     pattern: str | None = Field(default=None, description="文本或 glob 模式")
-    start_line: int | None = Field(default=None, description="读取文件时从第几行开始，行号从 1 开始")
+    start_line: int | None = Field(
+        default=None, description="读取文件时从第几行开始，行号从 1 开始"
+    )
     line_count: int | None = Field(default=None, description="最多读取多少行")
 
 
@@ -89,7 +99,9 @@ class ConversationState(TypedDict, total=False):
 
 class ChatAgent(BaseAgent):
     name = "chat_agent"
-    description = "使用原生工具调用的对话 Agent。LLM 选择 LangChain 工具，记忆工具通过 MCP 执行。"
+    description = (
+        "使用原生工具调用的对话 Agent。LLM 选择 LangChain 工具，记忆工具通过 MCP 执行。"
+    )
     available_tools = [
         "kynflow_search_evidence",
         "kynflow_get_thread_context",
@@ -123,7 +135,9 @@ class ChatAgent(BaseAgent):
                 model_kwargs=prompt_cache_model_kwargs(),
             )
 
-    async def run(self, input_data: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+    async def run(
+        self, input_data: dict[str, Any], context: dict[str, Any]
+    ) -> dict[str, Any]:
         final: dict[str, Any] | None = None
         async for event in self.run_stream(input_data, context):
             if event["event"] == "final":
@@ -136,7 +150,9 @@ class ChatAgent(BaseAgent):
             "citations": [],
         }
 
-    async def run_stream(self, input_data: dict[str, Any], context: dict[str, Any]) -> AsyncIterator[dict[str, Any]]:
+    async def run_stream(
+        self, input_data: dict[str, Any], context: dict[str, Any]
+    ) -> AsyncIterator[dict[str, Any]]:
         message = str(input_data.get("message") or "")
         runtime_context = dict(context)
         try:
@@ -151,10 +167,18 @@ class ChatAgent(BaseAgent):
                     "run_id": "",
                     "route": "skill_error",
                     "tool_calls": [],
-                    "agent_events": [{"type": "skill_activation_error", "error": str(exc)}],
+                    "agent_events": [
+                        {"type": "skill_activation_error", "error": str(exc)}
+                    ],
                     "answer": answer,
                     "citations": [],
-                    "completion": {"status": "blocked", "reason": "skill_activation_error", "steps": 0, "tool_call_count": 0, "tool_error_count": 0},
+                    "completion": {
+                        "status": "blocked",
+                        "reason": "skill_activation_error",
+                        "steps": 0,
+                        "tool_call_count": 0,
+                        "tool_error_count": 0,
+                    },
                 },
             )
             return
@@ -223,7 +247,9 @@ class ChatAgent(BaseAgent):
                 "skill_activated",
                 activation_event,
             )
-        prefetched_evidence = context.get("evidence") if isinstance(context.get("evidence"), list) else []
+        prefetched_evidence = (
+            context.get("evidence") if isinstance(context.get("evidence"), list) else []
+        )
         pre_retrieval_enabled = "evidence" in context
         reasoning_retrieval_enabled = "rag.search_similar_documents" in raw_tools
         pre_retrieval_sources = [
@@ -231,7 +257,9 @@ class ChatAgent(BaseAgent):
                 "source_id": str(item.get("source_id") or item.get("id") or ""),
                 "source_type": str(item.get("source_type") or "evidence"),
                 "title": str(item.get("title") or "未命名证据"),
-                "score": item.get("score") if isinstance(item.get("score"), (int, float)) else None,
+                "score": item.get("score")
+                if isinstance(item.get("score"), (int, float))
+                else None,
             }
             for item in prefetched_evidence[:8]
             if isinstance(item, dict)
@@ -240,7 +268,9 @@ class ChatAgent(BaseAgent):
             state,
             "rag_strategy",
             {
-                "mode": "hybrid_rag" if pre_retrieval_enabled and reasoning_retrieval_enabled else "tool_calling",
+                "mode": "hybrid_rag"
+                if pre_retrieval_enabled and reasoning_retrieval_enabled
+                else "tool_calling",
                 "pre_retrieval": {
                     "enabled": pre_retrieval_enabled,
                     "evidence_count": len(prefetched_evidence),
@@ -285,13 +315,19 @@ class ChatAgent(BaseAgent):
 
         required_memory_tool = str((memory_policy or {}).get("tool") or "") or None
         if required_memory_tool and required_memory_tool in raw_tools:
-            async for event in self._prefetch_memory_context(state, required_memory_tool):
+            async for event in self._prefetch_memory_context(
+                state, required_memory_tool
+            ):
                 yield event
             state["final_answer"] = await self._final_from_observations(state)
             answer = str(state.get("final_answer") or "").strip()
             if not answer:
                 answer = await self._fallback_answer(state)
-            self._stop_loop(state, "required_memory_context_loaded", self._tool_completion_status(state))
+            self._stop_loop(
+                state,
+                "required_memory_context_loaded",
+                self._tool_completion_status(state),
+            )
             self._record_skill_validation(state)
             async for chunk in self._stream_answer(answer):
                 yield chunk
@@ -318,7 +354,9 @@ class ChatAgent(BaseAgent):
             answer = str(state.get("final_answer") or "").strip()
             if not answer:
                 answer = await self._fallback_answer(state)
-            self._stop_loop(state, "project_context_loaded", self._tool_completion_status(state))
+            self._stop_loop(
+                state, "project_context_loaded", self._tool_completion_status(state)
+            )
             self._record_skill_validation(state)
             async for chunk in self._stream_answer(answer):
                 yield chunk
@@ -343,10 +381,14 @@ class ChatAgent(BaseAgent):
                 "当前没有取得足够证据。请先确认仓库已连接并完成同步；开放式对话还需要配置 LLM。"
             )
             evidence = (state.get("context") or {}).get("evidence")
-            has_evidence = isinstance(evidence, list) and any(isinstance(item, dict) for item in evidence)
+            has_evidence = isinstance(evidence, list) and any(
+                isinstance(item, dict) for item in evidence
+            )
             self._stop_loop(
                 state,
-                "prefetched_evidence_available" if has_evidence else "llm_not_configured",
+                "prefetched_evidence_available"
+                if has_evidence
+                else "llm_not_configured",
                 "completed" if has_evidence else "blocked",
             )
             self._record_skill_validation(state)
@@ -376,7 +418,9 @@ class ChatAgent(BaseAgent):
         if not answer:
             answer = await self._fallback_answer(state)
         if state.get("completion_status") == "running":
-            self._stop_loop(state, "fallback_answer_ready", self._tool_completion_status(state))
+            self._stop_loop(
+                state, "fallback_answer_ready", self._tool_completion_status(state)
+            )
         self._record_skill_validation(state)
         async for chunk in self._stream_answer(answer):
             yield chunk
@@ -412,18 +456,30 @@ class ChatAgent(BaseAgent):
         graph.add_conditional_edges(
             "tool_action",
             self._route_after_tool_action,
-            {"tools": "tool_action", "model": "model_decision", "limit": "max_steps_stop"},
+            {
+                "tools": "tool_action",
+                "model": "model_decision",
+                "limit": "max_steps_stop",
+            },
         )
         graph.add_edge("max_steps_stop", END)
         return graph.compile(name="chat_agent_tool_calling_graph")
 
-    async def _stream_agent_graph(self, graph: Any, state: ConversationState) -> AsyncIterator[dict[str, Any]]:
+    async def _stream_agent_graph(
+        self, graph: Any, state: ConversationState
+    ) -> AsyncIterator[dict[str, Any]]:
         current_state: ConversationState = dict(state)
         config = {"recursion_limit": self.max_steps * 8 + 20}
-        async for graph_event in graph.astream(current_state, config=config, stream_mode="debug"):
+        async for graph_event in graph.astream(
+            current_state, config=config, stream_mode="debug"
+        ):
             if not isinstance(graph_event, dict):
                 continue
-            payload = graph_event.get("payload") if isinstance(graph_event.get("payload"), dict) else {}
+            payload = (
+                graph_event.get("payload")
+                if isinstance(graph_event.get("payload"), dict)
+                else {}
+            )
             node_name = str(payload.get("name") or "")
             if graph_event.get("type") == "task" and node_name == "tool_action":
                 preview = self._preview_tool_use_event(payload.get("input"))
@@ -443,11 +499,15 @@ class ChatAgent(BaseAgent):
                 if isinstance(event, dict):
                     yield event
 
-    async def _graph_model_decision(self, state: ConversationState, tool_model: Any) -> dict[str, Any]:
+    async def _graph_model_decision(
+        self, state: ConversationState, tool_model: Any
+    ) -> dict[str, Any]:
         next_state: ConversationState = dict(state)
         step = int(next_state.get("step") or 0) + 1
         next_state["step"] = step
-        self._append_agent_event(next_state, "agent_step", {"step": step, "phase": "model_decision"})
+        self._append_agent_event(
+            next_state, "agent_step", {"step": step, "phase": "model_decision"}
+        )
         system_prompt = self._tool_calling_system_prompt()
         user_prompt = self._tool_calling_user_prompt(next_state)
         messages: list[BaseMessage] = [
@@ -463,7 +523,9 @@ class ChatAgent(BaseAgent):
         try:
             response = await tool_model.ainvoke(messages)
         except Exception as exc:
-            if not is_context_overflow_error(exc) or next_state.get("context_overflow_recovery_attempted"):
+            if not is_context_overflow_error(exc) or next_state.get(
+                "context_overflow_recovery_attempted"
+            ):
                 raise
             next_state["context_overflow_recovery_attempted"] = True
             next_state["runtime_context_stats"] = {
@@ -474,10 +536,16 @@ class ChatAgent(BaseAgent):
             self._append_agent_event(
                 next_state,
                 "context_overflow_recovery",
-                {"phase": "model_decision", "strategy": "aggressive_runtime_projection"},
+                {
+                    "phase": "model_decision",
+                    "strategy": "aggressive_runtime_projection",
+                },
             )
             user_prompt = self._tool_calling_user_prompt(next_state, aggressive=True)
-            messages = [SystemMessage(content=system_prompt), HumanMessage(content=user_prompt)]
+            messages = [
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=user_prompt),
+            ]
             estimated_prompt_tokens = self._record_prompt_diagnostics(
                 next_state,
                 phase="model_decision_reactive_retry",
@@ -545,11 +613,22 @@ class ChatAgent(BaseAgent):
             return self._graph_state_update(next_state, [])
         tool_call = pending[0]
         next_state["pending_tool_calls"] = pending[1:]
-        public_action, action_input, observation, _tool_message, _tool_use_event, tool_result_event = await self._execute_tool_call(tool_call, next_state)
+        (
+            public_action,
+            action_input,
+            observation,
+            _tool_message,
+            _tool_use_event,
+            tool_result_event,
+        ) = await self._execute_tool_call(tool_call, next_state)
         stream_events = [
             self._event("tool_result", tool_result_event),
-            self._event("action", {"tool_name": public_action, "arguments": action_input}),
-            self._event("observation", {"tool_name": public_action, "content": observation}),
+            self._event(
+                "action", {"tool_name": public_action, "arguments": action_input}
+            ),
+            self._event(
+                "observation", {"tool_name": public_action, "content": observation}
+            ),
         ]
         return self._graph_state_update(next_state, stream_events)
 
@@ -560,7 +639,12 @@ class ChatAgent(BaseAgent):
             "这轮 Agent Loop 已达到步骤预算上限。下面的结论只能基于已经完成的工具调用和观察结果，"
             "如果还需要继续，我会从当前证据继续缩小范围。"
         )
-        self._stop_loop(next_state, "max_steps_exhausted", "budget_exhausted", {"max_steps": self.max_steps})
+        self._stop_loop(
+            next_state,
+            "max_steps_exhausted",
+            "budget_exhausted",
+            {"max_steps": self.max_steps},
+        )
         return self._graph_state_update(next_state, [])
 
     def _route_after_model_decision(self, state: ConversationState) -> str:
@@ -569,11 +653,16 @@ class ChatAgent(BaseAgent):
     def _route_after_tool_action(self, state: ConversationState) -> str:
         if state.get("pending_tool_calls"):
             return "tools"
-        if int(state.get("step") or 0) >= self.max_steps and not str(state.get("final_answer") or "").strip():
+        if (
+            int(state.get("step") or 0) >= self.max_steps
+            and not str(state.get("final_answer") or "").strip()
+        ):
             return "limit"
         return "model"
 
-    def _graph_state_update(self, state: ConversationState, stream_events: list[dict[str, Any]]) -> dict[str, Any]:
+    def _graph_state_update(
+        self, state: ConversationState, stream_events: list[dict[str, Any]]
+    ) -> dict[str, Any]:
         keys = [
             "observations",
             "agent_events",
@@ -611,10 +700,14 @@ class ChatAgent(BaseAgent):
             {"reason": reason, "completion_status": completion_status, **(extra or {})},
         )
 
-    def _repeated_tool_call(self, tool_calls: list[dict[str, Any]], state: ConversationState) -> dict[str, Any] | None:
+    def _repeated_tool_call(
+        self, tool_calls: list[dict[str, Any]], state: ConversationState
+    ) -> dict[str, Any] | None:
         counts = dict(state.get("tool_call_counts") or {})
         for tool_call in tool_calls:
-            safe_action, public_action, _tool_use_id, action_input = self._tool_call_parts(tool_call, state)
+            safe_action, public_action, _tool_use_id, action_input = (
+                self._tool_call_parts(tool_call, state)
+            )
             fingerprint = self._tool_call_fingerprint(safe_action, action_input)
             repeat_count = counts.get(fingerprint, 0) + 1
             counts[fingerprint] = repeat_count
@@ -629,11 +722,15 @@ class ChatAgent(BaseAgent):
         state["tool_call_counts"] = counts
         return None
 
-    def _tool_call_fingerprint(self, safe_action: str, action_input: dict[str, Any]) -> str:
+    def _tool_call_fingerprint(
+        self, safe_action: str, action_input: dict[str, Any]
+    ) -> str:
         return f"{safe_action}:{json.dumps(action_input, ensure_ascii=False, sort_keys=True, default=str)}"
 
     def _completion_summary(self, state: ConversationState) -> dict[str, Any]:
-        tool_calls = [call for call in state.get("tool_calls") or [] if isinstance(call, dict)]
+        tool_calls = [
+            call for call in state.get("tool_calls") or [] if isinstance(call, dict)
+        ]
         error_calls = [call for call in tool_calls if call.get("status") == "error"]
         status = state.get("completion_status") or "completed"
         if status == "completed" and error_calls:
@@ -647,7 +744,9 @@ class ChatAgent(BaseAgent):
         }
 
     def _tool_completion_status(self, state: ConversationState) -> str:
-        calls = [call for call in state.get("tool_calls") or [] if isinstance(call, dict)]
+        calls = [
+            call for call in state.get("tool_calls") or [] if isinstance(call, dict)
+        ]
         if calls and not any(call.get("status") == "success" for call in calls):
             return "blocked"
         return "completed"
@@ -656,9 +755,15 @@ class ChatAgent(BaseAgent):
         if not isinstance(raw_state, dict):
             return None
         pending = raw_state.get("pending_tool_calls")
-        if not isinstance(pending, list) or not pending or not isinstance(pending[0], dict):
+        if (
+            not isinstance(pending, list)
+            or not pending
+            or not isinstance(pending[0], dict)
+        ):
             return None
-        _safe_action, public_action, tool_use_id, action_input = self._tool_call_parts(pending[0], raw_state)
+        _safe_action, public_action, tool_use_id, action_input = self._tool_call_parts(
+            pending[0], raw_state
+        )
         return {
             "type": "tool_use",
             "step": raw_state.get("step", 0),
@@ -673,7 +778,9 @@ class ChatAgent(BaseAgent):
         tool_call: dict[str, Any],
         state: ConversationState,
     ) -> AsyncIterator[dict[str, Any]]:
-        safe_action, public_action, tool_use_id, action_input, tool_use_event = self._prepare_tool_call(tool_call, state)
+        safe_action, public_action, tool_use_id, action_input, tool_use_event = (
+            self._prepare_tool_call(tool_call, state)
+        )
         yield self._event("tool_use", tool_use_event)
         observation, _tool_message, tool_result_event = await self._complete_tool_call(
             safe_action,
@@ -683,15 +790,23 @@ class ChatAgent(BaseAgent):
             state,
         )
         yield self._event("tool_result", tool_result_event)
-        yield self._event("action", {"tool_name": public_action, "arguments": action_input})
-        yield self._event("observation", {"tool_name": public_action, "content": observation})
+        yield self._event(
+            "action", {"tool_name": public_action, "arguments": action_input}
+        )
+        yield self._event(
+            "observation", {"tool_name": public_action, "content": observation}
+        )
 
     async def _execute_tool_call(
         self,
         tool_call: dict[str, Any],
         state: ConversationState,
-    ) -> tuple[str, dict[str, Any], dict[str, Any], ToolMessage, dict[str, Any], dict[str, Any]]:
-        safe_action, public_action, tool_use_id, action_input, tool_use_event = self._prepare_tool_call(tool_call, state)
+    ) -> tuple[
+        str, dict[str, Any], dict[str, Any], ToolMessage, dict[str, Any], dict[str, Any]
+    ]:
+        safe_action, public_action, tool_use_id, action_input, tool_use_event = (
+            self._prepare_tool_call(tool_call, state)
+        )
         observation, tool_message, tool_result_event = await self._complete_tool_call(
             safe_action,
             public_action,
@@ -699,18 +814,32 @@ class ChatAgent(BaseAgent):
             action_input,
             state,
         )
-        return public_action, action_input, observation, tool_message, tool_use_event, tool_result_event
+        return (
+            public_action,
+            action_input,
+            observation,
+            tool_message,
+            tool_use_event,
+            tool_result_event,
+        )
 
     def _prepare_tool_call(
         self,
         tool_call: dict[str, Any],
         state: ConversationState,
     ) -> tuple[str, str, str, dict[str, Any], dict[str, Any]]:
-        safe_action, public_action, tool_use_id, action_input = self._tool_call_parts(tool_call, state)
+        safe_action, public_action, tool_use_id, action_input = self._tool_call_parts(
+            tool_call, state
+        )
         tool_use_event = self._append_agent_event(
             state,
             "tool_use",
-            {"id": tool_use_id, "tool_name": public_action, "arguments": action_input, **self._skill_event_metadata(public_action, state)},
+            {
+                "id": tool_use_id,
+                "tool_name": public_action,
+                "arguments": action_input,
+                **self._skill_event_metadata(public_action, state),
+            },
         )
         return safe_action, public_action, tool_use_id, action_input, tool_use_event
 
@@ -721,14 +850,19 @@ class ChatAgent(BaseAgent):
     ) -> tuple[str, str, str, dict[str, Any]]:
         safe_action = str(tool_call.get("name") or "").strip()
         public_action = self._public_tool_name(safe_action, state)  # type: ignore[arg-type]
-        tool_use_id = str(tool_call.get("id") or f"tool_use_{len(state.get('agent_events') or []) + 1}")
+        tool_use_id = str(
+            tool_call.get("id")
+            or f"tool_use_{len(state.get('agent_events') or []) + 1}"
+        )
         raw_args = tool_call.get("args") if isinstance(tool_call, dict) else {}
         if isinstance(raw_args, str):
             try:
                 raw_args = json.loads(raw_args)
             except json.JSONDecodeError:
                 raw_args = {}
-        action_input = self._normalize_action_input(public_action, raw_args if isinstance(raw_args, dict) else {}, state)  # type: ignore[arg-type]
+        action_input = self._normalize_action_input(
+            public_action, raw_args if isinstance(raw_args, dict) else {}, state
+        )  # type: ignore[arg-type]
         return safe_action, public_action, tool_use_id, action_input
 
     async def _complete_tool_call(
@@ -813,7 +947,11 @@ class ChatAgent(BaseAgent):
                     call.setdefault("error_kind", observation.get("error_kind"))
                 if observation.get("retryable") is not None:
                     call.setdefault("retryable", observation.get("retryable"))
-                call.update(self._skill_event_metadata(str(call.get("tool_name") or public_action), state))
+                call.update(
+                    self._skill_event_metadata(
+                        str(call.get("tool_name") or public_action), state
+                    )
+                )
         self._capture_evaluation_observation(
             state,
             tool_name=public_action,
@@ -821,7 +959,15 @@ class ChatAgent(BaseAgent):
             observation=observation,
         )
         summary = self._summarize_observation(observation)
-        status = "error" if any(call.get("status") == "error" for call in observation.get("tool_calls", []) if isinstance(call, dict)) else "success"
+        status = (
+            "error"
+            if any(
+                call.get("status") == "error"
+                for call in observation.get("tool_calls", [])
+                if isinstance(call, dict)
+            )
+            else "success"
+        )
         tool_result_event = self._append_agent_event(
             state,
             "tool_result",
@@ -838,16 +984,33 @@ class ChatAgent(BaseAgent):
         )
         state["observations"] = [
             *(state.get("observations") or []),
-            {"tool_name": public_action, "arguments": action_input, "observation": summary},
+            {
+                "tool_name": public_action,
+                "arguments": action_input,
+                "observation": summary,
+            },
         ]
-        state["tool_calls"] = [*(state.get("tool_calls") or []), *observation.get("tool_calls", [])]
-        state["citations"] = [*(state.get("citations") or []), *observation.get("citations", [])]
+        state["tool_calls"] = [
+            *(state.get("tool_calls") or []),
+            *observation.get("tool_calls", []),
+        ]
+        state["citations"] = [
+            *(state.get("citations") or []),
+            *observation.get("citations", []),
+        ]
         extra_events = observation.get("agent_events")
         if isinstance(extra_events, list):
-            state["agent_events"] = [*(state.get("agent_events") or []), *[event for event in extra_events if isinstance(event, dict)]]
+            state["agent_events"] = [
+                *(state.get("agent_events") or []),
+                *[event for event in extra_events if isinstance(event, dict)],
+            ]
         observation_route = str(observation.get("route") or "")
-        has_successful_tool = any(call.get("status") == "success" for call in state.get("tool_calls") or [])
-        if observation_route and (observation_route != "tool_error" or not has_successful_tool):
+        has_successful_tool = any(
+            call.get("status") == "success" for call in state.get("tool_calls") or []
+        )
+        if observation_route and (
+            observation_route != "tool_error" or not has_successful_tool
+        ):
             state["route"] = observation_route
 
         tool_message = ToolMessage(
@@ -884,7 +1047,9 @@ class ChatAgent(BaseAgent):
             except Exception as exc:
                 last_error = exc
                 last_error_kind = self._classify_tool_error(exc)
-                retryable = self._is_retriable_tool_error(last_error_kind, public_action)
+                retryable = self._is_retriable_tool_error(
+                    last_error_kind, public_action
+                )
                 if not retryable or attempt >= max_attempts:
                     break
                 self._append_agent_event(
@@ -929,9 +1094,23 @@ class ChatAgent(BaseAgent):
             return "timeout"
         if any(token in text for token in ["rate limit", "429", "too many requests"]):
             return "rate_limited"
-        if any(token in text for token in ["connection", "temporarily", "unavailable", "reset by peer", "503", "502", "504"]):
+        if any(
+            token in text
+            for token in [
+                "connection",
+                "temporarily",
+                "unavailable",
+                "reset by peer",
+                "503",
+                "502",
+                "504",
+            ]
+        ):
             return "transient_network"
-        if any(token in text for token in ["permission", "forbidden", "unauthorized", "401", "403"]):
+        if any(
+            token in text
+            for token in ["permission", "forbidden", "unauthorized", "401", "403"]
+        ):
             return "permission_denied"
         if any(token in text for token in ["not found", "missing", "404"]):
             return "data_not_found"
@@ -939,14 +1118,22 @@ class ChatAgent(BaseAgent):
             return "model_output_invalid"
         return "tool_runtime_error"
 
-    def _is_retriable_tool_error(self, error_kind: ToolErrorKind, public_action: str) -> bool:
+    def _is_retriable_tool_error(
+        self, error_kind: ToolErrorKind, public_action: str
+    ) -> bool:
         if error_kind not in {"timeout", "rate_limited", "transient_network"}:
             return False
-        return public_action not in {"safety_agent.classify_action_risk", "report_agent.generate_weekly_report", "workflow.run_engineering_review"}
+        return public_action not in {
+            "safety_agent.classify_action_risk",
+            "report_agent.generate_weekly_report",
+            "workflow.run_engineering_review",
+        }
 
     def _tool_model(self, tools: dict[str, StructuredTool]):
         if self.model is None:
-            raise RuntimeError("ChatAgent requires an LLM for open-ended tool selection")
+            raise RuntimeError(
+                "ChatAgent requires an LLM for open-ended tool selection"
+            )
         return self.model.bind_tools(list(tools.values()))
 
     def _tool_calling_system_prompt(self) -> str:
@@ -969,7 +1156,9 @@ class ChatAgent(BaseAgent):
             "优先使用 workflow.run_engineering_review 工具。"
         )
 
-    def _tool_calling_user_prompt(self, state: ConversationState, *, aggressive: bool = False) -> str:
+    def _tool_calling_user_prompt(
+        self, state: ConversationState, *, aggressive: bool = False
+    ) -> str:
         prompt_observations, prompt_events, runtime_stats = self._runtime_tool_context(
             state,
             aggressive=aggressive,
@@ -983,8 +1172,12 @@ class ChatAgent(BaseAgent):
         history = self._history_messages(context)
         if aggressive:
             budget = default_context_budget()
-            server_context = clip_to_token_budget(server_context, max(512, budget.available_prompt_tokens // 3))
-            history = self._compress_history_for_retry(history, max(512, budget.recent_tokens // 2))
+            server_context = clip_to_token_budget(
+                server_context, max(512, budget.available_prompt_tokens // 3)
+            )
+            history = self._compress_history_for_retry(
+                history, max(512, budget.recent_tokens // 2)
+            )
         return (
             "上下文使用规则：如果服务端提供的最近消息已经包含回答所需的完整原文，直接基于这些消息回答，"
             "不要为了展示工具调用而重复读取记忆。只有目标消息不在最近窗口、内容被截断或压缩、用户明确要求"
@@ -1023,7 +1216,9 @@ class ChatAgent(BaseAgent):
             f"用户消息：{state.get('message') or ''}"
         )
 
-    def _normalize_action_input(self, action: str, action_input: dict[str, Any], state: ConversationState) -> dict[str, Any]:
+    def _normalize_action_input(
+        self, action: str, action_input: dict[str, Any], state: ConversationState
+    ) -> dict[str, Any]:
         normalized = dict(action_input)
         message = str(state.get("message") or "")
         context = state.get("context") or {}
@@ -1044,7 +1239,11 @@ class ChatAgent(BaseAgent):
             normalized.setdefault("query", message)
         if action == "rag.search_similar_documents":
             normalized.setdefault("query", str(normalized.get("message") or message))
-        if action == "workspace.read_file" and not normalized.get("path") and self._asks_project_overview(message):
+        if (
+            action == "workspace.read_file"
+            and not normalized.get("path")
+            and self._asks_project_overview(message)
+        ):
             normalized["path"] = "README.md"
         if action == "kynflow_search_evidence":
             normalized.setdefault("query", message)
@@ -1061,7 +1260,10 @@ class ChatAgent(BaseAgent):
 
     def _asks_project_overview(self, message: str) -> bool:
         lowered = message.lower()
-        if any(token in lowered for token in ["issue", "pull request", "pr #", "ci", "未关闭", "待处理"]):
+        if any(
+            token in lowered
+            for token in ["issue", "pull request", "pr #", "ci", "未关闭", "待处理"]
+        ):
             return False
         return any(
             token in lowered
@@ -1085,11 +1287,15 @@ class ChatAgent(BaseAgent):
             ]
         )
 
-    def _required_memory_tool(self, message: str, context: dict[str, Any] | None = None) -> str | None:
+    def _required_memory_tool(
+        self, message: str, context: dict[str, Any] | None = None
+    ) -> str | None:
         policy = self._memory_context_policy(message, context or {})
         return str((policy or {}).get("tool") or "") or None
 
-    def _memory_context_policy(self, message: str, context: dict[str, Any]) -> dict[str, Any] | None:
+    def _memory_context_policy(
+        self, message: str, context: dict[str, Any]
+    ) -> dict[str, Any] | None:
         lowered = message.lower()
         for tool_name in [
             "kynflow_search_evidence",
@@ -1097,9 +1303,26 @@ class ChatAgent(BaseAgent):
             "kynflow_read_session_events",
         ]:
             if tool_name in lowered:
-                return {"mode": "required_tool", "tool": tool_name, "reason": "explicit_tool_request"}
-        if any(token in lowered for token in ["历史证据", "历史决策", "项目记忆", "historical evidence", "past decision"]):
-            return {"mode": "required_tool", "tool": "kynflow_search_evidence", "reason": "project_history_request"}
+                return {
+                    "mode": "required_tool",
+                    "tool": tool_name,
+                    "reason": "explicit_tool_request",
+                }
+        if any(
+            token in lowered
+            for token in [
+                "历史证据",
+                "历史决策",
+                "项目记忆",
+                "historical evidence",
+                "past decision",
+            ]
+        ):
+            return {
+                "mode": "required_tool",
+                "tool": "kynflow_search_evidence",
+                "reason": "project_history_request",
+            }
         if any(
             token in lowered
             for token in [
@@ -1114,7 +1337,11 @@ class ChatAgent(BaseAgent):
                 "previous conversation",
             ]
         ):
-            return {"mode": "required_tool", "tool": "kynflow_read_session_events", "reason": "cross_session_request"}
+            return {
+                "mode": "required_tool",
+                "tool": "kynflow_read_session_events",
+                "reason": "cross_session_request",
+            }
 
         immediate_recall = any(
             token in lowered
@@ -1146,20 +1373,41 @@ class ChatAgent(BaseAgent):
 
         requires_exact_verification = any(
             token in lowered
-            for token in ["原话", "逐字", "准确核实", "精确核实", "审计", "verbatim", "exact quote", "verify the record"]
+            for token in [
+                "原话",
+                "逐字",
+                "准确核实",
+                "精确核实",
+                "审计",
+                "verbatim",
+                "exact quote",
+                "verify the record",
+            ]
         )
         if requires_exact_verification:
-            return {"mode": "required_tool", "tool": "kynflow_get_thread_context", "reason": "exact_verification_requested"}
+            return {
+                "mode": "required_tool",
+                "tool": "kynflow_get_thread_context",
+                "reason": "exact_verification_requested",
+            }
 
-        if self._recent_history_can_answer(message, context, immediate=immediate_recall):
+        if self._recent_history_can_answer(
+            message, context, immediate=immediate_recall
+        ):
             return {
                 "mode": "direct_recent_history",
                 "tool": None,
                 "reason": "exact_recent_messages_available",
             }
-        return {"mode": "required_tool", "tool": "kynflow_get_thread_context", "reason": "recent_history_incomplete"}
+        return {
+            "mode": "required_tool",
+            "tool": "kynflow_get_thread_context",
+            "reason": "recent_history_incomplete",
+        }
 
-    def _recent_history_can_answer(self, message: str, context: dict[str, Any], *, immediate: bool) -> bool:
+    def _recent_history_can_answer(
+        self, message: str, context: dict[str, Any], *, immediate: bool
+    ) -> bool:
         history = self._history_messages(context)
         prior_user_index = self._last_prior_user_index(history, message)
         if prior_user_index is None:
@@ -1173,10 +1421,18 @@ class ChatAgent(BaseAgent):
             return exact_suffix >= distance_from_end
         return bool(coverage.get("complete_and_exact"))
 
-    def _last_prior_user_index(self, history: list[dict[str, str]], message: str) -> int | None:
+    def _last_prior_user_index(
+        self, history: list[dict[str, str]], message: str
+    ) -> int | None:
         normalized_current = self._normalize_history_text(message)
-        indexes = [index for index, item in enumerate(history) if item.get("role") == "user"]
-        if indexes and self._normalize_history_text(history[indexes[-1]].get("content") or "") == normalized_current:
+        indexes = [
+            index for index, item in enumerate(history) if item.get("role") == "user"
+        ]
+        if (
+            indexes
+            and self._normalize_history_text(history[indexes[-1]].get("content") or "")
+            == normalized_current
+        ):
             indexes.pop()
         return indexes[-1] if indexes else None
 
@@ -1204,7 +1460,10 @@ class ChatAgent(BaseAgent):
                 user_prompt=user_prompt,
             )
             response = await self.model.ainvoke(
-                [SystemMessage(content=system_prompt), HumanMessage(content=user_prompt)]
+                [
+                    SystemMessage(content=system_prompt),
+                    HumanMessage(content=user_prompt),
+                ]
             )
             self._record_model_usage(
                 state,
@@ -1212,13 +1471,17 @@ class ChatAgent(BaseAgent):
                 phase="direct_recent_history",
                 estimated_prompt_tokens=estimated,
             )
-            return self._message_content(response).strip() or self._local_recent_history_answer(state)
+            return self._message_content(
+                response
+            ).strip() or self._local_recent_history_answer(state)
         except Exception:
             return self._local_recent_history_answer(state)
 
     def _local_recent_history_answer(self, state: ConversationState) -> str:
         history = self._history_messages(state.get("context") or {})
-        prior_user_index = self._last_prior_user_index(history, str(state.get("message") or ""))
+        prior_user_index = self._last_prior_user_index(
+            history, str(state.get("message") or "")
+        )
         if prior_user_index is None:
             return "当前上下文里没有可确认的上一条用户消息。"
         content = history[prior_user_index].get("content") or ""
@@ -1231,10 +1494,14 @@ class ChatAgent(BaseAgent):
         coverage = compression_stats.get("history_coverage") or {}
         return coverage if isinstance(coverage, dict) else {}
 
-    async def _prefetch_memory_context(self, state: ConversationState, public_name: str) -> AsyncIterator[dict[str, Any]]:
+    async def _prefetch_memory_context(
+        self, state: ConversationState, public_name: str
+    ) -> AsyncIterator[dict[str, Any]]:
         tools = state.get("tools") or {}
         tool_names = state.get("tool_name_map") or {}
-        safe_name = next((safe for safe, public in tool_names.items() if public == public_name), None)
+        safe_name = next(
+            (safe for safe, public in tool_names.items() if public == public_name), None
+        )
         if not safe_name or safe_name not in tools:
             return
         message = str(state.get("message") or "")
@@ -1246,22 +1513,34 @@ class ChatAgent(BaseAgent):
         else:
             args = {"limit": 5}
         async for event in self._execute_tool_call_events(
-            {"name": safe_name, "args": args, "id": f"required_{public_name}_{len(state.get('agent_events') or [])}"},
+            {
+                "name": safe_name,
+                "args": args,
+                "id": f"required_{public_name}_{len(state.get('agent_events') or [])}",
+            },
             state,
         ):
             yield event
 
-    async def _prefetch_project_context(self, state: ConversationState) -> AsyncIterator[dict[str, Any]]:
+    async def _prefetch_project_context(
+        self, state: ConversationState
+    ) -> AsyncIterator[dict[str, Any]]:
         tools = state.get("tools") or {}
         tool_names = state.get("tool_name_map") or {}
         safe_by_public = {public: safe for safe, public in tool_names.items()}
 
-        async def call(public_name: str, args: dict[str, Any]) -> AsyncIterator[dict[str, Any]]:
+        async def call(
+            public_name: str, args: dict[str, Any]
+        ) -> AsyncIterator[dict[str, Any]]:
             safe_name = safe_by_public.get(public_name)
             if not safe_name or safe_name not in tools:
                 return
             async for event in self._execute_tool_call_events(
-                {"name": safe_name, "args": args, "id": f"prefetch_{public_name}_{len(state.get('agent_events') or [])}"},
+                {
+                    "name": safe_name,
+                    "args": args,
+                    "id": f"prefetch_{public_name}_{len(state.get('agent_events') or [])}",
+                },
                 state,
             ):
                 yield event
@@ -1270,20 +1549,33 @@ class ChatAgent(BaseAgent):
             yield event
         observed_paths: set[str] = set()
         for item in state.get("observations") or []:
-            if not isinstance(item, dict) or not isinstance(item.get("observation"), dict):
+            if not isinstance(item, dict) or not isinstance(
+                item.get("observation"), dict
+            ):
                 continue
             preview = str(item["observation"].get("answer_preview") or "")
-            observed_paths.update(token.strip("'\"`[](),").lower() for token in preview.split())
+            observed_paths.update(
+                token.strip("'\"`[](),").lower() for token in preview.split()
+            )
         for path in ["README.md", "README.zh-CN.md", "package.json", "SETUP.md"]:
             if path.lower() in observed_paths:
-                async for event in call("workspace.read_file", {"path": path, "line_count": 220}):
+                async for event in call(
+                    "workspace.read_file", {"path": path, "line_count": 220}
+                ):
                     yield event
 
-    def _build_langchain_tools(self, raw_tools: dict[str, ConversationTool], context: dict[str, Any]) -> dict[str, StructuredTool]:
+    def _build_langchain_tools(
+        self, raw_tools: dict[str, ConversationTool], context: dict[str, Any]
+    ) -> dict[str, StructuredTool]:
         wrapped: dict[str, StructuredTool] = {}
         for name, func in raw_tools.items():
-            async def call_tool(_func: ConversationTool = func, **kwargs: Any) -> dict[str, Any]:
-                input_data = {key: value for key, value in kwargs.items() if value is not None}
+
+            async def call_tool(
+                _func: ConversationTool = func, **kwargs: Any
+            ) -> dict[str, Any]:
+                input_data = {
+                    key: value for key, value in kwargs.items() if value is not None
+                }
                 return await _func(input_data, context)
 
             safe_name = self._safe_tool_name(name)
@@ -1306,7 +1598,9 @@ class ChatAgent(BaseAgent):
     def _public_tool_name(self, safe_name: str, state: ConversationState) -> str:
         return (state.get("tool_name_map") or {}).get(safe_name, safe_name)
 
-    def _tool_description(self, name: str, context: dict[str, Any] | None = None) -> str:
+    def _tool_description(
+        self, name: str, context: dict[str, Any] | None = None
+    ) -> str:
         descriptions = {
             "kynflow_search_evidence": "MCP 记忆工具。搜索持久记忆、会话摘要、仓库证据、Issue、PR、CI 和 Agent 运行记录。",
             "kynflow_get_thread_context": "MCP 记忆工具。跨压缩边界读取当前仓库会话的完整原始聊天转录，支持消息 UUID 和字符偏移分页。",
@@ -1332,7 +1626,9 @@ class ChatAgent(BaseAgent):
 
     def _tool_help(self, state: ConversationState) -> str:
         tools = state.get("tools") or {}
-        return "\n".join(f"- {name}: {tool.description}" for name, tool in tools.items())
+        return "\n".join(
+            f"- {name}: {tool.description}" for name, tool in tools.items()
+        )
 
     async def _final_from_observations(self, state: ConversationState) -> str:
         if self.model is None:
@@ -1347,8 +1643,13 @@ class ChatAgent(BaseAgent):
                 "角色设定、模型名和团队比喻都不能当成人。如果没有配置团队成员，也没有观察到现有 assignee，"
                 "请说明当前还没有添加项目成员，并要求用户在团队面板中添加开发者。"
             )
-            prompt_observations, prompt_events, runtime_stats = self._runtime_tool_context(state)
-            state["runtime_context_stats"] = {**(state.get("runtime_context_stats") or {}), **runtime_stats}
+            prompt_observations, prompt_events, runtime_stats = (
+                self._runtime_tool_context(state)
+            )
+            state["runtime_context_stats"] = {
+                **(state.get("runtime_context_stats") or {}),
+                **runtime_stats,
+            }
             user_prompt = (
                 f"用户消息：{state.get('message') or ''}\n"
                 f"当前 Agent 配置的运行模型：{settings.llm_model}\n"
@@ -1364,7 +1665,10 @@ class ChatAgent(BaseAgent):
                 user_prompt=user_prompt,
             )
             response = await self.model.ainvoke(
-                [SystemMessage(content=system_prompt), HumanMessage(content=user_prompt)]
+                [
+                    SystemMessage(content=system_prompt),
+                    HumanMessage(content=user_prompt),
+                ]
             )
             self._record_model_usage(
                 state,
@@ -1382,12 +1686,21 @@ class ChatAgent(BaseAgent):
         for item in observations:
             if not isinstance(item, dict):
                 continue
-            value = item.get("answer") or item.get("content") or item.get("result") or item.get("message")
+            value = (
+                item.get("answer")
+                or item.get("content")
+                or item.get("result")
+                or item.get("message")
+            )
             if not value and isinstance(item.get("observation"), dict):
                 nested = item["observation"]
                 if nested.get("route") == "tool_error":
                     continue
-                value = nested.get("answer_preview") or nested.get("answer") or nested.get("content")
+                value = (
+                    nested.get("answer_preview")
+                    or nested.get("answer")
+                    or nested.get("content")
+                )
             if isinstance(value, (dict, list)):
                 value = json.dumps(value, ensure_ascii=False)
             text = " ".join(str(value or "").split())
@@ -1397,7 +1710,9 @@ class ChatAgent(BaseAgent):
             evidence_answer = self._local_prefetched_evidence_answer(state)
             if evidence_answer:
                 return evidence_answer
-            context_text = " ".join(self._server_context(state.get("context") or {}).split())
+            context_text = " ".join(
+                self._server_context(state.get("context") or {}).split()
+            )
             if context_text:
                 return "已读取当前仓库上下文。\n\n" + context_text[:1200]
             return "当前没有取得足够证据。请先确认仓库已连接并完成同步；开放式对话还需要配置 LLM。"
@@ -1423,15 +1738,20 @@ class ChatAgent(BaseAgent):
                 item
                 for item in evidence
                 if str(item.get("source_type") or "") == "issue"
-                and str((item.get("metadata") or {}).get("state") or "").lower() == "open"
+                and str((item.get("metadata") or {}).get("state") or "").lower()
+                == "open"
             ]
             if open_issues:
                 lines = ["根据本轮预检索证据，当前仓库有这些未关闭的 Issue："]
                 for item in open_issues[:8]:
                     title = str(item.get("title") or "未命名 Issue").strip()
                     snippet = " ".join(str(item.get("snippet") or "").split())
-                    lines.append(f"- {title}" + (f"：{snippet[:240]}" if snippet else ""))
-                lines.append("\n数据来自当前仓库已同步的 Issue 证据；本轮没有调用工作区源码工具。")
+                    lines.append(
+                        f"- {title}" + (f"：{snippet[:240]}" if snippet else "")
+                    )
+                lines.append(
+                    "\n数据来自当前仓库已同步的 Issue 证据；本轮没有调用工作区源码工具。"
+                )
                 return "\n".join(lines)
 
         rendered = [self._render_evaluation_context(item) for item in evidence[:8]]
@@ -1442,7 +1762,9 @@ class ChatAgent(BaseAgent):
             f"{index + 1}. {item}" for index, item in enumerate(rendered)
         )
 
-    def _prefetched_evidence_citations(self, state: ConversationState) -> list[dict[str, str]]:
+    def _prefetched_evidence_citations(
+        self, state: ConversationState
+    ) -> list[dict[str, str]]:
         context = state.get("context") or {}
         evidence = context.get("evidence")
         if not isinstance(evidence, list):
@@ -1457,7 +1779,9 @@ class ChatAgent(BaseAgent):
             if isinstance(item, dict)
         ]
 
-    def _append_agent_event(self, state: ConversationState, event_type: str, data: dict[str, Any]) -> dict[str, Any]:
+    def _append_agent_event(
+        self, state: ConversationState, event_type: str, data: dict[str, Any]
+    ) -> dict[str, Any]:
         event = {
             "type": event_type,
             "step": state.get("step", 0),
@@ -1470,7 +1794,14 @@ class ChatAgent(BaseAgent):
         return [
             event
             for event in state.get("agent_events") or []
-            if event.get("type") in {"tool_use", "tool_result", "tool_retry", "agent_step", "agent_loop_stop"}
+            if event.get("type")
+            in {
+                "tool_use",
+                "tool_result",
+                "tool_retry",
+                "agent_step",
+                "agent_loop_stop",
+            }
         ]
 
     def _runtime_tool_context(
@@ -1486,7 +1817,9 @@ class ChatAgent(BaseAgent):
         call, matching Claude Code's separation between durable transcript and
         active context.
         """
-        raw_observations = [item for item in state.get("observations") or [] if isinstance(item, dict)]
+        raw_observations = [
+            item for item in state.get("observations") or [] if isinstance(item, dict)
+        ]
         budget = default_context_budget().tool_observation_tokens
         if aggressive:
             budget = max(512, budget // 4)
@@ -1506,12 +1839,16 @@ class ChatAgent(BaseAgent):
                     or ""
                 )
                 if preview:
-                    next_observation["answer_preview"] = clip_to_token_budget(preview, per_item_budget)
+                    next_observation["answer_preview"] = clip_to_token_budget(
+                        preview, per_item_budget
+                    )
                     next_observation.pop("answer", None)
                     next_observation.pop("content", None)
                 next_item["observation"] = next_observation
             else:
-                next_item["observation"] = clip_to_token_budget(str(observation or ""), per_item_budget)
+                next_item["observation"] = clip_to_token_budget(
+                    str(observation or ""), per_item_budget
+                )
 
             serialized = json.dumps(next_item, ensure_ascii=False, default=str)
             cost = estimate_tokens(serialized)
@@ -1521,7 +1858,9 @@ class ChatAgent(BaseAgent):
             if cost > remaining:
                 next_item = {
                     "tool_name": str(item.get("tool_name") or "tool"),
-                    "observation": clip_to_token_budget(serialized, max(120, remaining)),
+                    "observation": clip_to_token_budget(
+                        serialized, max(120, remaining)
+                    ),
                     "compacted": True,
                 }
                 cost = estimate_tokens(json.dumps(next_item, ensure_ascii=False))
@@ -1563,25 +1902,35 @@ class ChatAgent(BaseAgent):
                 }
             }
             if "arguments" in summary:
-                args_text = json.dumps(summary["arguments"], ensure_ascii=False, default=str)
+                args_text = json.dumps(
+                    summary["arguments"], ensure_ascii=False, default=str
+                )
                 if estimate_tokens(args_text) > 240:
                     summary["arguments"] = clip_to_token_budget(args_text, 240)
             prompt_events.append(summary)
 
-        original_tokens = estimate_tokens(json.dumps(raw_observations, ensure_ascii=False, default=str))
-        prompt_tokens = estimate_tokens(json.dumps(prompt_observations, ensure_ascii=False, default=str))
-        return prompt_observations, prompt_events, {
-            "mode": "runtime_tool_projection",
-            "aggressive": aggressive,
-            "observation_budget_tokens": budget,
-            "original_observation_tokens": original_tokens,
-            "prompt_observation_tokens": prompt_tokens,
-            "estimated_tokens_saved": max(0, original_tokens - prompt_tokens),
-            "source_observations": len(raw_observations),
-            "prompt_observations": len(prompt_observations),
-            "omitted_observations": omitted,
-            "tool_event_index_entries": len(prompt_events),
-        }
+        original_tokens = estimate_tokens(
+            json.dumps(raw_observations, ensure_ascii=False, default=str)
+        )
+        prompt_tokens = estimate_tokens(
+            json.dumps(prompt_observations, ensure_ascii=False, default=str)
+        )
+        return (
+            prompt_observations,
+            prompt_events,
+            {
+                "mode": "runtime_tool_projection",
+                "aggressive": aggressive,
+                "observation_budget_tokens": budget,
+                "original_observation_tokens": original_tokens,
+                "prompt_observation_tokens": prompt_tokens,
+                "estimated_tokens_saved": max(0, original_tokens - prompt_tokens),
+                "source_observations": len(raw_observations),
+                "prompt_observations": len(prompt_observations),
+                "omitted_observations": omitted,
+                "tool_event_index_entries": len(prompt_events),
+            },
+        )
 
     def _compress_history_for_retry(
         self,
@@ -1591,7 +1940,9 @@ class ChatAgent(BaseAgent):
         kept: list[dict[str, str]] = []
         used = 0
         for item in reversed(history):
-            content = clip_to_token_budget(item.get("content") or "", max(120, min(700, max_tokens // 3)))
+            content = clip_to_token_budget(
+                item.get("content") or "", max(120, min(700, max_tokens // 3))
+            )
             cost = estimate_tokens(item.get("role")) + estimate_tokens(content)
             if kept and used + cost > max_tokens:
                 break
@@ -1620,7 +1971,10 @@ class ChatAgent(BaseAgent):
             "tool_schema_tokens": tool_schema_tokens,
             "pressure": pressure.as_dict(),
         }
-        state["prompt_diagnostics"] = [*(state.get("prompt_diagnostics") or []), diagnostic]
+        state["prompt_diagnostics"] = [
+            *(state.get("prompt_diagnostics") or []),
+            diagnostic,
+        ]
         return total
 
     def _tool_schema_estimated_tokens(self, state: ConversationState) -> int:
@@ -1633,7 +1987,9 @@ class ChatAgent(BaseAgent):
                 schema = args_schema.model_json_schema() if args_schema else {}
             except (AttributeError, TypeError, ValueError):
                 schema = {}
-            total += estimate_tokens(json.dumps(schema, ensure_ascii=False, default=str))
+            total += estimate_tokens(
+                json.dumps(schema, ensure_ascii=False, default=str)
+            )
         return total
 
     def _record_model_usage(
@@ -1649,13 +2005,17 @@ class ChatAgent(BaseAgent):
             {
                 "phase": phase,
                 "estimated_prompt_tokens": estimated_prompt_tokens,
-                "source": "provider" if usage.get("input_tokens") is not None else "estimate",
+                "source": "provider"
+                if usage.get("input_tokens") is not None
+                else "estimate",
             }
         )
         if usage.get("input_tokens") is None:
             usage["input_tokens"] = estimated_prompt_tokens
         if usage.get("total_tokens") is None:
-            usage["total_tokens"] = int(usage.get("input_tokens") or 0) + int(usage.get("output_tokens") or 0)
+            usage["total_tokens"] = int(usage.get("input_tokens") or 0) + int(
+                usage.get("output_tokens") or 0
+            )
         state["model_usage"] = [*(state.get("model_usage") or []), usage]
 
     def _normalize_model_usage(self, response: Any) -> dict[str, Any]:
@@ -1664,17 +2024,27 @@ class ChatAgent(BaseAgent):
             raw = raw.model_dump()
         raw = raw if isinstance(raw, dict) else {}
         response_metadata = getattr(response, "response_metadata", None)
-        response_metadata = response_metadata if isinstance(response_metadata, dict) else {}
-        token_usage = response_metadata.get("token_usage") or response_metadata.get("usage") or {}
+        response_metadata = (
+            response_metadata if isinstance(response_metadata, dict) else {}
+        )
+        token_usage = (
+            response_metadata.get("token_usage") or response_metadata.get("usage") or {}
+        )
         token_usage = token_usage if isinstance(token_usage, dict) else {}
         input_details = raw.get("input_token_details") or {}
         input_details = input_details if isinstance(input_details, dict) else {}
         return {
             "input_tokens": raw.get("input_tokens", token_usage.get("prompt_tokens")),
-            "output_tokens": raw.get("output_tokens", token_usage.get("completion_tokens")),
+            "output_tokens": raw.get(
+                "output_tokens", token_usage.get("completion_tokens")
+            ),
             "total_tokens": raw.get("total_tokens", token_usage.get("total_tokens")),
-            "cache_read_input_tokens": input_details.get("cache_read", token_usage.get("cache_read_input_tokens", 0)),
-            "cache_creation_input_tokens": input_details.get("cache_creation", token_usage.get("cache_creation_input_tokens", 0)),
+            "cache_read_input_tokens": input_details.get(
+                "cache_read", token_usage.get("cache_read_input_tokens", 0)
+            ),
+            "cache_creation_input_tokens": input_details.get(
+                "cache_creation", token_usage.get("cache_creation_input_tokens", 0)
+            ),
             "model": response_metadata.get("model_name") or settings.llm_model,
         }
 
@@ -1684,7 +2054,9 @@ class ChatAgent(BaseAgent):
             "context_diagnostics": {
                 "prompt_calls": state.get("prompt_diagnostics") or [],
                 "runtime_tool_context": state.get("runtime_context_stats") or {},
-                "reactive_overflow_retry": bool(state.get("context_overflow_recovery_attempted")),
+                "reactive_overflow_retry": bool(
+                    state.get("context_overflow_recovery_attempted")
+                ),
             },
         }
 
@@ -1701,7 +2073,11 @@ class ChatAgent(BaseAgent):
                 continue
             role = item.get("role")
             content = item.get("content")
-            if role in {"user", "assistant"} and isinstance(content, str) and content.strip():
+            if (
+                role in {"user", "assistant"}
+                and isinstance(content, str)
+                and content.strip()
+            ):
                 messages.append({"role": role, "content": content})
         return messages
 
@@ -1713,7 +2089,9 @@ class ChatAgent(BaseAgent):
         value = context.get("registered_skills")
         return str(value) if value else "当前没有注册 Kynflow 技能。"
 
-    def _activate_skills(self, message: str, context: dict[str, Any]) -> list[dict[str, Any]]:
+    def _activate_skills(
+        self, message: str, context: dict[str, Any]
+    ) -> list[dict[str, Any]]:
         registry = context.get("_skill_registry")
         if not isinstance(registry, SkillRegistry):
             return []
@@ -1726,7 +2104,11 @@ class ChatAgent(BaseAgent):
 
     def _active_skills(self, context: dict[str, Any]) -> list[dict[str, Any]]:
         skills = context.get("active_skills") or []
-        return [item for item in skills if isinstance(item, dict)] if isinstance(skills, list) else []
+        return (
+            [item for item in skills if isinstance(item, dict)]
+            if isinstance(skills, list)
+            else []
+        )
 
     def _active_skill_prompt(self, context: dict[str, Any]) -> str:
         skills = self._active_skills(context)
@@ -1734,13 +2116,26 @@ class ChatAgent(BaseAgent):
             return "本轮没有匹配到需要加载完整正文的 Skill；仅保留轻量目录摘要。"
         blocks = []
         for skill in skills:
-            resources = skill.get("resources") if isinstance(skill.get("resources"), list) else []
+            resources = (
+                skill.get("resources")
+                if isinstance(skill.get("resources"), list)
+                else []
+            )
             resource_sections = []
             for resource in resources:
-                if not isinstance(resource, dict) or not str(resource.get("content") or "").strip():
+                if (
+                    not isinstance(resource, dict)
+                    or not str(resource.get("content") or "").strip()
+                ):
                     continue
-                resource_sections.append(f"### 资源：{resource.get('path')}\n{resource.get('content')}")
-            resource_text = "\n\n按需读取的资源：\n" + "\n\n".join(resource_sections) if resource_sections else ""
+                resource_sections.append(
+                    f"### 资源：{resource.get('path')}\n{resource.get('content')}"
+                )
+            resource_text = (
+                "\n\n按需读取的资源：\n" + "\n\n".join(resource_sections)
+                if resource_sections
+                else ""
+            )
             blocks.append(
                 f"## {skill.get('skill_title')} ({skill.get('skill_name')} v{skill.get('skill_version')})\n"
                 f"激活方式：{skill.get('activation_mode')}；原因：{skill.get('activation_reason')}\n"
@@ -1749,9 +2144,13 @@ class ChatAgent(BaseAgent):
                 f"{str(skill.get('instructions') or '').strip()}"
                 f"{resource_text}"
             )
-        return clip_to_token_budget("\n\n".join(blocks), 6000, suffix="\n[Skill 指令因上下文预算被截断]")
+        return clip_to_token_budget(
+            "\n\n".join(blocks), 6000, suffix="\n[Skill 指令因上下文预算被截断]"
+        )
 
-    def _explicit_skill_tool_violation(self, tool_name: str, state: ConversationState) -> str | None:
+    def _explicit_skill_tool_violation(
+        self, tool_name: str, state: ConversationState
+    ) -> str | None:
         context = state.get("context") or {}
         explicit = [
             skill
@@ -1760,11 +2159,7 @@ class ChatAgent(BaseAgent):
         ]
         if not explicit:
             return None
-        allowed = {
-            str(tool)
-            for skill in explicit
-            for tool in skill.get("tools") or []
-        }
+        allowed = {str(tool) for skill in explicit for tool in skill.get("tools") or []}
         if tool_name in allowed:
             return None
         skill_names = "、".join(str(skill.get("skill_name")) for skill in explicit)
@@ -1778,7 +2173,9 @@ class ChatAgent(BaseAgent):
         observed_tools = [
             str(event.get("tool_name") or "")
             for event in state.get("agent_events") or []
-            if isinstance(event, dict) and event.get("type") == "tool_use" and event.get("tool_name")
+            if isinstance(event, dict)
+            and event.get("type") == "tool_use"
+            and event.get("tool_name")
         ]
         successful_tools = [
             str(event.get("tool_name") or "")
@@ -1794,7 +2191,11 @@ class ChatAgent(BaseAgent):
             if skill.get("activation_mode") == "explicit"
             for tool in skill.get("tools") or []
         }
-        explicit_violations = [tool for tool in observed_tools if explicit_allowed and tool not in explicit_allowed]
+        explicit_violations = [
+            tool
+            for tool in observed_tools
+            if explicit_allowed and tool not in explicit_allowed
+        ]
         for skill in active:
             allowed = {str(tool) for tool in skill.get("tools") or []}
             used = [tool for tool in observed_tools if tool in allowed]
@@ -1825,14 +2226,20 @@ class ChatAgent(BaseAgent):
                     "skill_title": skill.get("skill_title"),
                     "skill_version": skill.get("skill_version"),
                     "status": status,
-                    "instructions_loaded": bool(str(skill.get("instructions") or "").strip()),
+                    "instructions_loaded": bool(
+                        str(skill.get("instructions") or "").strip()
+                    ),
                     "instruction_digest": skill.get("instruction_digest"),
                     "declared_steps": skill.get("workflow_steps") or [],
                     "observed_tools": used,
                     "entrypoint_called": entrypoint_called,
                     "entrypoint_succeeded": entrypoint_succeeded,
-                    "delegated_task_ids": [str(event.get("task_id") or "") for event in delegated_tasks],
-                    "tool_contract_violations": explicit_violations if skill.get("activation_mode") == "explicit" else [],
+                    "delegated_task_ids": [
+                        str(event.get("task_id") or "") for event in delegated_tasks
+                    ],
+                    "tool_contract_violations": explicit_violations
+                    if skill.get("activation_mode") == "explicit"
+                    else [],
                     "step_verification": (
                         "entrypoint_completed"
                         if entrypoint_succeeded
@@ -1847,14 +2254,28 @@ class ChatAgent(BaseAgent):
                 },
             )
 
-    def _skill_event_metadata(self, tool_name: str, state: ConversationState) -> dict[str, Any]:
+    def _skill_event_metadata(
+        self, tool_name: str, state: ConversationState
+    ) -> dict[str, Any]:
         context = state.get("context") or {}
         active = self._active_skills(context)
-        selected = next((skill for skill in active if skill.get("entrypoint") == tool_name), None)
+        selected = next(
+            (skill for skill in active if skill.get("entrypoint") == tool_name), None
+        )
         if selected is None:
-            selected = next((skill for skill in active if tool_name in (skill.get("tools") or [])), None)
+            selected = next(
+                (skill for skill in active if tool_name in (skill.get("tools") or [])),
+                None,
+            )
         if selected is None:
-            selected = next((skill for skill in active if skill.get("activation_mode") == "explicit"), None)
+            selected = next(
+                (
+                    skill
+                    for skill in active
+                    if skill.get("activation_mode") == "explicit"
+                ),
+                None,
+            )
         if selected is not None:
             return {
                 "skill_name": selected.get("skill_name"),
@@ -1899,7 +2320,9 @@ class ChatAgent(BaseAgent):
                     "name": name,
                     "role": str(member.get("role") or "").strip(),
                     "strengths": str(member.get("strengths") or "").strip(),
-                    "techStack": str(member.get("techStack") or member.get("tech_stack") or "").strip(),
+                    "techStack": str(
+                        member.get("techStack") or member.get("tech_stack") or ""
+                    ).strip(),
                 }
             )
         return members[:20]
@@ -1907,7 +2330,11 @@ class ChatAgent(BaseAgent):
     def _summarize_observation(self, observation: dict[str, Any]) -> dict[str, Any]:
         answer = str(observation.get("answer") or "")
         budget = default_context_budget()
-        limit = budget.tool_observation_tokens if str(observation.get("route") or "").startswith("workspace_") else max(300, budget.tool_observation_tokens // 3)
+        limit = (
+            budget.tool_observation_tokens
+            if str(observation.get("route") or "").startswith("workspace_")
+            else max(300, budget.tool_observation_tokens // 3)
+        )
         compressed = clip_to_token_budget(answer, limit)
         return {
             "route": observation.get("route"),
@@ -1921,8 +2348,12 @@ class ChatAgent(BaseAgent):
             "citations_count": len(observation.get("citations", [])),
         }
 
-    def _initial_evaluation_trace(self, message: str, context: dict[str, Any]) -> dict[str, Any]:
-        evidence = context.get("evidence") if isinstance(context.get("evidence"), list) else []
+    def _initial_evaluation_trace(
+        self, message: str, context: dict[str, Any]
+    ) -> dict[str, Any]:
+        evidence = (
+            context.get("evidence") if isinstance(context.get("evidence"), list) else []
+        )
         contexts: list[str] = []
         sources: list[dict[str, Any]] = []
         for item in evidence:
@@ -1985,7 +2416,11 @@ class ChatAgent(BaseAgent):
         trace["tool_observations"] = tool_observations
 
         raw_sources = observation.get("retrieval_results")
-        sources = [dict(item) for item in raw_sources if isinstance(item, dict)] if isinstance(raw_sources, list) else []
+        sources = (
+            [dict(item) for item in raw_sources if isinstance(item, dict)]
+            if isinstance(raw_sources, list)
+            else []
+        )
         contexts = [self._render_evaluation_context(item) for item in sources]
         contexts = [item for item in contexts if item]
         if not contexts:
@@ -1999,7 +2434,9 @@ class ChatAgent(BaseAgent):
             retrievals.append(
                 {
                     "stage": "agent_tool",
-                    "query": str(arguments.get("query") or arguments.get("message") or ""),
+                    "query": str(
+                        arguments.get("query") or arguments.get("message") or ""
+                    ),
                     "contexts": contexts,
                     "sources": sources,
                 }
@@ -2014,7 +2451,11 @@ class ChatAgent(BaseAgent):
         source_type = str(item.get("source_type") or "").strip()
         title = str(item.get("title") or "").strip()
         snippet = str(item.get("snippet") or item.get("content") or "").strip()
-        heading = " ".join(part for part in ([f"[{source_type}]" if source_type else "", title]) if part)
+        heading = " ".join(
+            part
+            for part in ([f"[{source_type}]" if source_type else "", title])
+            if part
+        )
         if heading and snippet:
             return f"{heading}: {snippet}"
         return heading or snippet

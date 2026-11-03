@@ -57,7 +57,13 @@ def _user(db):
 
 
 def _repo(db, name: str = "demo") -> Repository:
-    repo = Repository(owner="local", name=name, full_name=f"local/{name}", checkout_mode="managed", clone_url=f"https://github.com/local/{name}.git")
+    repo = Repository(
+        owner="local",
+        name=name,
+        full_name=f"local/{name}",
+        checkout_mode="managed",
+        clone_url=f"https://github.com/local/{name}.git",
+    )
     db.add(repo)
     db.flush()
     return repo
@@ -70,7 +76,13 @@ async def test_send_report_action_draft_confirm_records_execution() -> None:
     repo = _repo(db)
 
     draft = await create_action_draft(
-        ActionDraftCreateRequest(repo_id=repo.id, draft_type="send_report", target_type="repository", title="Weekly report", content="Report body"),
+        ActionDraftCreateRequest(
+            repo_id=repo.id,
+            draft_type="send_report",
+            target_type="repository",
+            title="Weekly report",
+            content="Report body",
+        ),
         db=db,
         user=user,
     )
@@ -90,12 +102,41 @@ async def test_multi_repo_report_aggregates_workspace_repositories(monkeypatch) 
     user = _user(db)
     repo_a = _repo(db, "api")
     repo_b = _repo(db, "web")
-    db.add(Issue(repo_id=repo_a.id, number=1, title="Fix auth", state="open", created_at=datetime.now(UTC)))
-    db.add(PullRequest(repo_id=repo_b.id, number=2, title="UI update", state="open", created_at=datetime.now(UTC)))
-    db.add(WorkflowRun(repo_id=repo_b.id, github_run_id=3, name="test", status="completed", conclusion="failure", created_at=datetime.now(UTC)))
+    db.add(
+        Issue(
+            repo_id=repo_a.id,
+            number=1,
+            title="Fix auth",
+            state="open",
+            created_at=datetime.now(UTC),
+        )
+    )
+    db.add(
+        PullRequest(
+            repo_id=repo_b.id,
+            number=2,
+            title="UI update",
+            state="open",
+            created_at=datetime.now(UTC),
+        )
+    )
+    db.add(
+        WorkflowRun(
+            repo_id=repo_b.id,
+            github_run_id=3,
+            name="test",
+            status="completed",
+            conclusion="failure",
+            created_at=datetime.now(UTC),
+        )
+    )
     db.flush()
 
-    workspace = await create_workspace(WorkspaceCreateRequest(name="team", repo_ids=[repo_a.id, repo_b.id]), db=db, user=user)
+    workspace = await create_workspace(
+        WorkspaceCreateRequest(name="team", repo_ids=[repo_a.id, repo_b.id]),
+        db=db,
+        user=user,
+    )
     result = await multi_repo_report(
         MultiRepoReportRequest(
             workspace_id=workspace.id,
@@ -143,7 +184,9 @@ def test_pr_snapshot_live_search_is_pr_scoped(tmp_path) -> None:
     repo = _repo(db)
     project = tmp_path / "repo"
     project.mkdir()
-    (project / "feature.py").write_text("def feature_flag():\n    return True\n", encoding="utf-8")
+    (project / "feature.py").write_text(
+        "def feature_flag():\n    return True\n", encoding="utf-8"
+    )
 
     snapshot_results = search_repository_code(
         repo,
@@ -168,46 +211,95 @@ def test_pr_snapshot_live_search_is_pr_scoped(tmp_path) -> None:
     assert snapshot_results[0]["source_type"] == "workspace_file"
 
 
-def test_pr_snapshot_analysis_writes_code_graph_without_documents(tmp_path, monkeypatch) -> None:
+def test_pr_snapshot_analysis_writes_code_graph_without_documents(
+    tmp_path, monkeypatch
+) -> None:
     monkeypatch.setattr(settings, "milvus_enabled", False)
     reset_milvus_store_cache()
     db = _db_session()
     repo = _repo(db)
-    pr = PullRequest(repo_id=repo.id, number=12, title="Feature flag", state="open", head_branch="feature/pr-snapshot")
+    pr = PullRequest(
+        repo_id=repo.id,
+        number=12,
+        title="Feature flag",
+        state="open",
+        head_branch="feature/pr-snapshot",
+    )
     db.add(pr)
     db.flush()
     project = tmp_path / "repo"
     project.mkdir()
-    (project / "feature.py").write_text("def handler():\n    return helper()\n\ndef helper():\n    return True\n", encoding="utf-8")
+    (project / "feature.py").write_text(
+        "def handler():\n    return helper()\n\ndef helper():\n    return True\n",
+        encoding="utf-8",
+    )
 
-    indexed = _sync_pr_snapshot_analysis(db, repo, pr, project, "feature/pr-snapshot", "abc123")
+    indexed = _sync_pr_snapshot_analysis(
+        db, repo, pr, project, "feature/pr-snapshot", "abc123"
+    )
     db.commit()
 
     assert indexed == 2
-    assert db.query(CodeSymbol).filter(CodeSymbol.pr_id == pr.id, CodeSymbol.pr_number == 12).count() == 2
+    assert (
+        db.query(CodeSymbol)
+        .filter(CodeSymbol.pr_id == pr.id, CodeSymbol.pr_number == 12)
+        .count()
+        == 2
+    )
 
 
-def test_pr_analysis_context_prefers_snapshot_docs_and_graph(tmp_path, monkeypatch) -> None:
+def test_pr_analysis_context_prefers_snapshot_docs_and_graph(
+    tmp_path, monkeypatch
+) -> None:
     monkeypatch.setattr(settings, "milvus_enabled", False)
     reset_milvus_store_cache()
     db = _db_session()
     repo = _repo(db)
-    pr = PullRequest(repo_id=repo.id, number=4, title="Use handler", state="open", head_branch="feature/handler")
+    pr = PullRequest(
+        repo_id=repo.id,
+        number=4,
+        title="Use handler",
+        state="open",
+        head_branch="feature/handler",
+    )
     db.add(pr)
     db.flush()
-    db.add(PRFile(pr_id=pr.id, filename="service.py", status="modified", additions=4, deletions=1, patch="handler()"))
+    db.add(
+        PRFile(
+            pr_id=pr.id,
+            filename="service.py",
+            status="modified",
+            additions=4,
+            deletions=1,
+            patch="handler()",
+        )
+    )
     db.flush()
     project = tmp_path / "repo"
     project.mkdir()
-    (project / "service.py").write_text("def handler():\n    return helper()\n\ndef helper():\n    return True\n", encoding="utf-8")
+    (project / "service.py").write_text(
+        "def handler():\n    return helper()\n\ndef helper():\n    return True\n",
+        encoding="utf-8",
+    )
     _sync_pr_snapshot_analysis(db, repo, pr, project, "feature/handler", "abc123")
     db.commit()
     db.refresh(pr)
 
     context = {"code_references": []}
     counts = {"code": 0}
-    snapshot = {"status": "ready", "snapshot_name": "PR 分支快照", "pr_id": str(pr.id), "pr_number": pr.number, "branch": pr.head_branch, "commit_sha": "abc123", "indexed_symbols": 2, "snapshot_path": str(project)}
-    _augment_pr_context_with_snapshot(db, pr, "handler service.py", context, counts, snapshot)
+    snapshot = {
+        "status": "ready",
+        "snapshot_name": "PR 分支快照",
+        "pr_id": str(pr.id),
+        "pr_number": pr.number,
+        "branch": pr.head_branch,
+        "commit_sha": "abc123",
+        "indexed_symbols": 2,
+        "snapshot_path": str(project),
+    }
+    _augment_pr_context_with_snapshot(
+        db, pr, "handler service.py", context, counts, snapshot
+    )
 
     assert counts["snapshot_code"] > 0
     assert context["code_references"][0]["metadata"]["pr_id"] == str(pr.id)
@@ -260,45 +352,82 @@ def test_pr_analysis_keeps_patch_out_of_semantic_queries(monkeypatch) -> None:
         code_calls.append(query)
         return []
 
-    monkeypatch.setattr("app.api.routes.pull_requests.search_similar_documents", fake_search)
-    monkeypatch.setattr("app.api.routes.pull_requests.search_repository_code", fake_code_search)
+    monkeypatch.setattr(
+        "app.api.routes.pull_requests.search_similar_documents", fake_search
+    )
+    monkeypatch.setattr(
+        "app.api.routes.pull_requests.search_repository_code", fake_code_search
+    )
 
     code_query, _context, _counts = _build_pr_analysis_context(db, pr)
 
     assert "SENSITIVE_PATCH_ONLY_FOR_CODE_LOOKUP" in code_query
     assert any("SENSITIVE_PATCH_ONLY_FOR_CODE_LOOKUP" in query for query in code_calls)
     assert semantic_calls
-    assert all("SENSITIVE_PATCH_ONLY_FOR_CODE_LOOKUP" not in query for query in semantic_calls)
+    assert all(
+        "SENSITIVE_PATCH_ONLY_FOR_CODE_LOOKUP" not in query for query in semantic_calls
+    )
     assert any("Keep the retry idempotent." in query for query in semantic_calls)
 
 
-def test_ci_context_uses_related_pr_snapshot_docs_and_graph(tmp_path, monkeypatch) -> None:
+def test_ci_context_uses_related_pr_snapshot_docs_and_graph(
+    tmp_path, monkeypatch
+) -> None:
     monkeypatch.setattr(settings, "milvus_enabled", False)
     reset_milvus_store_cache()
     db = _db_session()
     repo = _repo(db)
-    pr = PullRequest(repo_id=repo.id, number=7, title="Fix service", state="open", head_branch="feature/ci")
+    pr = PullRequest(
+        repo_id=repo.id,
+        number=7,
+        title="Fix service",
+        state="open",
+        head_branch="feature/ci",
+    )
     db.add(pr)
     db.flush()
     project = tmp_path / "repo"
     project.mkdir()
-    (project / "service.py").write_text("def test_target():\n    return build()\n\ndef build():\n    return True\n", encoding="utf-8")
+    (project / "service.py").write_text(
+        "def test_target():\n    return build()\n\ndef build():\n    return True\n",
+        encoding="utf-8",
+    )
     _sync_pr_snapshot_analysis(db, repo, pr, project, "feature/ci", "abc123")
-    run = WorkflowRun(repo_id=repo.id, github_run_id=99, name="tests", status="completed", conclusion="failure", logs_text="ERROR service.py test_target failed")
+    run = WorkflowRun(
+        repo_id=repo.id,
+        github_run_id=99,
+        name="tests",
+        status="completed",
+        conclusion="failure",
+        logs_text="ERROR service.py test_target failed",
+    )
     db.add(run)
     db.commit()
 
     context = {"code_references": [], "related_files_from_logs": ["service.py"]}
     counts = {"code": 0}
-    snapshot = {"status": "ready", "snapshot_name": "PR 分支快照", "pr_id": str(pr.id), "pr_number": pr.number, "branch": pr.head_branch, "commit_sha": "abc123", "indexed_symbols": 2, "snapshot_path": str(project)}
-    _augment_ci_context_with_snapshot(db, run, "service.py test_target failed", context, counts, snapshot)
+    snapshot = {
+        "status": "ready",
+        "snapshot_name": "PR 分支快照",
+        "pr_id": str(pr.id),
+        "pr_number": pr.number,
+        "branch": pr.head_branch,
+        "commit_sha": "abc123",
+        "indexed_symbols": 2,
+        "snapshot_path": str(project),
+    }
+    _augment_ci_context_with_snapshot(
+        db, run, "service.py test_target failed", context, counts, snapshot
+    )
 
     assert counts["snapshot_code"] > 0
     assert context["code_references"][0]["metadata"]["checkout_kind"] == "pr_snapshot"
     assert context["code_graph_impact"]["symbols"][0]["name"] == "test_target"
 
 
-def test_ci_analysis_redacts_semantic_queries_but_keeps_local_code_context(monkeypatch) -> None:
+def test_ci_analysis_redacts_semantic_queries_but_keeps_local_code_context(
+    monkeypatch,
+) -> None:
     monkeypatch.setattr(settings, "milvus_enabled", False)
     reset_milvus_store_cache()
     db = _db_session()
@@ -337,7 +466,9 @@ def test_ci_analysis_redacts_semantic_queries_but_keeps_local_code_context(monke
     assert all("[REDACTED]" in query for query in semantic_calls)
 
 
-def test_cleanup_pr_snapshots_removes_old_dirs_and_code_graph(tmp_path, monkeypatch) -> None:
+def test_cleanup_pr_snapshots_removes_old_dirs_and_code_graph(
+    tmp_path, monkeypatch
+) -> None:
     monkeypatch.setattr(settings, "milvus_enabled", False)
     reset_milvus_store_cache()
     checkout_root = tmp_path / "checkouts"
@@ -364,7 +495,17 @@ def test_cleanup_pr_snapshots_removes_old_dirs_and_code_graph(tmp_path, monkeypa
     )
     db.add(symbol)
     db.flush()
-    db.add(CodeRelation(repo_id=repo.id, source_symbol_id=symbol.id, source_name="handler", target_name="helper", relation_type="calls", path="service.py", pr_id=pr_id))
+    db.add(
+        CodeRelation(
+            repo_id=repo.id,
+            source_symbol_id=symbol.id,
+            source_name="handler",
+            target_name="helper",
+            relation_type="calls",
+            path="service.py",
+            pr_id=pr_id,
+        )
+    )
     db.commit()
 
     result = cleanup_pr_snapshots(db, repo, max_age_hours=1)

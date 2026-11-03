@@ -73,7 +73,13 @@ def build_sources(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return sources
 
 
-def retrieve_sources(db: Session, repo_id: str | uuid.UUID, question: str, top_k: int, source_types: list[str]) -> list[dict[str, Any]]:
+def retrieve_sources(
+    db: Session,
+    repo_id: str | uuid.UUID,
+    question: str,
+    top_k: int,
+    source_types: list[str],
+) -> list[dict[str, Any]]:
     query = question.strip()
     if not query:
         return []
@@ -112,8 +118,12 @@ def _answer_terms(text: str) -> set[str]:
     for segment in re.findall(r"[\u4e00-\u9fff]+", lowered):
         if len(segment) <= 3:
             terms.add(segment)
-        terms.update(segment[index : index + 2] for index in range(max(0, len(segment) - 1)))
-        terms.update(segment[index : index + 3] for index in range(max(0, len(segment) - 2)))
+        terms.update(
+            segment[index : index + 2] for index in range(max(0, len(segment) - 1))
+        )
+        terms.update(
+            segment[index : index + 3] for index in range(max(0, len(segment) - 2))
+        )
     return {term for term in terms if term.strip()}
 
 
@@ -125,7 +135,9 @@ def extractive_answer(question: str, sources: list[dict[str, Any]]) -> str:
     candidates: list[tuple[int, int, int, str]] = []
     for source in sources:
         citation = int(source["citation"])
-        sentences = re.split(r"(?<=[。！？.!?])\s+|\n+", str(source.get("snippet") or ""))
+        sentences = re.split(
+            r"(?<=[。！？.!?])\s+|\n+", str(source.get("snippet") or "")
+        )
         for position, sentence in enumerate(sentences):
             cleaned = " ".join(sentence.split()).strip(" -")
             cleaned = re.sub(r"(^|\s)#{1,6}\s*", r"\1", cleaned).strip()
@@ -156,7 +168,12 @@ def extractive_answer(question: str, sources: list[dict[str, Any]]) -> str:
 
     if not selected:
         source = sources[0]
-        selected = [(int(source["citation"]), str(source.get("snippet") or source.get("title") or ""))]
+        selected = [
+            (
+                int(source["citation"]),
+                str(source.get("snippet") or source.get("title") or ""),
+            )
+        ]
     bullets = "\n".join(f"- {sentence} [{citation}]" for citation, sentence in selected)
     return f"根据当前知识库检索到的证据：\n\n{bullets}"
 
@@ -193,7 +210,9 @@ async def answer_question(
             }
         }
     gate = dict(retrieval_config.get("answer_gate") or {})
-    decision = str(gate.get("decision") or ("answer" if sources else "insufficient_evidence"))
+    decision = str(
+        gate.get("decision") or ("answer" if sources else "insufficient_evidence")
+    )
     if not sources or decision != "answer":
         return {
             "question": question.strip(),
@@ -209,7 +228,9 @@ async def answer_question(
 
     answer = ""
     if settings.rag_llm_enabled and settings.llm_api_key:
-        answer = await (llm or LLMClient()).chat_text(RAG_SYSTEM_PROMPT, _context_message(question, sources))
+        answer = await (llm or LLMClient()).chat_text(
+            RAG_SYSTEM_PROMPT, _context_message(question, sources)
+        )
     mode = "llm" if answer.strip() else "extractive"
     if not answer.strip():
         answer = extractive_answer(question, sources)
@@ -238,11 +259,22 @@ def reindex_documents(db: Session, repo_id: str | uuid.UUID) -> int:
     )
     db.query(Document).filter(
         Document.repo_id == repo_uuid,
-        Document.source_type.in_(["chat_session", "conversation_memory", "thread_memory", "code_file"]),
+        Document.source_type.in_(
+            ["chat_session", "conversation_memory", "thread_memory", "code_file"]
+        ),
     ).delete(synchronize_session=False)
-    documents = db.query(Document).filter(Document.repo_id == repo_uuid).order_by(Document.created_at.asc()).all()
+    documents = (
+        db.query(Document)
+        .filter(Document.repo_id == repo_uuid)
+        .order_by(Document.created_at.asc())
+        .all()
+    )
     rag_documents = [doc for doc in documents if should_vectorize(doc.source_type)]
-    config = db.query(KnowledgeBaseConfig).filter(KnowledgeBaseConfig.repo_id == repo_uuid).one_or_none()
+    config = (
+        db.query(KnowledgeBaseConfig)
+        .filter(KnowledgeBaseConfig.repo_id == repo_uuid)
+        .one_or_none()
+    )
     for doc in documents:
         if should_vectorize(doc.source_type):
             continue
@@ -292,13 +324,17 @@ def rag_status(db: Session, repo_id: str | uuid.UUID) -> dict[str, Any]:
     repo_uuid = _as_uuid(repo_id)
     counts = dict(
         db.query(Document.source_type, func.count(Document.id))
-        .filter(Document.repo_id == repo_uuid, Document.source_type.in_(RAG_SOURCE_TYPES))
+        .filter(
+            Document.repo_id == repo_uuid, Document.source_type.in_(RAG_SOURCE_TYPES)
+        )
         .group_by(Document.source_type)
         .all()
     )
     source_ids = (
         db.query(func.count(func.distinct(Document.source_id)))
-        .filter(Document.repo_id == repo_uuid, Document.source_type.in_(RAG_SOURCE_TYPES))
+        .filter(
+            Document.repo_id == repo_uuid, Document.source_type.in_(RAG_SOURCE_TYPES)
+        )
         .scalar()
         or 0
     )
@@ -315,8 +351,19 @@ def rag_status(db: Session, repo_id: str | uuid.UUID) -> dict[str, Any]:
         "vector_store": milvus_runtime_status(),
         "generation": {
             "llm_configured": bool(settings.rag_llm_enabled and settings.llm_api_key),
-            "model": settings.llm_model if settings.rag_llm_enabled and settings.llm_api_key else None,
+            "model": settings.llm_model
+            if settings.rag_llm_enabled and settings.llm_api_key
+            else None,
             "fallback": "extractive evidence answer",
         },
-        "supported_files": [".txt", ".md", ".markdown", ".pdf", ".docx", ".json", ".csv", ".log"],
+        "supported_files": [
+            ".txt",
+            ".md",
+            ".markdown",
+            ".pdf",
+            ".docx",
+            ".json",
+            ".csv",
+            ".log",
+        ],
     }

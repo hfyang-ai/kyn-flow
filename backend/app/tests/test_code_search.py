@@ -15,12 +15,13 @@ def test_query_terms_prioritizes_code_identifiers() -> None:
     assert "auth/service.py" in terms
 
 
-def test_search_checkout_code_reads_current_files_without_database_index(tmp_path) -> None:
+def test_search_checkout_code_reads_current_files_without_database_index(
+    tmp_path,
+) -> None:
     (tmp_path / "src").mkdir()
     source = tmp_path / "src" / "auth.py"
     source.write_text(
-        "def refresh_access_token():\n"
-        "    return rotate_credentials()\n",
+        "def refresh_access_token():\n    return rotate_credentials()\n",
         encoding="utf-8",
     )
     (tmp_path / ".env").write_text("REFRESH_ACCESS_TOKEN=secret\n", encoding="utf-8")
@@ -37,8 +38,12 @@ def test_search_checkout_code_reads_current_files_without_database_index(tmp_pat
 def test_search_checkout_code_respects_worktree_subdirectory(tmp_path) -> None:
     (tmp_path / ".github" / "workflows").mkdir(parents=True)
     (tmp_path / "src").mkdir()
-    (tmp_path / ".github" / "workflows" / "test.yml").write_text("name: backend-tests\n", encoding="utf-8")
-    (tmp_path / "src" / "test.py").write_text("backend_tests = True\n", encoding="utf-8")
+    (tmp_path / ".github" / "workflows" / "test.yml").write_text(
+        "name: backend-tests\n", encoding="utf-8"
+    )
+    (tmp_path / "src" / "test.py").write_text(
+        "backend_tests = True\n", encoding="utf-8"
+    )
 
     results = search_checkout_code(
         tmp_path,
@@ -46,12 +51,18 @@ def test_search_checkout_code_respects_worktree_subdirectory(tmp_path) -> None:
         relative_path=".github/workflows",
     )
 
-    assert results and {item["source_id"] for item in results} == {".github/workflows/test.yml"}
+    assert results and {item["source_id"] for item in results} == {
+        ".github/workflows/test.yml"
+    }
 
 
 def test_search_repository_code_uses_configured_local_checkout(tmp_path) -> None:
-    (tmp_path / "service.py").write_text("def handle_payment_webhook():\n    pass\n", encoding="utf-8")
-    repo = SimpleNamespace(id=uuid.uuid4(), local_path=str(tmp_path), full_name="local/demo")
+    (tmp_path / "service.py").write_text(
+        "def handle_payment_webhook():\n    pass\n", encoding="utf-8"
+    )
+    repo = SimpleNamespace(
+        id=uuid.uuid4(), local_path=str(tmp_path), full_name="local/demo"
+    )
 
     results = search_repository_code(repo, "handle_payment_webhook")
 

@@ -71,7 +71,14 @@ def test_default_ragas_cases_fall_back_to_structured_repository_data() -> None:
     db.flush()
     from app.db.models import Issue
 
-    issue = Issue(repo_id=repo.id, number=7, title="Refresh token fails", body="Retry once with an idempotency key", state="open", labels=["bug"])
+    issue = Issue(
+        repo_id=repo.id,
+        number=7,
+        title="Refresh token fails",
+        body="Retry once with an idempotency key",
+        state="open",
+        labels=["bug"],
+    )
     db.add(issue)
     db.flush()
 
@@ -248,13 +255,20 @@ class RetryScorer:
 
 
 @pytest.mark.asyncio
-async def test_rescore_reuses_saved_agent_evidence_and_only_retries_missing_metrics() -> None:
+async def test_rescore_reuses_saved_agent_evidence_and_only_retries_missing_metrics() -> (
+    None
+):
     scorer = RetryScorer()
     source_result = {
         "target": {"repo_id": "repo-1"},
         "evaluation_set": {"name": "fixed", "sha256": "abc"},
         "pipeline": {"top_k": 5},
-        "retrieval": {"recall_at_k": 1.0, "precision_at_k": 1.0, "mrr": 1.0, "ndcg": 1.0},
+        "retrieval": {
+            "recall_at_k": 1.0,
+            "precision_at_k": 1.0,
+            "mrr": 1.0,
+            "ndcg": 1.0,
+        },
         "performance": {"cases": 1, "avg_latency_ms": 100},
         "cases": [
             {
@@ -267,7 +281,12 @@ async def test_rescore_reuses_saved_agent_evidence_and_only_retries_missing_metr
                 "tool_calls": [],
                 "tool_observations": [],
                 "expected_tool_calls": [],
-                "hard_rules": {"passed": True, "source_hit": True, "contexts_present": True, "answer_present": True},
+                "hard_rules": {
+                    "passed": True,
+                    "source_hit": True,
+                    "contexts_present": True,
+                    "answer_present": True,
+                },
                 "ragas": {
                     "context_precision": 1.0,
                     "context_recall": 1.0,
@@ -305,7 +324,9 @@ def test_eval_comparison_requires_same_baseline_and_reports_regressions() -> Non
             "passed": True,
             "quality_status": "passed",
             "summary_metrics": {"faithfulness": 0.95},
-            "cases": [{"id": "case-1", "hard_rules": {"passed": True}, "ragas_errors": {}}],
+            "cases": [
+                {"id": "case-1", "hard_rules": {"passed": True}, "ragas_errors": {}}
+            ],
         },
     )
     candidate = EvalRun(
@@ -362,7 +383,11 @@ def test_issue_draft_markdown_contains_reproduction_and_actions() -> None:
                     "response": "错误答案",
                     "ragas_errors": {"faithfulness": "TimeoutError"},
                     "diagnoses": [
-                        {"category": "judge", "title": "Judge 异常", "action": "仅重试异常评分"}
+                        {
+                            "category": "judge",
+                            "title": "Judge 异常",
+                            "action": "仅重试异常评分",
+                        }
                     ],
                 }
             ],
@@ -379,7 +404,9 @@ def test_issue_draft_markdown_contains_reproduction_and_actions() -> None:
 
 
 @pytest.mark.asyncio
-async def test_rag_quality_eval_runs_real_chatagent_and_rolls_back_eval_conversation(monkeypatch) -> None:
+async def test_rag_quality_eval_runs_real_chatagent_and_rolls_back_eval_conversation(
+    monkeypatch,
+) -> None:
     monkeypatch.setattr(settings, "milvus_enabled", False)
     reset_milvus_store_cache()
     engine = create_engine("sqlite+pysqlite:///:memory:")
@@ -425,7 +452,10 @@ async def test_rag_quality_eval_runs_real_chatagent_and_rolls_back_eval_conversa
     assert result["hard_gate"]["passed"] is True
     assert result["retrieval"]["recall_at_k"] == 1.0
     assert result["ragas"]["version"] == "test-ragas-0.4"
-    assert all(result["ragas"]["metrics"][name]["score"] is not None for name in CORE_RAGAS_METRICS)
+    assert all(
+        result["ragas"]["metrics"][name]["score"] is not None
+        for name in CORE_RAGAS_METRICS
+    )
     assert scorer.calls[0]["response"].startswith("Retries use an idempotency key")
     assert scorer.calls[0]["retrieved_contexts"]
     assert [event["stage"] for event in progress_events] == [
@@ -435,7 +465,9 @@ async def test_rag_quality_eval_runs_real_chatagent_and_rolls_back_eval_conversa
         "case_complete",
         "finalizing",
     ]
-    assert db.query(Conversation).filter(Conversation.status == "evaluation").count() == 0
+    assert (
+        db.query(Conversation).filter(Conversation.status == "evaluation").count() == 0
+    )
 
 
 @pytest.mark.asyncio

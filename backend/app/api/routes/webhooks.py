@@ -18,7 +18,9 @@ def verify_signature(body: bytes, signature: str | None) -> None:
         return
     if not signature or not signature.startswith("sha256="):
         raise HTTPException(status_code=401, detail="缺少 GitHub webhook 签名")
-    expected = hmac.new(settings.github_webhook_secret.encode("utf-8"), body, hashlib.sha256).hexdigest()
+    expected = hmac.new(
+        settings.github_webhook_secret.encode("utf-8"), body, hashlib.sha256
+    ).hexdigest()
     actual = signature.removeprefix("sha256=")
     if not hmac.compare_digest(expected, actual):
         raise HTTPException(status_code=401, detail="GitHub webhook 签名无效")
@@ -27,7 +29,9 @@ def verify_signature(body: bytes, signature: str | None) -> None:
 def find_repo_by_full_name(full_name: str) -> Repository | None:
     db: Session = SessionLocal()
     try:
-        return db.query(Repository).filter(Repository.full_name == full_name).one_or_none()
+        return (
+            db.query(Repository).filter(Repository.full_name == full_name).one_or_none()
+        )
     finally:
         db.close()
 
@@ -51,8 +55,29 @@ async def github_webhook(
     if repo is None:
         return {"accepted": False, "reason": f"{full_name} is not connected"}
 
-    if x_github_event in {"issues", "pull_request", "workflow_run", "push", "check_suite", "check_run"}:
-        background_tasks.add_task(sync_repository_by_id, repo.id, RepoSyncRequest(limit=settings.auto_sync_limit))
-        return {"accepted": True, "event": x_github_event, "repo_id": str(repo.id), "action": "sync_scheduled"}
+    if x_github_event in {
+        "issues",
+        "pull_request",
+        "workflow_run",
+        "push",
+        "check_suite",
+        "check_run",
+    }:
+        background_tasks.add_task(
+            sync_repository_by_id,
+            repo.id,
+            RepoSyncRequest(limit=settings.auto_sync_limit),
+        )
+        return {
+            "accepted": True,
+            "event": x_github_event,
+            "repo_id": str(repo.id),
+            "action": "sync_scheduled",
+        }
 
-    return {"accepted": True, "event": x_github_event, "repo_id": str(repo.id), "action": "ignored"}
+    return {
+        "accepted": True,
+        "event": x_github_event,
+        "repo_id": str(repo.id),
+        "action": "ignored",
+    }

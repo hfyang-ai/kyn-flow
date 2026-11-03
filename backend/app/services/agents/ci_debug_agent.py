@@ -10,22 +10,34 @@ from app.services.llm.prompts import CI_DEBUG_PROMPT
 class CIDebugAgent(BaseAgent):
     name = "ci_debug_agent"
     description = "分析 workflow 失败日志，并提出排查步骤。"
-    available_tools = ["get_workflow_run", "get_workflow_logs", "extract_failed_log_sections"]
+    available_tools = [
+        "get_workflow_run",
+        "get_workflow_logs",
+        "extract_failed_log_sections",
+    ]
 
     def __init__(self, llm: LLMClient | None = None) -> None:
         self.llm = llm or LLMClient()
 
-    async def run(self, input_data: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+    async def run(
+        self, input_data: dict[str, Any], context: dict[str, Any]
+    ) -> dict[str, Any]:
         fallback = self._fallback_debug(input_data, context)
-        llm_output = await self.llm.chat_json(CI_DEBUG_PROMPT, {"workflow_run": input_data, "context": context})
+        llm_output = await self.llm.chat_json(
+            CI_DEBUG_PROMPT, {"workflow_run": input_data, "context": context}
+        )
         if llm_output:
             try:
-                return CIDebugOutput.model_validate(self._merge_with_fallback(llm_output, fallback)).model_dump()
+                return CIDebugOutput.model_validate(
+                    self._merge_with_fallback(llm_output, fallback)
+                ).model_dump()
             except Exception:  # noqa: S110 - LLM 输出校验失败，静默降级到规则 fallback
                 pass
         return fallback
 
-    def _fallback_debug(self, input_data: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+    def _fallback_debug(
+        self, input_data: dict[str, Any], context: dict[str, Any]
+    ) -> dict[str, Any]:
         logs = (input_data.get("logs_text") or "").lower()
         raw_logs = str(input_data.get("logs_text") or "")
         failed_jobs = [
@@ -37,15 +49,25 @@ class CIDebugAgent(BaseAgent):
             step.get("name")
             for job in failed_jobs
             for step in job.get("steps", [])
-            if isinstance(step, dict) and step.get("conclusion") == "failure" and step.get("name")
+            if isinstance(step, dict)
+            and step.get("conclusion") == "failure"
+            and step.get("name")
         ]
         failure_type = self._classify_failure(logs)
         first_error = self._extract_first_error(raw_logs)
         related_files = self._extract_related_files(raw_logs, context)
-        failed_job_names = [str(job.get("name")) for job in failed_jobs if job.get("name")]
-        job_hint = f"失败 job：{', '.join(failed_job_names[:3])}。" if failed_job_names else ""
-        step_hint = f"失败 step：{', '.join(failed_steps[:3])}。" if failed_steps else ""
-        root_cause = self._infer_root_cause(failure_type, first_error, failed_job_names, failed_steps)
+        failed_job_names = [
+            str(job.get("name")) for job in failed_jobs if job.get("name")
+        ]
+        job_hint = (
+            f"失败 job：{', '.join(failed_job_names[:3])}。" if failed_job_names else ""
+        )
+        step_hint = (
+            f"失败 step：{', '.join(failed_steps[:3])}。" if failed_steps else ""
+        )
+        root_cause = self._infer_root_cause(
+            failure_type, first_error, failed_job_names, failed_steps
+        )
         fix_steps = self._fix_steps(failure_type, related_files)
         is_merge_blocking = self._is_merge_blocking(input_data, failure_type)
         blocking_reason = (
@@ -70,7 +92,8 @@ class CIDebugAgent(BaseAgent):
             "已生成根因、修复步骤和阻塞判断。",
         ]
         return CIDebugOutput(
-            failure_summary=input_data.get("name", "CI run") + f" 执行失败。{job_hint}{step_hint}需要结合日志定位首个错误块。",
+            failure_summary=input_data.get("name", "CI run")
+            + f" 执行失败。{job_hint}{step_hint}需要结合日志定位首个错误块。",
             failure_type=failure_type,
             plan=plan,
             executed_steps=executed_steps,
@@ -78,22 +101,41 @@ class CIDebugAgent(BaseAgent):
             root_cause=root_cause,
             possible_causes=self._possible_causes(failure_type),
             fix_steps=fix_steps,
-            debug_steps=["查看失败 job 的首个错误块", "本地复现对应命令", "检查最近 PR 修改的相关文件", "修复后重新运行失败 job 和完整 workflow"],
+            debug_steps=[
+                "查看失败 job 的首个错误块",
+                "本地复现对应命令",
+                "检查最近 PR 修改的相关文件",
+                "修复后重新运行失败 job 和完整 workflow",
+            ],
             related_files=related_files,
             is_merge_blocking=is_merge_blocking,
             blocking_reason=blocking_reason,
-            confidence=self._estimate_confidence(first_error, failed_jobs, related_files, context),
+            confidence=self._estimate_confidence(
+                first_error, failed_jobs, related_files, context
+            ),
         ).model_dump()
 
-    def _merge_with_fallback(self, output: dict[str, Any], fallback: dict[str, Any]) -> dict[str, Any]:
+    def _merge_with_fallback(
+        self, output: dict[str, Any], fallback: dict[str, Any]
+    ) -> dict[str, Any]:
         merged = {**fallback, **output}
-        for key in ["plan", "executed_steps", "possible_causes", "fix_steps", "debug_steps", "related_files"]:
+        for key in [
+            "plan",
+            "executed_steps",
+            "possible_causes",
+            "fix_steps",
+            "debug_steps",
+            "related_files",
+        ]:
             if not merged.get(key):
                 merged[key] = fallback[key]
         for key in ["failure_summary", "failure_type", "root_cause", "blocking_reason"]:
             if not str(merged.get(key) or "").strip():
                 merged[key] = fallback[key]
-        if merged.get("failure_type") == "unknown" and fallback.get("failure_type") != "unknown":
+        if (
+            merged.get("failure_type") == "unknown"
+            and fallback.get("failure_type") != "unknown"
+        ):
             merged["failure_type"] = fallback["failure_type"]
         if not merged.get("first_error"):
             merged["first_error"] = fallback["first_error"]
@@ -102,11 +144,54 @@ class CIDebugAgent(BaseAgent):
     def _classify_failure(self, logs: str) -> str:
         ordered_rules = [
             ("permission", ["permission", "denied", "forbidden", "eacces", "权限"]),
-            ("environment", ["missing env", "environment variable", "secret", "not set", "环境变量"]),
-            ("dependency", ["npm err", "pip install", "dependency", "module not found", "no matching distribution", "cannot find module", "依赖"]),
+            (
+                "environment",
+                [
+                    "missing env",
+                    "environment variable",
+                    "secret",
+                    "not set",
+                    "环境变量",
+                ],
+            ),
+            (
+                "dependency",
+                [
+                    "npm err",
+                    "pip install",
+                    "dependency",
+                    "module not found",
+                    "no matching distribution",
+                    "cannot find module",
+                    "依赖",
+                ],
+            ),
             ("lint", ["eslint", "lint", "ruff", "flake8", "biome"]),
-            ("build", ["build failed", "compilation", "webpack", "vite", "next build", "tsc", "type error", "构建"]),
-            ("test", ["pytest", "assert", "test failed", "tests failed", "failed tests", "断言", "测试"]),
+            (
+                "build",
+                [
+                    "build failed",
+                    "compilation",
+                    "webpack",
+                    "vite",
+                    "next build",
+                    "tsc",
+                    "type error",
+                    "构建",
+                ],
+            ),
+            (
+                "test",
+                [
+                    "pytest",
+                    "assert",
+                    "test failed",
+                    "tests failed",
+                    "failed tests",
+                    "断言",
+                    "测试",
+                ],
+            ),
         ]
         for failure_type, tokens in ordered_rules:
             if any(token in logs for token in tokens):
@@ -121,14 +206,28 @@ class CIDebugAgent(BaseAgent):
         lines = [line.strip() for line in logs.splitlines() if line.strip()]
         for index, line in enumerate(lines):
             lowered = line.lower()
-            if any(token in lowered for token in ["error", "failed", "failure", "exception", "traceback", "assertionerror", "npm err", "fatal"]):
+            if any(
+                token in lowered
+                for token in [
+                    "error",
+                    "failed",
+                    "failure",
+                    "exception",
+                    "traceback",
+                    "assertionerror",
+                    "npm err",
+                    "fatal",
+                ]
+            ):
                 start = max(0, index - 2)
                 end = min(len(lines), index + 5)
                 return "\n".join(lines[start:end])[:900]
         return "\n".join(lines[:6])[:900]
 
     def _extract_related_files(self, logs: str, context: dict[str, Any]) -> list[str]:
-        candidates = re.findall(r"[\w./\\-]+\.(?:py|ts|tsx|js|jsx|json|ya?ml|toml|ini|cfg|md)", logs)
+        candidates = re.findall(
+            r"[\w./\\-]+\.(?:py|ts|tsx|js|jsx|json|ya?ml|toml|ini|cfg|md)", logs
+        )
         for item in context.get("code_references") or []:
             if isinstance(item, dict):
                 title = str(item.get("title") or item.get("reference") or "").strip()
@@ -141,14 +240,24 @@ class CIDebugAgent(BaseAgent):
                 normalized.append(cleaned)
         return normalized[:8]
 
-    def _infer_root_cause(self, failure_type: str, first_error: str | None, failed_job_names: list[str], failed_steps: list[str]) -> str:
-        scope = ", ".join(filter(None, [", ".join(failed_job_names[:2]), ", ".join(failed_steps[:2])]))
+    def _infer_root_cause(
+        self,
+        failure_type: str,
+        first_error: str | None,
+        failed_job_names: list[str],
+        failed_steps: list[str],
+    ) -> str:
+        scope = ", ".join(
+            filter(None, [", ".join(failed_job_names[:2]), ", ".join(failed_steps[:2])])
+        )
         if failure_type == "test":
             return f"失败集中在测试执行阶段{f'（{scope}）' if scope else ''}，首个错误指向断言、用例或被测行为不一致。"
         if failure_type == "build":
             return f"失败集中在构建/类型检查阶段{f'（{scope}）' if scope else ''}，首个错误通常来自编译、类型或打包配置问题。"
         if failure_type == "dependency":
-            return "日志显示依赖安装或模块解析失败，优先检查 lockfile、包版本和 CI 缓存。"
+            return (
+                "日志显示依赖安装或模块解析失败，优先检查 lockfile、包版本和 CI 缓存。"
+            )
         if failure_type == "permission":
             return "日志显示权限不足或访问被拒绝，优先检查 token、文件权限和 workflow 权限配置。"
         if failure_type == "environment":
@@ -159,35 +268,91 @@ class CIDebugAgent(BaseAgent):
 
     def _possible_causes(self, failure_type: str) -> list[str]:
         mapping = {
-            "test": ["测试断言不一致", "最近变更改变了接口行为", "测试数据或环境初始化不完整"],
-            "build": ["类型错误或编译错误", "构建配置与代码变更不匹配", "生成产物或路径引用缺失"],
-            "lint": ["格式或静态规则违规", "新增代码未经过本地 lint", "配置升级导致规则变化"],
-            "dependency": ["依赖版本变化", "lockfile 未同步", "CI 缓存或 registry 配置异常"],
+            "test": [
+                "测试断言不一致",
+                "最近变更改变了接口行为",
+                "测试数据或环境初始化不完整",
+            ],
+            "build": [
+                "类型错误或编译错误",
+                "构建配置与代码变更不匹配",
+                "生成产物或路径引用缺失",
+            ],
+            "lint": [
+                "格式或静态规则违规",
+                "新增代码未经过本地 lint",
+                "配置升级导致规则变化",
+            ],
+            "dependency": [
+                "依赖版本变化",
+                "lockfile 未同步",
+                "CI 缓存或 registry 配置异常",
+            ],
             "permission": ["workflow 权限不足", "token scope 不足", "脚本访问受限目录"],
             "environment": ["环境变量缺失", "secret 未配置", "CI 与本地默认配置不一致"],
-            "unknown": ["首个错误块信息不足", "上游命令吞掉了真实错误", "需要查看完整 job 日志"],
+            "unknown": [
+                "首个错误块信息不足",
+                "上游命令吞掉了真实错误",
+                "需要查看完整 job 日志",
+            ],
         }
         return mapping[failure_type]
 
     def _fix_steps(self, failure_type: str, related_files: list[str]) -> list[str]:
         focus = f"，重点检查 {', '.join(related_files[:3])}" if related_files else ""
         mapping = {
-            "test": [f"本地运行失败测试命令并复现{focus}", "对照最近 PR 修改确认预期行为", "修正代码或测试数据后补充回归用例"],
-            "build": [f"本地运行构建/类型检查命令{focus}", "修复首个编译或类型错误", "确认生成路径、导入路径和配置文件同步更新"],
-            "lint": [f"本地运行 lint/format 命令{focus}", "修复首个规则违规", "必要时调整规则并说明原因"],
-            "dependency": ["重新安装依赖并确认 lockfile 更新", "检查 package/requirements 与 CI 版本是否一致", "清理 CI 缓存后重跑"],
-            "permission": ["检查 workflow permissions 配置", "确认 token/secrets 的 scope", "避免脚本写入受限目录或使用受限 API"],
-            "environment": ["补齐 workflow env 或 repository secrets", "为本地和 CI 提供一致默认配置", "在日志中避免泄露 secret 明文"],
-            "unknown": ["展开完整 job 日志", "找到最早失败命令的 stderr", "必要时在 workflow 中增加诊断输出后重跑"],
+            "test": [
+                f"本地运行失败测试命令并复现{focus}",
+                "对照最近 PR 修改确认预期行为",
+                "修正代码或测试数据后补充回归用例",
+            ],
+            "build": [
+                f"本地运行构建/类型检查命令{focus}",
+                "修复首个编译或类型错误",
+                "确认生成路径、导入路径和配置文件同步更新",
+            ],
+            "lint": [
+                f"本地运行 lint/format 命令{focus}",
+                "修复首个规则违规",
+                "必要时调整规则并说明原因",
+            ],
+            "dependency": [
+                "重新安装依赖并确认 lockfile 更新",
+                "检查 package/requirements 与 CI 版本是否一致",
+                "清理 CI 缓存后重跑",
+            ],
+            "permission": [
+                "检查 workflow permissions 配置",
+                "确认 token/secrets 的 scope",
+                "避免脚本写入受限目录或使用受限 API",
+            ],
+            "environment": [
+                "补齐 workflow env 或 repository secrets",
+                "为本地和 CI 提供一致默认配置",
+                "在日志中避免泄露 secret 明文",
+            ],
+            "unknown": [
+                "展开完整 job 日志",
+                "找到最早失败命令的 stderr",
+                "必要时在 workflow 中增加诊断输出后重跑",
+            ],
         }
         return mapping[failure_type]
 
     def _is_merge_blocking(self, input_data: dict[str, Any], failure_type: str) -> bool:
         conclusion = str(input_data.get("conclusion") or "").lower()
         status = str(input_data.get("status") or "").lower()
-        return conclusion == "failure" or (status == "completed" and failure_type != "unknown")
+        return conclusion == "failure" or (
+            status == "completed" and failure_type != "unknown"
+        )
 
-    def _estimate_confidence(self, first_error: str | None, failed_jobs: list[dict[str, Any]], related_files: list[str], context: dict[str, Any]) -> float:
+    def _estimate_confidence(
+        self,
+        first_error: str | None,
+        failed_jobs: list[dict[str, Any]],
+        related_files: list[str],
+        context: dict[str, Any],
+    ) -> float:
         score = 0.42
         if first_error:
             score += 0.16

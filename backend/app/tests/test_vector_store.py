@@ -25,9 +25,12 @@ def test_clip_utf8_limits_encoded_length_without_breaking_characters() -> None:
 
 
 def test_collection_dimension_is_read_from_milvus_schema() -> None:
-    assert _collection_dimensions(
-        {"fields": [{"name": "embedding", "params": {"dim": "1024"}}]}
-    ) == 1024
+    assert (
+        _collection_dimensions(
+            {"fields": [{"name": "embedding", "params": {"dim": "1024"}}]}
+        )
+        == 1024
+    )
 
 
 def test_embedding_contract_rejects_per_repository_vector_spaces() -> None:
@@ -35,7 +38,9 @@ def test_embedding_contract_rejects_per_repository_vector_spaces() -> None:
         validate_embedding_contract("deterministic", "other-model", 384)
 
 
-def test_explicit_deterministic_provider_is_allowed_without_becoming_a_fallback(monkeypatch) -> None:
+def test_explicit_deterministic_provider_is_allowed_without_becoming_a_fallback(
+    monkeypatch,
+) -> None:
     monkeypatch.setattr(settings, "embedding_provider", "deterministic")
     monkeypatch.setattr(settings, "embedding_model", "deterministic-local")
     monkeypatch.setattr(settings, "embedding_dimensions", 8)
@@ -51,13 +56,17 @@ def test_explicit_deterministic_provider_is_allowed_without_becoming_a_fallback(
     assert len(vectors[0]) == 8
 
 
-def test_embedding_provider_failure_is_not_replaced_with_hash_vectors(monkeypatch) -> None:
+def test_embedding_provider_failure_is_not_replaced_with_hash_vectors(
+    monkeypatch,
+) -> None:
     monkeypatch.setattr(settings, "embedding_provider", "openai_compatible")
     monkeypatch.setattr(settings, "embedding_model", "configured-model")
     monkeypatch.setattr(settings, "embedding_dimensions", 8)
     monkeypatch.setattr(
         "app.services.rag.embeddings._embed_openai_compatible",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("provider offline")),
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            RuntimeError("provider offline")
+        ),
     )
 
     with pytest.raises(RuntimeError, match="provider offline"):

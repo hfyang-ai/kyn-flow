@@ -48,7 +48,9 @@ def _request_case(item) -> RagEvalCase:
 
 def _custom_evaluation_set(payload: EvalRunRequest) -> dict:
     serialized = [item.model_dump(mode="json") for item in payload.cases or []]
-    canonical = json.dumps(serialized, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    canonical = json.dumps(
+        serialized, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
     return {
         "id": payload.name or "custom-cases",
         "name": payload.name or "custom-cases",
@@ -180,7 +182,9 @@ async def _execute_rag_eval_job(
         db.commit()
 
     try:
-        await persist_progress({"stage": "starting", "message": "后台任务已启动，正在加载仓库上下文。"})
+        await persist_progress(
+            {"stage": "starting", "message": "后台任务已启动，正在加载仓库上下文。"}
+        )
         result = await run_rag_quality_eval(
             db,
             repo_id,
@@ -244,7 +248,9 @@ def _job_result(
         "quality_status": "incomplete",
         "evaluation_complete": False,
         "passed": False,
-        "target": {"name": "ChatAgent", "repo_id": repo_id} if repo_id else {"name": "ChatAgent"},
+        "target": {"name": "ChatAgent", "repo_id": repo_id}
+        if repo_id
+        else {"name": "ChatAgent"},
         "evaluation_set": evaluation_set or {},
         "progress": {
             "stage": stage,
@@ -268,9 +274,20 @@ async def rescore_eval(
     source_result = source.result_json or {}
     if not source_result.get("cases"):
         raise HTTPException(status_code=400, detail="原评测没有可用于重评分的逐题现场")
-    error_count = sum(bool(item.get("ragas_errors")) for item in source_result.get("cases") or [])
+    error_count = sum(
+        bool(item.get("ragas_errors")) for item in source_result.get("cases") or []
+    )
     missing_count = sum(
-        any(name not in (item.get("ragas") or {}) for name in ("context_precision", "context_recall", "faithfulness", "answer_relevancy", "agent_goal_accuracy"))
+        any(
+            name not in (item.get("ragas") or {})
+            for name in (
+                "context_precision",
+                "context_recall",
+                "faithfulness",
+                "answer_relevancy",
+                "agent_goal_accuracy",
+            )
+        )
         for item in source_result.get("cases") or []
     )
     if error_count == 0 and missing_count == 0:
@@ -321,7 +338,11 @@ async def _execute_rescore_job(
             repo_id=repo_id or None,
             evaluation_set=evaluation_set,
             rescore_of=source_eval_id,
-            **{key: value for key, value in progress.items() if key not in {"stage", "message"}},
+            **{
+                key: value
+                for key, value in progress.items()
+                if key not in {"stage", "message"}
+            },
         )
         db.add(row)
         db.commit()
@@ -374,11 +395,17 @@ def _eval_comparison(base: EvalRun, candidate: EvalRun) -> dict:
     reasons: list[str] = []
     if base_set.get("sha256") != candidate_set.get("sha256"):
         reasons.append("评测集 Hash 不一致")
-    if (base_result.get("ragas") or {}).get("version") != (candidate_result.get("ragas") or {}).get("version"):
+    if (base_result.get("ragas") or {}).get("version") != (
+        candidate_result.get("ragas") or {}
+    ).get("version"):
         reasons.append("Ragas 版本不一致")
-    if (base_result.get("ragas") or {}).get("judge_model") != (candidate_result.get("ragas") or {}).get("judge_model"):
+    if (base_result.get("ragas") or {}).get("judge_model") != (
+        candidate_result.get("ragas") or {}
+    ).get("judge_model"):
         reasons.append("Judge 模型不一致")
-    if (base_result.get("pipeline") or {}).get("top_k") != (candidate_result.get("pipeline") or {}).get("top_k"):
+    if (base_result.get("pipeline") or {}).get("top_k") != (
+        candidate_result.get("pipeline") or {}
+    ).get("top_k"):
         reasons.append("Top-K 不一致")
     base_metrics = base_result.get("summary_metrics") or {}
     candidate_metrics = candidate_result.get("summary_metrics") or {}
@@ -389,23 +416,39 @@ def _eval_comparison(base: EvalRun, candidate: EvalRun) -> dict:
         if not isinstance(left, (int, float)) or not isinstance(right, (int, float)):
             continue
         metric_deltas.append(
-            {"name": name, "base": float(left), "candidate": float(right), "delta": round(float(right) - float(left), 4)}
+            {
+                "name": name,
+                "base": float(left),
+                "candidate": float(right),
+                "delta": round(float(right) - float(left), 4),
+            }
         )
     base_cases = {str(item.get("id")): item for item in base_result.get("cases") or []}
-    candidate_cases = {str(item.get("id")): item for item in candidate_result.get("cases") or []}
+    candidate_cases = {
+        str(item.get("id")): item for item in candidate_result.get("cases") or []
+    }
     case_deltas = []
     for case_id in sorted(set(base_cases) | set(candidate_cases)):
         left = base_cases.get(case_id) or {}
         right = candidate_cases.get(case_id) or {}
-        left_passed = bool((left.get("hard_rules") or {}).get("passed")) and not bool(left.get("ragas_errors"))
-        right_passed = bool((right.get("hard_rules") or {}).get("passed")) and not bool(right.get("ragas_errors"))
+        left_passed = bool((left.get("hard_rules") or {}).get("passed")) and not bool(
+            left.get("ragas_errors")
+        )
+        right_passed = bool((right.get("hard_rules") or {}).get("passed")) and not bool(
+            right.get("ragas_errors")
+        )
         state = "unchanged"
         if not left_passed and right_passed:
             state = "improved"
         elif left_passed and not right_passed:
             state = "regressed"
         case_deltas.append(
-            {"id": case_id, "base_passed": left_passed, "candidate_passed": right_passed, "state": state}
+            {
+                "id": case_id,
+                "base_passed": left_passed,
+                "candidate_passed": right_passed,
+                "state": state,
+            }
         )
     return {
         "base_eval_id": str(base.id),
@@ -466,7 +509,11 @@ def _issue_markdown(eval_run: EvalRun) -> str:
         )
     lines.extend(["", "## 失败用例", ""])
     for case in result.get("cases") or []:
-        diagnoses = [item for item in case.get("diagnoses") or [] if item.get("category") != "passed"]
+        diagnoses = [
+            item
+            for item in case.get("diagnoses") or []
+            if item.get("category") != "passed"
+        ]
         if not diagnoses and not case.get("ragas_errors"):
             continue
         lines.extend(
@@ -479,7 +526,9 @@ def _issue_markdown(eval_run: EvalRun) -> str:
             ]
         )
         if case.get("ragas_errors"):
-            lines.append(f"- Judge 错误：`{json.dumps(case['ragas_errors'], ensure_ascii=False)}`")
+            lines.append(
+                f"- Judge 错误：`{json.dumps(case['ragas_errors'], ensure_ascii=False)}`"
+            )
         for diagnosis in diagnoses:
             lines.append(f"- {diagnosis.get('title')}：{diagnosis.get('action')}")
         lines.append("")
@@ -509,7 +558,9 @@ async def create_eval_issue_draft(
     result = eval_run.result_json or {}
     repo_id = (result.get("target") or {}).get("repo_id")
     if not repo_id:
-        raise HTTPException(status_code=400, detail="该历史评测没有保存仓库信息，无法创建 Issue 草稿")
+        raise HTTPException(
+            status_code=400, detail="该历史评测没有保存仓库信息，无法创建 Issue 草稿"
+        )
     repo = db.get(Repository, UUID(str(repo_id)))
     if repo is None:
         raise HTTPException(status_code=404, detail="未找到评测对应仓库")
@@ -523,7 +574,10 @@ async def create_eval_issue_draft(
         content=_issue_markdown(eval_run),
         risk_level="medium",
         created_by=user.id,
-        meta={"eval_id": str(eval_run.id), "quality_status": result.get("quality_status")},
+        meta={
+            "eval_id": str(eval_run.id),
+            "quality_status": result.get("quality_status"),
+        },
     )
     db.add(draft)
     write_audit_log(
@@ -552,7 +606,8 @@ async def list_evals(
         rows = [
             row
             for row in rows
-            if str(((row.result_json or {}).get("target") or {}).get("repo_id") or "") == str(repo_id)
+            if str(((row.result_json or {}).get("target") or {}).get("repo_id") or "")
+            == str(repo_id)
         ]
     rows = rows[: max(1, min(limit, 100))]
     return [
@@ -594,7 +649,9 @@ def _summary_metrics(result: dict) -> dict[str, float]:
     summary = result.get("summary_metrics")
     metrics = {
         key: float(value)
-        for key, value in (summary.items() if isinstance(summary, dict) else result.items())
+        for key, value in (
+            summary.items() if isinstance(summary, dict) else result.items()
+        )
         if isinstance(value, (int, float)) and not isinstance(value, bool)
     }
     return metrics

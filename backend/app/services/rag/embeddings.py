@@ -15,7 +15,9 @@ def _deterministic_tokens(text: str) -> list[str]:
     tokens = re.findall(r"[a-z0-9_\-]+", lowered)
     for segment in re.findall(r"[\u4e00-\u9fff]+", lowered):
         tokens.extend(segment)
-        tokens.extend(segment[index : index + 2] for index in range(max(0, len(segment) - 1)))
+        tokens.extend(
+            segment[index : index + 2] for index in range(max(0, len(segment) - 1))
+        )
     return tokens
 
 
@@ -30,7 +32,9 @@ def deterministic_embedding(text: str, dimensions: int = 128) -> list[float]:
     return [value / norm for value in vector]
 
 
-def _validate_vector_dimensions(vector: list[float], dimensions: int, provider: str) -> list[float]:
+def _validate_vector_dimensions(
+    vector: list[float], dimensions: int, provider: str
+) -> list[float]:
     if len(vector) != dimensions:
         raise ValueError(
             f"Embedding provider '{provider}' returned {len(vector)} dimensions; expected {dimensions}. "
@@ -107,8 +111,15 @@ def _embed_openai_compatible(
     api_key: str | None = None,
     base_url: str | None = None,
 ) -> list[list[float]]:
-    api_key = api_key or settings.embedding_api_key or os.getenv("OPENAI_API_KEY") or settings.llm_api_key
-    base_url = (base_url or settings.embedding_base_url or settings.llm_base_url).rstrip("/")
+    api_key = (
+        api_key
+        or settings.embedding_api_key
+        or os.getenv("OPENAI_API_KEY")
+        or settings.llm_api_key
+    )
+    base_url = (
+        base_url or settings.embedding_base_url or settings.llm_base_url
+    ).rstrip("/")
     model = model or settings.embedding_model
     if not api_key:
         raise RuntimeError("embedding API key is not configured")
@@ -120,12 +131,16 @@ def _embed_openai_compatible(
             json=_embedding_payload(texts, dimensions, model),
         )
         response.raise_for_status()
-        rows = sorted(response.json().get("data", []), key=lambda item: int(item.get("index", 0)))
+        rows = sorted(
+            response.json().get("data", []), key=lambda item: int(item.get("index", 0))
+        )
         vectors = [item.get("embedding") for item in rows]
         if len(vectors) != len(texts):
             raise ValueError("embedding response length mismatch")
         return [
-            _validate_vector_dimensions([float(value) for value in vector], dimensions, "openai_compatible")
+            _validate_vector_dimensions(
+                [float(value) for value in vector], dimensions, "openai_compatible"
+            )
             for vector in vectors
         ]
 
@@ -166,7 +181,11 @@ def _embed_local(
     output: list[list[float]] = []
     for vector in vectors:
         values = vector.tolist() if hasattr(vector, "tolist") else list(vector)
-        output.append(_validate_vector_dimensions([float(value) for value in values], dimensions, "local"))
+        output.append(
+            _validate_vector_dimensions(
+                [float(value) for value in values], dimensions, "local"
+            )
+        )
     return output
 
 
@@ -198,7 +217,9 @@ def embed_knowledge_texts(
     validate_embedding_contract(provider, model, dimensions)
     resolved = normalize_embedding_provider(provider)
     if resolved in {"qwen_local", "local"}:
-        return _embed_local(clean_texts, dimensions, model_name=model, is_query=is_query)
+        return _embed_local(
+            clean_texts, dimensions, model_name=model, is_query=is_query
+        )
     if resolved == "dashscope":
         return _embed_openai_compatible(
             clean_texts,
@@ -214,7 +235,9 @@ def embed_knowledge_texts(
     raise ValueError(f"Unsupported embedding provider: {resolved}")
 
 
-def embed_knowledge_query(text: str, *, provider: str, model: str, dimensions: int) -> list[float]:
+def embed_knowledge_query(
+    text: str, *, provider: str, model: str, dimensions: int
+) -> list[float]:
     return embed_knowledge_texts(
         [text],
         provider=provider,

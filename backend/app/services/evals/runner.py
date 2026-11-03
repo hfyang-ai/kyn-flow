@@ -22,7 +22,9 @@ from app.services.skills import get_skill_registry
 
 
 class NoopLLM:
-    async def chat_json(self, system_prompt: str, user_payload: dict[str, Any]) -> dict[str, Any]:
+    async def chat_json(
+        self, system_prompt: str, user_payload: dict[str, Any]
+    ) -> dict[str, Any]:
         return {}
 
 
@@ -34,32 +36,72 @@ def cosine_similarity(a: list[float], b: list[float]) -> float:
     return numerator / (denominator or 1.0)
 
 
-async def run_basic_eval(db: Session | None = None, repo_id: str | None = None) -> dict[str, Any]:
+async def run_basic_eval(
+    db: Session | None = None, repo_id: str | None = None
+) -> dict[str, Any]:
     issue_agent = IssueAgent(llm=NoopLLM())
     pr_agent = PRReviewAgent(llm=NoopLLM())
     ci_agent = CIDebugAgent(llm=NoopLLM())
 
     issue_cases = [
-        ({"title": "Login API returns 500", "body": "Token expires and login fails", "labels": ["bug"]}, "Bug"),
-        ({"title": "Document local demo mode", "body": "README should explain seed script", "labels": ["documentation"]}, "Documentation"),
-        ({"title": "Add workflow sync", "body": "Sync recent GitHub Actions runs", "labels": ["feature", "ci"]}, "Ops"),
+        (
+            {
+                "title": "Login API returns 500",
+                "body": "Token expires and login fails",
+                "labels": ["bug"],
+            },
+            "Bug",
+        ),
+        (
+            {
+                "title": "Document local demo mode",
+                "body": "README should explain seed script",
+                "labels": ["documentation"],
+            },
+            "Documentation",
+        ),
+        (
+            {
+                "title": "Add workflow sync",
+                "body": "Sync recent GitHub Actions runs",
+                "labels": ["feature", "ci"],
+            },
+            "Ops",
+        ),
     ]
-    issue_results = [await issue_agent.run(payload, {}) for payload, _expected in issue_cases]
-    issue_accuracy = sum(result["category"] == expected for result, (_payload, expected) in zip(issue_results, issue_cases)) / len(issue_cases)
+    issue_results = [
+        await issue_agent.run(payload, {}) for payload, _expected in issue_cases
+    ]
+    issue_accuracy = sum(
+        result["category"] == expected
+        for result, (_payload, expected) in zip(issue_results, issue_cases)
+    ) / len(issue_cases)
 
     pr_payload = {
         "number": 12,
         "title": "Refactor auth middleware",
         "body": "Split token validation and session refresh",
         "files": [
-            {"filename": "backend/app/auth/middleware.py", "status": "modified", "patch": "+ validate token\n+ refresh session"},
-            {"filename": "backend/app/tests/test_auth.py", "status": "modified", "patch": "+ test expired token"},
+            {
+                "filename": "backend/app/auth/middleware.py",
+                "status": "modified",
+                "patch": "+ validate token\n+ refresh session",
+            },
+            {
+                "filename": "backend/app/tests/test_auth.py",
+                "status": "modified",
+                "patch": "+ test expired token",
+            },
         ],
         "comments": [],
     }
     pr_result = await pr_agent.run(pr_payload, {})
-    key_text = " ".join(pr_result.get("key_changes", []) + pr_result.get("files_need_attention", []))
-    pr_key_file_coverage = sum(file["filename"] in key_text for file in pr_payload["files"]) / len(pr_payload["files"])
+    key_text = " ".join(
+        pr_result.get("key_changes", []) + pr_result.get("files_need_attention", [])
+    )
+    pr_key_file_coverage = sum(
+        file["filename"] in key_text for file in pr_payload["files"]
+    ) / len(pr_payload["files"])
 
     rag_docs = [
         ("issue-login", "Login API returns 500 when token expires"),
@@ -68,19 +110,37 @@ async def run_basic_eval(db: Session | None = None, repo_id: str | None = None) 
     ]
     query_embedding = deterministic_embedding("token expires login 500")
     scored = sorted(
-        [(doc_id, cosine_similarity(query_embedding, deterministic_embedding(text))) for doc_id, text in rag_docs],
+        [
+            (doc_id, cosine_similarity(query_embedding, deterministic_embedding(text)))
+            for doc_id, text in rag_docs
+        ],
         key=lambda item: item[1],
         reverse=True,
     )
-    rag_hit_rate_at_3 = 1.0 if any(doc_id == "issue-login" for doc_id, _score in scored[:3]) else 0.0
-    rag_quality = await run_rag_quality_eval(db, repo_id, run_judge=False) if db is not None and repo_id else None
+    rag_hit_rate_at_3 = (
+        1.0 if any(doc_id == "issue-login" for doc_id, _score in scored[:3]) else 0.0
+    )
+    rag_quality = (
+        await run_rag_quality_eval(db, repo_id, run_judge=False)
+        if db is not None and repo_id
+        else None
+    )
 
     long_messages = [
-        {"role": "user", "content": "We decided that auth refresh belongs in middleware. " * 40},
-        {"role": "assistant", "content": "Decision captured. Next step is adding tests for expired tokens. " * 36},
+        {
+            "role": "user",
+            "content": "We decided that auth refresh belongs in middleware. " * 40,
+        },
+        {
+            "role": "assistant",
+            "content": "Decision captured. Next step is adding tests for expired tokens. "
+            * 36,
+        },
         {"role": "user", "content": "What did we decide about auth token refresh?"},
     ]
-    compressed_messages, message_stats = compress_messages(long_messages, max_tokens=260)
+    compressed_messages, message_stats = compress_messages(
+        long_messages, max_tokens=260
+    )
     memory_update = fallback_memory_update(
         "Please implement auth token refresh in middleware",
         "Decision: keep refresh in middleware. Next step: add expired token tests.",
@@ -88,7 +148,16 @@ async def run_basic_eval(db: Session | None = None, repo_id: str | None = None) 
         [],
     )
     merged_memory = merge_memory(
-        {"summary": "", "facts": [], "decisions": [], "open_questions": [], "tasks": [], "user_preferences": [], "repo_context": [], "citations": []},
+        {
+            "summary": "",
+            "facts": [],
+            "decisions": [],
+            "open_questions": [],
+            "tasks": [],
+            "user_preferences": [],
+            "repo_context": [],
+            "citations": [],
+        },
         memory_update,
         memory_update["summary"],
         max_tokens=240,
@@ -102,7 +171,8 @@ async def run_basic_eval(db: Session | None = None, repo_id: str | None = None) 
                 "source_type": "workspace_file",
                 "source_id": "auth-doc",
                 "score": 1.0,
-                "_raw_content": ("unrelated setup notes. " * 80) + "auth middleware refreshes expired token and validates session.",
+                "_raw_content": ("unrelated setup notes. " * 80)
+                + "auth middleware refreshes expired token and validates session.",
                 "metadata": {"path": "backend/app/auth/middleware.py"},
             }
         ],
@@ -110,7 +180,9 @@ async def run_basic_eval(db: Session | None = None, repo_id: str | None = None) 
     )
     compression_quality = compression_eval_summary(
         "\n".join(item["content"] for item in long_messages),
-        "\n".join(item["content"] for item in compressed_messages) + "\n" + render_structured_memory(type("Memory", (), merged_memory), max_tokens=240),
+        "\n".join(item["content"] for item in compressed_messages)
+        + "\n"
+        + render_structured_memory(type("Memory", (), merged_memory), max_tokens=240),
         retrieved=1,
         kept=len(retrieval_items),
     )
@@ -120,7 +192,13 @@ async def run_basic_eval(db: Session | None = None, repo_id: str | None = None) 
             "name": "backend-test",
             "status": "completed",
             "conclusion": "failure",
-            "jobs": [{"name": "pytest", "conclusion": "failure", "steps": [{"name": "Run tests", "conclusion": "failure"}]}],
+            "jobs": [
+                {
+                    "name": "pytest",
+                    "conclusion": "failure",
+                    "steps": [{"name": "Run tests", "conclusion": "failure"}],
+                }
+            ],
             "logs_text": "pytest tests/test_api.py FAILED AssertionError",
         },
         {},
@@ -132,7 +210,9 @@ async def run_basic_eval(db: Session | None = None, repo_id: str | None = None) 
             str(ci_result.get("root_cause") or ""),
         ]
     ).lower()
-    ci_pytest_failure_detection = 1.0 if ci_result.get("failure_type") == "test" and "pytest" in ci_text else 0.0
+    ci_pytest_failure_detection = (
+        1.0 if ci_result.get("failure_type") == "test" and "pytest" in ci_text else 0.0
+    )
     schema_checks = [
         IssueAnalysisOutput.model_validate(issue_results[0]),
         PRReviewOutput.model_validate(pr_result),
@@ -152,7 +232,9 @@ async def run_basic_eval(db: Session | None = None, repo_id: str | None = None) 
         "project-investigation": "kynflow_search_evidence",
     }
     loaded_skill_names = {skill.manifest.name for skill in registry.list_skills()}
-    skill_registry_coverage = len(loaded_skill_names & set(required_skill_entrypoints)) / len(required_skill_entrypoints)
+    skill_registry_coverage = len(
+        loaded_skill_names & set(required_skill_entrypoints)
+    ) / len(required_skill_entrypoints)
     skill_entrypoint_hits = 0
     for skill_name, entrypoint in required_skill_entrypoints.items():
         skill = registry.skill_for_entrypoint(entrypoint)
@@ -171,7 +253,9 @@ async def run_basic_eval(db: Session | None = None, repo_id: str | None = None) 
         f"- CI pytest failure detection: {ci_pytest_failure_detection:.2f}",
     ]
     if rag_quality:
-        report_lines.append(f"- RAG recall@5: {rag_quality['retrieval']['recall_at_k']:.2f}")
+        report_lines.append(
+            f"- RAG recall@5: {rag_quality['retrieval']['recall_at_k']:.2f}"
+        )
     report_lines.extend(
         [
             f"- Native tool schema ready rate: {tool_call_schema_ready_rate:.2f}",
@@ -185,10 +269,18 @@ async def run_basic_eval(db: Session | None = None, repo_id: str | None = None) 
         repo_uuid = UUID(str(repo_id))
         repository_sample = {
             "issues": db.query(Issue).filter(Issue.repo_id == repo_uuid).count(),
-            "pull_requests": db.query(PullRequest).filter(PullRequest.repo_id == repo_uuid).count(),
-            "workflow_runs": db.query(WorkflowRun).filter(WorkflowRun.repo_id == repo_uuid).count(),
-            "code_symbols": db.query(CodeSymbol).filter(CodeSymbol.repo_id == repo_uuid).count(),
-            "knowledge_documents": db.query(Document).filter(Document.repo_id == repo_uuid).count(),
+            "pull_requests": db.query(PullRequest)
+            .filter(PullRequest.repo_id == repo_uuid)
+            .count(),
+            "workflow_runs": db.query(WorkflowRun)
+            .filter(WorkflowRun.repo_id == repo_uuid)
+            .count(),
+            "code_symbols": db.query(CodeSymbol)
+            .filter(CodeSymbol.repo_id == repo_uuid)
+            .count(),
+            "knowledge_documents": db.query(Document)
+            .filter(Document.repo_id == repo_uuid)
+            .count(),
         }
 
     return {
@@ -203,7 +295,9 @@ async def run_basic_eval(db: Session | None = None, repo_id: str | None = None) 
         "rag_quality": rag_quality,
         "context_compression": {
             "message_stats": message_stats,
-            "retrieval_stats": retrieval_items[0].get("compression") if retrieval_items else {},
+            "retrieval_stats": retrieval_items[0].get("compression")
+            if retrieval_items
+            else {},
             "memory_sections": {
                 "facts": len(merged_memory["facts"]),
                 "decisions": len(merged_memory["decisions"]),

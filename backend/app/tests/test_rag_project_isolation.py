@@ -142,6 +142,11 @@ def test_rag_is_bound_to_real_repositories_and_has_no_virtual_creator() -> None:
     assert rejected.value.status_code == 404
     assert [repo.id for repo in asyncio.run(list_repos(db))] == [actual.id]
 
-    routes = {(route.path, frozenset(route.methods or set())) for route in rag_routes.router.routes}
+    routes = {
+        (route.path, frozenset(route.methods or set()))
+        for route in rag_routes.router.routes
+    }
     assert ("/repositories", frozenset({"GET"})) in routes
-    assert not any(path == "/knowledge-bases" and "POST" in methods for path, methods in routes)
+    assert not any(
+        path == "/knowledge-bases" and "POST" in methods for path, methods in routes
+    )

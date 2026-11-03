@@ -9,8 +9,13 @@ from app.services.context_compression import prompt_cache_model_kwargs
 
 
 class LLMClient:
-    def __init__(self, *, json_timeout_seconds: float = 60, json_max_tokens: int | None = None,
-                 json_fast_review: bool = False) -> None:
+    def __init__(
+        self,
+        *,
+        json_timeout_seconds: float = 60,
+        json_max_tokens: int | None = None,
+        json_fast_review: bool = False,
+    ) -> None:
         self.base_url = settings.llm_base_url.rstrip("/")
         self.api_key = settings.llm_api_key
         self.model = settings.llm_model
@@ -18,7 +23,9 @@ class LLMClient:
         self.json_max_tokens = json_max_tokens
         self.json_fast_review = json_fast_review
 
-    async def chat_json(self, system_prompt: str, user_payload: dict[str, Any]) -> dict[str, Any]:
+    async def chat_json(
+        self, system_prompt: str, user_payload: dict[str, Any]
+    ) -> dict[str, Any]:
         if not self.api_key:
             return {}
 
@@ -26,7 +33,10 @@ class LLMClient:
             "model": self.model,
             "messages": [
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": json.dumps(user_payload, ensure_ascii=False)},
+                {
+                    "role": "user",
+                    "content": json.dumps(user_payload, ensure_ascii=False),
+                },
             ],
             "response_format": {"type": "json_object"},
         }
@@ -35,7 +45,10 @@ class LLMClient:
             payload["max_tokens"] = self.json_max_tokens
         if self.json_fast_review:
             from urllib.parse import urlsplit
-            if urlsplit(self.base_url).hostname == "api.deepseek.com" and self.model.startswith("deepseek"):
+
+            if urlsplit(
+                self.base_url
+            ).hostname == "api.deepseek.com" and self.model.startswith("deepseek"):
                 payload["thinking"] = {"type": "disabled"}
         async with httpx.AsyncClient(timeout=self.json_timeout_seconds) as client:
             try:
@@ -74,19 +87,28 @@ class LLMClient:
                 return ""
             return str(response.json()["choices"][0]["message"].get("content") or "")
 
-    async def chat_text_stream(self, system_prompt: str, messages: list[dict[str, str]]) -> AsyncIterator[str]:
+    async def chat_text_stream(
+        self, system_prompt: str, messages: list[dict[str, str]]
+    ) -> AsyncIterator[str]:
         if not self.api_key:
             return
 
         payload_messages = [{"role": "system", "content": system_prompt}, *messages]
-        payload: dict[str, Any] = {"model": self.model, "messages": payload_messages, "stream": True}
+        payload: dict[str, Any] = {
+            "model": self.model,
+            "messages": payload_messages,
+            "stream": True,
+        }
         payload.update(prompt_cache_model_kwargs())
-        async with httpx.AsyncClient(timeout=60) as client, client.stream(
-            "POST",
-            f"{self.base_url}/chat/completions",
-            headers={"Authorization": f"Bearer {self.api_key}"},
-            json=payload,
-        ) as response:
+        async with (
+            httpx.AsyncClient(timeout=60) as client,
+            client.stream(
+                "POST",
+                f"{self.base_url}/chat/completions",
+                headers={"Authorization": f"Bearer {self.api_key}"},
+                json=payload,
+            ) as response,
+        ):
             try:
                 response.raise_for_status()
             except httpx.HTTPStatusError:

@@ -6,7 +6,9 @@ from app.core.config import settings
 from app.services import code_analysis
 
 
-def test_sync_checkout_uses_cached_checkout_when_update_fails(tmp_path, monkeypatch) -> None:
+def test_sync_checkout_uses_cached_checkout_when_update_fails(
+    tmp_path, monkeypatch
+) -> None:
     monkeypatch.setattr(settings, "repo_checkout_dir", str(tmp_path))
     repo = SimpleNamespace(
         id=uuid.uuid4(),
@@ -18,14 +20,18 @@ def test_sync_checkout_uses_cached_checkout_when_update_fails(tmp_path, monkeypa
     (checkout / ".git").mkdir(parents=True)
 
     def fail_run(args, cwd=None):
-        raise subprocess.CalledProcessError(128, ["git", *args], stderr="network failed")
+        raise subprocess.CalledProcessError(
+            128, ["git", *args], stderr="network failed"
+        )
 
     monkeypatch.setattr(code_analysis, "_run_git", fail_run)
 
     assert code_analysis._sync_checkout(repo, None) == checkout
 
 
-def test_sync_checkout_uses_configured_local_repo_without_updating(tmp_path, monkeypatch) -> None:
+def test_sync_checkout_uses_configured_local_repo_without_updating(
+    tmp_path, monkeypatch
+) -> None:
     local_repo = tmp_path / "local-repo"
     local_repo.mkdir()
     repo = SimpleNamespace(
@@ -37,17 +43,23 @@ def test_sync_checkout_uses_configured_local_repo_without_updating(tmp_path, mon
         checkout_mode="local",
     )
 
-    monkeypatch.setattr(code_analysis, "_is_git_work_tree", lambda path: path == local_repo.resolve())
+    monkeypatch.setattr(
+        code_analysis, "_is_git_work_tree", lambda path: path == local_repo.resolve()
+    )
 
     def fail_run(args, cwd=None):
-        raise AssertionError("local repository indexing should not fetch, checkout, or pull")
+        raise AssertionError(
+            "local repository indexing should not fetch, checkout, or pull"
+        )
 
     monkeypatch.setattr(code_analysis, "_run_git", fail_run)
 
     assert code_analysis._sync_checkout(repo, None) == local_repo.resolve()
 
 
-def test_sync_checkout_rejects_non_empty_configured_download_target(tmp_path, monkeypatch) -> None:
+def test_sync_checkout_rejects_non_empty_configured_download_target(
+    tmp_path, monkeypatch
+) -> None:
     target = tmp_path / "repo"
     target.mkdir()
     (target / "README.md").write_text("# occupied\n", encoding="utf-8")
@@ -68,4 +80,6 @@ def test_sync_checkout_rejects_non_empty_configured_download_target(tmp_path, mo
     except RuntimeError as exc:
         assert "already exists" in str(exc)
     else:
-        raise AssertionError("expected configured non-empty download target to be rejected")
+        raise AssertionError(
+            "expected configured non-empty download target to be rejected"
+        )

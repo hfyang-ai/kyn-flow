@@ -21,7 +21,9 @@ def _db_session():
 
 
 def _repo(db):
-    repo = Repository(owner="local", name="retrieval", full_name=f"local/retrieval-{uuid.uuid4()}")
+    repo = Repository(
+        owner="local", name="retrieval", full_name=f"local/retrieval-{uuid.uuid4()}"
+    )
     db.add(repo)
     db.flush()
     return repo
@@ -44,7 +46,12 @@ def _document(db, repo, *, title, content, source_id=None, metadata=None):
 def test_bm25_prefers_rare_error_name_and_exposes_trace() -> None:
     db = _db_session()
     repo = _repo(db)
-    _document(db, repo, title="General retry notes", content="failure retry token failure retry token")
+    _document(
+        db,
+        repo,
+        title="General retry notes",
+        content="failure retry token failure retry token",
+    )
     rare = _document(
         db,
         repo,
@@ -124,7 +131,11 @@ def test_weighted_fusion_uses_project_formula_and_dual_recall_bonus() -> None:
             "keyword_score": 1.0,
             "bm25_score": 8.2,
             "metadata": {"chunk_id": "chunk-shared"},
-            "retrieval": {"sources": ["keyword"], "keyword_score": 1.0, "keyword_rank": 1},
+            "retrieval": {
+                "sources": ["keyword"],
+                "keyword_score": 1.0,
+                "keyword_rank": 1,
+            },
         }
     ]
 
@@ -159,7 +170,9 @@ def test_parent_expansion_reads_only_same_parent_source_and_version() -> None:
                 "branch": "main",
             },
         )
-        for index, content in enumerate(["token setup", "refresh token failure", "retry once"])
+        for index, content in enumerate(
+            ["token setup", "refresh token failure", "retry once"]
+        )
     ]
     _document(
         db,
@@ -167,7 +180,12 @@ def test_parent_expansion_reads_only_same_parent_source_and_version() -> None:
         title="old branch",
         content="must not be expanded",
         source_id=source_id,
-        metadata={"chunk_id": "old", "parent_id": "parent-auth", "child_index": 2, "branch": "legacy"},
+        metadata={
+            "chunk_id": "old",
+            "parent_id": "parent-auth",
+            "child_index": 2,
+            "branch": "legacy",
+        },
     )
     db.commit()
 
@@ -187,7 +205,9 @@ def test_parent_expansion_reads_only_same_parent_source_and_version() -> None:
     )
 
     assert items[0]["parent_expanded"] is True
-    assert items[0]["_raw_content"] == "token setup\n\nrefresh token failure\n\nretry once"
+    assert (
+        items[0]["_raw_content"] == "token setup\n\nrefresh token failure\n\nretry once"
+    )
     assert "must not be expanded" not in items[0]["_raw_content"]
     assert stage["additional_chunks"] == 2
 
@@ -199,28 +219,57 @@ def test_parent_expansion_reads_only_same_parent_source_and_version() -> None:
         (
             "这个怎么办",
             [
-                {"id": "a", "source_id": "one", "score": 0.9, "snippet": "第一种处理方式"},
-                {"id": "b", "source_id": "two", "score": 0.88, "snippet": "第二种处理方式"},
+                {
+                    "id": "a",
+                    "source_id": "one",
+                    "score": 0.9,
+                    "snippet": "第一种处理方式",
+                },
+                {
+                    "id": "b",
+                    "source_id": "two",
+                    "score": 0.88,
+                    "snippet": "第二种处理方式",
+                },
             ],
             "ask_clarification",
         ),
         (
             "是否允许部署",
             [
-                {"id": "a", "source_id": "one", "score": 0.92, "snippet": "当前版本允许部署。"},
-                {"id": "b", "source_id": "two", "score": 0.9, "snippet": "当前版本禁止部署。"},
+                {
+                    "id": "a",
+                    "source_id": "one",
+                    "score": 0.92,
+                    "snippet": "当前版本允许部署。",
+                },
+                {
+                    "id": "b",
+                    "source_id": "two",
+                    "score": 0.9,
+                    "snippet": "当前版本禁止部署。",
+                },
             ],
             "conflict",
         ),
         (
             "token refresh policy",
-            [{"id": "a", "source_id": "one", "score": 0.92, "snippet": "Refresh the token once."}],
+            [
+                {
+                    "id": "a",
+                    "source_id": "one",
+                    "score": 0.92,
+                    "snippet": "Refresh the token once.",
+                }
+            ],
             "answer",
         ),
     ],
 )
 def test_answer_gate_exposes_all_project_decisions(query, items, expected) -> None:
-    gate = evaluate_answer_gate(query, items, score_threshold=0.8, threshold_enabled=True)
+    gate = evaluate_answer_gate(
+        query, items, score_threshold=0.8, threshold_enabled=True
+    )
 
     assert gate["decision"] == expected
     assert "reason" in gate
@@ -235,7 +284,8 @@ async def test_qwen_rerank_receives_raw_content_before_compression(monkeypatch) 
         "source_id": str(uuid.uuid4()),
         "source_type": "knowledge_file",
         "title": "auth.md",
-        "_raw_content": "irrelevant setup. " * 80 + "Refresh the token once after ExpiredSignatureError.",
+        "_raw_content": "irrelevant setup. " * 80
+        + "Refresh the token once after ExpiredSignatureError.",
         "snippet": "short pre-rerank snippet",
         "score": 0.91,
         "metadata": {},
@@ -249,9 +299,18 @@ async def test_qwen_rerank_receives_raw_content_before_compression(monkeypatch) 
     async def fake_qwen(_query, items, _config, _limit):
         assert items[0]["_raw_content"].startswith("irrelevant setup")
         assert "compression" not in items[0]
-        return [{**items[0], "score": 0.95, "rerank_score": 0.95, "retrieval": {**items[0]["retrieval"], "rerank_mode": "qwen_api"}}]
+        return [
+            {
+                **items[0],
+                "score": 0.95,
+                "rerank_score": 0.95,
+                "retrieval": {**items[0]["retrieval"], "rerank_mode": "qwen_api"},
+            }
+        ]
 
-    monkeypatch.setattr("app.services.rag.knowledge_base.search_similar_documents", fake_search)
+    monkeypatch.setattr(
+        "app.services.rag.knowledge_base.search_similar_documents", fake_search
+    )
     monkeypatch.setattr("app.services.rag.knowledge_base._qwen_rerank", fake_qwen)
 
     items, trace, _duration = await retrieve_knowledge(
@@ -265,7 +324,13 @@ async def test_qwen_rerank_receives_raw_content_before_compression(monkeypatch) 
     assert items[0]["compression"]["mode"] == "query_aware_extractive"
     assert "ExpiredSignatureError" in items[0]["snippet"]
     stage_names = [stage["name"] for stage in trace["pipeline"]["stages"]]
-    assert stage_names == ["rerank", "parent_expansion", "score_threshold", "context_compression", "answer_gate"]
+    assert stage_names == [
+        "rerank",
+        "parent_expansion",
+        "score_threshold",
+        "context_compression",
+        "answer_gate",
+    ]
     assert trace["answer_gate"]["decision"] == "answer"
 
 
@@ -293,7 +358,9 @@ async def test_qwen_failure_is_traced_and_falls_back_to_heuristic(monkeypatch) -
     async def fail_qwen(*_args, **_kwargs):
         raise TimeoutError("rerank timeout")
 
-    monkeypatch.setattr("app.services.rag.knowledge_base.search_similar_documents", fake_search)
+    monkeypatch.setattr(
+        "app.services.rag.knowledge_base.search_similar_documents", fake_search
+    )
     monkeypatch.setattr("app.services.rag.knowledge_base._qwen_rerank", fail_qwen)
 
     items, trace, _duration = await retrieve_knowledge(
@@ -304,7 +371,9 @@ async def test_qwen_failure_is_traced_and_falls_back_to_heuristic(monkeypatch) -
         score_threshold_enabled=False,
     )
 
-    rerank_stage = next(stage for stage in trace["pipeline"]["stages"] if stage["name"] == "rerank")
+    rerank_stage = next(
+        stage for stage in trace["pipeline"]["stages"] if stage["name"] == "rerank"
+    )
     assert items[0]["retrieval"]["rerank_mode"] == "heuristic"
     assert rerank_stage["fallback"] is True
     assert rerank_stage["fallback_reason"] == "TimeoutError"

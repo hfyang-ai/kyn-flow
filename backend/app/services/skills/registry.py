@@ -41,7 +41,11 @@ class SkillDefinition(BaseModel):
         }
 
     def prompt_summary(self) -> str:
-        steps = ", ".join(self.manifest.workflow_steps) if self.manifest.workflow_steps else "在 SKILL.md 中定义"
+        steps = (
+            ", ".join(self.manifest.workflow_steps)
+            if self.manifest.workflow_steps
+            else "在 SKILL.md 中定义"
+        )
         return (
             f"- {self.manifest.name} v{self.manifest.version} -> {self.manifest.entrypoint}: "
             f"{self.manifest.description} 步骤：{steps}。安全级别：{self.manifest.safety_level}。"
@@ -83,7 +87,9 @@ class SkillActivation(BaseModel):
                 if content:
                     sections.append(f"### 资源：{resource['path']}\n{content}")
             if sections:
-                resource_text = "\n\n按需加载的 Skill 资源：\n\n" + "\n\n".join(sections)
+                resource_text = "\n\n按需加载的 Skill 资源：\n\n" + "\n\n".join(
+                    sections
+                )
         return (
             f"## {self.skill_title} ({self.skill_name} v{self.skill_version})\n"
             f"激活方式：{self.activation_mode}；原因：{self.activation_reason}\n"
@@ -100,7 +106,9 @@ class SkillRegistry:
         self._skills = self._load_skills()
         self._validate_unique_keys()
         self._by_name = {skill.manifest.name: skill for skill in self._skills}
-        self._by_entrypoint = {skill.manifest.entrypoint: skill for skill in self._skills}
+        self._by_entrypoint = {
+            skill.manifest.entrypoint: skill for skill in self._skills
+        }
 
     def list_skills(self) -> list[SkillDefinition]:
         return sorted(self._skills, key=lambda skill: skill.manifest.name)
@@ -112,7 +120,10 @@ class SkillRegistry:
         return self._by_entrypoint.get(tool_name)
 
     def trace_metadata_by_tool(self) -> dict[str, dict[str, Any]]:
-        return {tool_name: skill.trace_metadata() for tool_name, skill in self._by_entrypoint.items()}
+        return {
+            tool_name: skill.trace_metadata()
+            for tool_name, skill in self._by_entrypoint.items()
+        }
 
     def annotate_tool_call(self, tool_call: dict[str, Any]) -> dict[str, Any]:
         tool_name = str(tool_call.get("tool_name") or "")
@@ -137,7 +148,10 @@ class SkillRegistry:
         )
 
     def tool_description_suffixes(self) -> dict[str, str]:
-        return {tool_name: self.tool_description_suffix(tool_name) for tool_name in self._by_entrypoint}
+        return {
+            tool_name: self.tool_description_suffix(tool_name)
+            for tool_name in self._by_entrypoint
+        }
 
     def activate(
         self,
@@ -148,30 +162,34 @@ class SkillRegistry:
     ) -> list[SkillActivation]:
         explicit = self._explicit_skills(message, requested_name)
         if explicit:
-            return [self._activation(skill, "explicit", "用户明确指定 Skill") for skill in explicit]
+            return [
+                self._activation(skill, "explicit", "用户明确指定 Skill")
+                for skill in explicit
+            ]
 
         scored = [
-            (self._activation_score(message, skill), skill)
-            for skill in self._skills
+            (self._activation_score(message, skill), skill) for skill in self._skills
         ]
-        selected = [
-            (score, skill)
-            for score, skill in scored
-            if score > 0
-        ]
+        selected = [(score, skill) for score, skill in scored if score > 0]
         selected.sort(key=lambda item: (-item[0], item[1].manifest.name))
         return [
-            self._activation(skill, "automatic", f"消息命中 Skill 触发条件，匹配分 {score}")
+            self._activation(
+                skill, "automatic", f"消息命中 Skill 触发条件，匹配分 {score}"
+            )
             for score, skill in selected[:max_auto_skills]
         ]
 
-    def activate_entrypoint(self, tool_name: str, *, reason: str = "专用 Agent 执行入口") -> SkillActivation | None:
+    def activate_entrypoint(
+        self, tool_name: str, *, reason: str = "专用 Agent 执行入口"
+    ) -> SkillActivation | None:
         skill = self.skill_for_entrypoint(tool_name)
         if skill is None:
             return None
         return self._activation(skill, "entrypoint", reason)
 
-    def _activation(self, skill: SkillDefinition, mode: str, reason: str) -> SkillActivation:
+    def _activation(
+        self, skill: SkillDefinition, mode: str, reason: str
+    ) -> SkillActivation:
         instructions = skill.instructions.strip()
         return SkillActivation(
             skill_name=skill.manifest.name,
@@ -185,11 +203,15 @@ class SkillRegistry:
             activation_mode=mode,
             activation_reason=reason,
             instructions=instructions,
-            instruction_digest=hashlib.sha256(instructions.encode("utf-8")).hexdigest()[:16],
+            instruction_digest=hashlib.sha256(instructions.encode("utf-8")).hexdigest()[
+                :16
+            ],
             resources=self._load_referenced_resources(skill),
         )
 
-    def _explicit_skills(self, message: str, requested_name: str | None) -> list[SkillDefinition]:
+    def _explicit_skills(
+        self, message: str, requested_name: str | None
+    ) -> list[SkillDefinition]:
         if requested_name:
             skill = self._skill_by_name_or_title(requested_name)
             if skill is None:
@@ -202,7 +224,8 @@ class SkillRegistry:
         selected = [
             skill
             for skill in self._skills
-            if skill.manifest.name.lower() in lowered or skill.manifest.title.lower() in lowered
+            if skill.manifest.name.lower() in lowered
+            or skill.manifest.title.lower() in lowered
         ]
         if selected:
             return selected
@@ -222,7 +245,8 @@ class SkillRegistry:
             (
                 skill
                 for skill in self._skills
-                if skill.manifest.name.lower() == normalized or skill.manifest.title.lower() == normalized
+                if skill.manifest.name.lower() == normalized
+                or skill.manifest.title.lower() == normalized
             ),
             None,
         )
@@ -235,14 +259,18 @@ class SkillRegistry:
             if not normalized:
                 continue
             if re.fullmatch(r"[a-z0-9_+#.-]+", normalized):
-                matched = re.search(rf"(?<![a-z0-9_]){re.escape(normalized)}(?![a-z0-9_])", lowered)
+                matched = re.search(
+                    rf"(?<![a-z0-9_]){re.escape(normalized)}(?![a-z0-9_])", lowered
+                )
             else:
                 matched = normalized in lowered
             if matched:
                 score += max(1, min(len(normalized), 8))
         return score
 
-    def _load_referenced_resources(self, skill: SkillDefinition) -> list[dict[str, Any]]:
+    def _load_referenced_resources(
+        self, skill: SkillDefinition
+    ) -> list[dict[str, Any]]:
         references = sorted(
             {
                 match.group(1).strip()
@@ -257,24 +285,46 @@ class SkillRegistry:
 
         skill_root = Path(skill.path).resolve().parent
         resources: list[dict[str, Any]] = []
-        text_suffixes = {".md", ".txt", ".json", ".yaml", ".yml", ".toml", ".py", ".sh", ".ps1"}
+        text_suffixes = {
+            ".md",
+            ".txt",
+            ".json",
+            ".yaml",
+            ".yml",
+            ".toml",
+            ".py",
+            ".sh",
+            ".ps1",
+        }
         for relative in references:
             resource_path = (skill_root / relative).resolve()
             try:
                 resource_path.relative_to(skill_root)
             except ValueError as exc:
-                raise SkillRegistryError(f"Skill {skill.manifest.name} 引用了目录外资源：{relative}") from exc
+                raise SkillRegistryError(
+                    f"Skill {skill.manifest.name} 引用了目录外资源：{relative}"
+                ) from exc
             if not resource_path.is_file():
-                raise SkillRegistryError(f"Skill {skill.manifest.name} 引用的资源不存在：{relative}")
+                raise SkillRegistryError(
+                    f"Skill {skill.manifest.name} 引用的资源不存在：{relative}"
+                )
             if resource_path.stat().st_size > 64 * 1024:
-                raise SkillRegistryError(f"Skill {skill.manifest.name} 引用的资源超过 64 KiB：{relative}")
-            content = resource_path.read_text(encoding="utf-8") if resource_path.suffix.lower() in text_suffixes else ""
+                raise SkillRegistryError(
+                    f"Skill {skill.manifest.name} 引用的资源超过 64 KiB：{relative}"
+                )
+            content = (
+                resource_path.read_text(encoding="utf-8")
+                if resource_path.suffix.lower() in text_suffixes
+                else ""
+            )
             resources.append(
                 {
                     "path": relative.replace("\\", "/"),
                     "content": content,
                     "size": resource_path.stat().st_size,
-                    "digest": hashlib.sha256(resource_path.read_bytes()).hexdigest()[:16],
+                    "digest": hashlib.sha256(resource_path.read_bytes()).hexdigest()[
+                        :16
+                    ],
                 }
             )
         return resources
@@ -294,7 +344,9 @@ class SkillRegistry:
             if skill.manifest.name in seen_names:
                 raise SkillRegistryError(f"Skill 名称重复：{skill.manifest.name}")
             if skill.manifest.entrypoint in seen_entrypoints:
-                raise SkillRegistryError(f"Skill entrypoint 重复：{skill.manifest.entrypoint}")
+                raise SkillRegistryError(
+                    f"Skill entrypoint 重复：{skill.manifest.entrypoint}"
+                )
             seen_names.add(skill.manifest.name)
             seen_entrypoints.add(skill.manifest.entrypoint)
 
@@ -363,13 +415,19 @@ def _parse_value(value: str) -> Any:
         try:
             parsed = ast.literal_eval(value)
         except (SyntaxError, ValueError):
-            parsed = [item.strip().strip("'\"") for item in value[1:-1].split(",") if item.strip()]
+            parsed = [
+                item.strip().strip("'\"")
+                for item in value[1:-1].split(",")
+                if item.strip()
+            ]
         return parsed if isinstance(parsed, list) else value
     if value.lower() == "true":
         return True
     if value.lower() == "false":
         return False
-    if (value.startswith('"') and value.endswith('"')) or (value.startswith("'") and value.endswith("'")):
+    if (value.startswith('"') and value.endswith('"')) or (
+        value.startswith("'") and value.endswith("'")
+    ):
         return value[1:-1]
     return value
 

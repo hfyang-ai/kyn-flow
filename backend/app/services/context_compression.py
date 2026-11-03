@@ -71,7 +71,9 @@ COMPACT_BOUNDARY_SUBTYPE = "compact_boundary"
 MICROCOMPACT_MARKER = "[Old regenerable tool/context result cleared by microcompact]"
 
 
-PressureStage = Literal["normal", "warning", "auto_compact", "aggressive", "manual_path"]
+PressureStage = Literal[
+    "normal", "warning", "auto_compact", "aggressive", "manual_path"
+]
 
 
 def estimate_tokens(text: str | None) -> int:
@@ -133,7 +135,10 @@ def model_context_window_tokens(model: str | None = None) -> int:
     known = _model_lookup(model, MODEL_CONTEXT_WINDOWS)
     if known:
         return known
-    return max(4096, settings.context_max_input_tokens + settings.context_reserved_response_tokens)
+    return max(
+        4096,
+        settings.context_max_input_tokens + settings.context_reserved_response_tokens,
+    )
 
 
 def model_output_window_tokens(model: str | None = None) -> int:
@@ -143,12 +148,19 @@ def model_output_window_tokens(model: str | None = None) -> int:
     return max(512, settings.context_reserved_response_tokens)
 
 
-def effective_context_window_tokens(model: str | None = None, *, for_compaction: bool = False) -> int:
+def effective_context_window_tokens(
+    model: str | None = None, *, for_compaction: bool = False
+) -> int:
     model_window = model_context_window_tokens(model)
     if for_compaction:
-        reserved = min(model_output_window_tokens(model), max(512, settings.context_compact_reserved_output_tokens))
+        reserved = min(
+            model_output_window_tokens(model),
+            max(512, settings.context_compact_reserved_output_tokens),
+        )
     else:
-        reserved = max(512, min(settings.context_reserved_response_tokens, model_window // 2))
+        reserved = max(
+            512, min(settings.context_reserved_response_tokens, model_window // 2)
+        )
     dynamic_window = max(4096, model_window - reserved)
     if settings.context_dynamic_model_window_enabled:
         return max(settings.context_max_input_tokens, dynamic_window)
@@ -191,19 +203,29 @@ class ContextPressure:
 
 def _thresholds_for_window(window: int) -> tuple[int, int, int, int]:
     warning_buffer = min(settings.context_warning_buffer_tokens, max(512, window // 4))
-    auto_buffer = min(settings.context_auto_compact_buffer_tokens, max(512, window // 5))
-    aggressive_buffer = min(settings.context_aggressive_buffer_tokens, max(512, window // 8))
+    auto_buffer = min(
+        settings.context_auto_compact_buffer_tokens, max(512, window // 5)
+    )
+    aggressive_buffer = min(
+        settings.context_aggressive_buffer_tokens, max(512, window // 8)
+    )
     manual_buffer = min(settings.context_manual_buffer_tokens, max(256, window // 16))
     auto_threshold = max(1024, window - auto_buffer)
-    warning_threshold = max(512, min(auto_threshold - 1, auto_threshold - warning_buffer))
+    warning_threshold = max(
+        512, min(auto_threshold - 1, auto_threshold - warning_buffer)
+    )
     aggressive_threshold = max(auto_threshold + 1, window - aggressive_buffer)
     manual_threshold = max(aggressive_threshold + 1, window - manual_buffer)
     return warning_threshold, auto_threshold, aggressive_threshold, manual_threshold
 
 
-def calculate_context_pressure(token_usage: int, model: str | None = None) -> ContextPressure:
+def calculate_context_pressure(
+    token_usage: int, model: str | None = None
+) -> ContextPressure:
     effective_window = effective_context_window_tokens(model, for_compaction=True)
-    warning_threshold, auto_threshold, aggressive_threshold, manual_threshold = _thresholds_for_window(effective_window)
+    warning_threshold, auto_threshold, aggressive_threshold, manual_threshold = (
+        _thresholds_for_window(effective_window)
+    )
     if token_usage >= manual_threshold:
         stage: PressureStage = "manual_path"
     elif token_usage >= aggressive_threshold:
@@ -223,13 +245,18 @@ def calculate_context_pressure(token_usage: int, model: str | None = None) -> Co
         auto_compact_threshold=auto_threshold,
         aggressive_threshold=aggressive_threshold,
         manual_threshold=manual_threshold,
-        utilization=round(token_usage / effective_window, 4) if effective_window else 0.0,
+        utilization=round(token_usage / effective_window, 4)
+        if effective_window
+        else 0.0,
     )
 
 
 def is_compact_boundary_message(message: dict[str, Any]) -> bool:
     meta = message.get("meta") or message.get("metadata") or {}
-    return str(message.get("role") or "") == "system" and meta.get("subtype") == COMPACT_BOUNDARY_SUBTYPE
+    return (
+        str(message.get("role") or "") == "system"
+        and meta.get("subtype") == COMPACT_BOUNDARY_SUBTYPE
+    )
 
 
 def find_last_compact_boundary_index(messages: list[dict[str, Any]]) -> int:
@@ -239,7 +266,9 @@ def find_last_compact_boundary_index(messages: list[dict[str, Any]]) -> int:
     return -1
 
 
-def messages_after_compact_boundary(messages: list[dict[str, Any]], *, include_boundary: bool = True) -> list[dict[str, Any]]:
+def messages_after_compact_boundary(
+    messages: list[dict[str, Any]], *, include_boundary: bool = True
+) -> list[dict[str, Any]]:
     boundary_index = find_last_compact_boundary_index(messages)
     if boundary_index < 0:
         return messages
@@ -287,7 +316,10 @@ def _tool_use_ids(message: dict[str, Any]) -> set[str]:
             ids.add(str(block["id"]))
     meta = _message_meta(message)
     for key in ("tool_call_id", "tool_use_id"):
-        if meta.get(key) and str(message.get("role") or "") in {"assistant", "tool_use"}:
+        if meta.get(key) and str(message.get("role") or "") in {
+            "assistant",
+            "tool_use",
+        }:
             ids.add(str(meta[key]))
     return ids
 
@@ -309,7 +341,9 @@ def _tool_result_ids(message: dict[str, Any]) -> set[str]:
     return ids
 
 
-def adjust_keep_start_to_preserve_api_invariants(messages: list[dict[str, Any]], start_index: int) -> int:
+def adjust_keep_start_to_preserve_api_invariants(
+    messages: list[dict[str, Any]], start_index: int
+) -> int:
     """Move a suffix boundary left when slicing there would orphan tool results."""
     if start_index <= 0 or start_index >= len(messages):
         return max(0, min(start_index, len(messages)))
@@ -401,7 +435,9 @@ class ContextBudget:
 
 def default_context_budget(model: str | None = None) -> ContextBudget:
     if settings.context_dynamic_model_window_enabled:
-        max_input = max(settings.context_max_input_tokens, model_context_window_tokens(model))
+        max_input = max(
+            settings.context_max_input_tokens, model_context_window_tokens(model)
+        )
     else:
         max_input = max(4096, settings.context_max_input_tokens)
     reserved = max(512, min(settings.context_reserved_response_tokens, max_input // 2))
@@ -417,7 +453,9 @@ def default_context_budget(model: str | None = None) -> ContextBudget:
     )
 
 
-def compress_messages(messages: list[dict[str, Any]], max_tokens: int) -> tuple[list[dict[str, str]], dict[str, Any]]:
+def compress_messages(
+    messages: list[dict[str, Any]], max_tokens: int
+) -> tuple[list[dict[str, str]], dict[str, Any]]:
     kept_reversed: list[dict[str, str]] = []
     used = 0
     truncated_messages = 0
@@ -495,7 +533,11 @@ def microcompact_messages(
     keep_recent: int | None = None,
     max_excerpt_tokens: int = 90,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    keep = keep_recent if keep_recent is not None else settings.context_microcompact_keep_recent_messages
+    keep = (
+        keep_recent
+        if keep_recent is not None
+        else settings.context_microcompact_keep_recent_messages
+    )
     keep_start = adjust_keep_start_to_preserve_api_invariants(
         messages,
         max(0, len(messages) - max(0, keep)),
@@ -517,7 +559,9 @@ def microcompact_messages(
             and before > max_excerpt_tokens * 2
         ):
             names = _tool_names(message)
-            excerpt = extract_relevant_snippet(query, content, max_tokens=max_excerpt_tokens)
+            excerpt = extract_relevant_snippet(
+                query, content, max_tokens=max_excerpt_tokens
+            )
             tool_label = ", ".join(_unique_preserve_order(names, 4)) or "tool output"
             compacted_content = f"{MICROCOMPACT_MARKER}\nSource: {tool_label}\nRecoverable: rerun the corresponding workspace, RAG, or GitHub tool if exact details are needed."
             if excerpt:
@@ -548,7 +592,9 @@ def extract_relevant_snippet(query: str, text: str, max_tokens: int = 220) -> st
     if not terms:
         return clip_to_token_budget(clean, max_tokens)
 
-    sentences = [part.strip() for part in SENTENCE_SPLIT_PATTERN.split(clean) if part.strip()]
+    sentences = [
+        part.strip() for part in SENTENCE_SPLIT_PATTERN.split(clean) if part.strip()
+    ]
     if not sentences:
         sentences = [clean]
 
@@ -578,7 +624,9 @@ def compress_retrieval_results(
     max_total_tokens: int | None = None,
 ) -> list[dict[str, Any]]:
     compressed: list[dict[str, Any]] = []
-    total_budget = max(0, int(max_total_tokens)) if max_total_tokens is not None else None
+    total_budget = (
+        max(0, int(max_total_tokens)) if max_total_tokens is not None else None
+    )
     used_tokens = 0
     for item in items:
         if total_budget is not None and used_tokens >= total_budget:
@@ -592,17 +640,25 @@ def compress_retrieval_results(
         item_budget = max(1, int(max_tokens_per_item))
         if total_budget is not None:
             item_budget = min(item_budget, total_budget - used_tokens)
-        raw_text = str(item.get("_raw_content") or item.get("content") or item.get("snippet") or "")
+        raw_text = str(
+            item.get("_raw_content") or item.get("content") or item.get("snippet") or ""
+        )
         snippet = extract_relevant_snippet(query, raw_text, max_tokens=item_budget)
         original_tokens = estimate_tokens(raw_text)
         compressed_tokens = estimate_tokens(snippet)
-        next_item = {key: value for key, value in item.items() if key not in {"_raw_content", "content"}}
+        next_item = {
+            key: value
+            for key, value in item.items()
+            if key not in {"_raw_content", "content"}
+        }
         next_item["snippet"] = snippet
         next_item["compression"] = {
             "mode": "query_aware_extractive",
             "original_estimated_tokens": original_tokens,
             "compressed_estimated_tokens": compressed_tokens,
-            "ratio": round(compressed_tokens / original_tokens, 4) if original_tokens else 1.0,
+            "ratio": round(compressed_tokens / original_tokens, 4)
+            if original_tokens
+            else 1.0,
             "item_budget_tokens": item_budget,
             "global_budget_tokens": total_budget,
             "global_tokens_before_item": used_tokens,
@@ -660,24 +716,32 @@ PRESERVE_LINE_HINTS = (
 )
 
 
-def _must_preserve_candidates(messages: list[dict[str, Any]], limit: int = 18) -> list[str]:
+def _must_preserve_candidates(
+    messages: list[dict[str, Any]], limit: int = 18
+) -> list[str]:
     candidates: list[str] = []
     for message in messages:
         content = str(message.get("content") or "")
         if not content:
             continue
-        candidates.extend(match.group(0).strip() for match in PATH_LIKE_PATTERN.finditer(content))
+        candidates.extend(
+            match.group(0).strip() for match in PATH_LIKE_PATTERN.finditer(content)
+        )
         for raw_line in re.split(r"[\r\n]+", content):
             line = " ".join(raw_line.strip(" -\t").split())
             if not line:
                 continue
             lower = line.lower()
-            if COMMAND_HINT_PATTERN.search(line) or any(hint in lower for hint in PRESERVE_LINE_HINTS):
+            if COMMAND_HINT_PATTERN.search(line) or any(
+                hint in lower for hint in PRESERVE_LINE_HINTS
+            ):
                 candidates.append(clip_to_token_budget(line, 120))
     return _unique_preserve_order(candidates, limit)
 
 
-def compaction_preservation_report(messages: list[dict[str, Any]], summary: str) -> dict[str, Any]:
+def compaction_preservation_report(
+    messages: list[dict[str, Any]], summary: str
+) -> dict[str, Any]:
     required = _must_preserve_candidates(messages)
     summary_lower = str(summary or "").lower()
     missing = [item for item in required if item.lower() not in summary_lower]
@@ -703,20 +767,27 @@ def ensure_compaction_summary_preserves_key_facts(
         f"- {clip_to_token_budget(item, 96)}" for item in missing[:12]
     )
     body_budget = max(160, max_tokens - estimate_tokens(appendix) - 12)
-    combined = "\n\n".join([clip_to_token_budget(summary, body_budget), appendix]).strip()
+    combined = "\n\n".join(
+        [clip_to_token_budget(summary, body_budget), appendix]
+    ).strip()
     combined = clip_to_token_budget(combined, max_tokens)
     final_report = compaction_preservation_report(messages, combined)
     final_report["appended_missing_count"] = len(missing)
     return combined, final_report
 
 
-def build_compaction_summary_payload(messages: list[dict[str, Any]], max_tokens: int = 6000) -> str:
+def build_compaction_summary_payload(
+    messages: list[dict[str, Any]], max_tokens: int = 6000
+) -> str:
     lines: list[str] = []
     for message in messages:
         role = str(message.get("role") or "unknown")
         if role == "system" and is_compact_boundary_message(message):
             role = "compact_boundary"
-        content = clip_to_token_budget(str(message.get("content") or ""), max(160, max_tokens // max(len(messages), 1)))
+        content = clip_to_token_budget(
+            str(message.get("content") or ""),
+            max(160, max_tokens // max(len(messages), 1)),
+        )
         if not content:
             continue
         tool_names = _tool_names(message)
@@ -727,7 +798,9 @@ def build_compaction_summary_payload(messages: list[dict[str, Any]], max_tokens:
 
 def format_compaction_summary(summary: str) -> str:
     formatted = str(summary or "").strip()
-    formatted = re.sub(r"<analysis>[\s\S]*?</analysis>", "", formatted, flags=re.IGNORECASE).strip()
+    formatted = re.sub(
+        r"<analysis>[\s\S]*?</analysis>", "", formatted, flags=re.IGNORECASE
+    ).strip()
     match = re.search(r"<summary>([\s\S]*?)</summary>", formatted, flags=re.IGNORECASE)
     if match:
         formatted = "摘要：\n" + match.group(1).strip()
@@ -735,48 +808,110 @@ def format_compaction_summary(summary: str) -> str:
     return formatted.strip()
 
 
-def fallback_compaction_summary(messages: list[dict[str, Any]], max_tokens: int | None = None) -> str:
-    user_messages = [str(item.get("content") or "") for item in messages if item.get("role") == "user"]
-    assistant_messages = [str(item.get("content") or "") for item in messages if item.get("role") == "assistant"]
+def fallback_compaction_summary(
+    messages: list[dict[str, Any]], max_tokens: int | None = None
+) -> str:
+    user_messages = [
+        str(item.get("content") or "")
+        for item in messages
+        if item.get("role") == "user"
+    ]
+    assistant_messages = [
+        str(item.get("content") or "")
+        for item in messages
+        if item.get("role") == "assistant"
+    ]
     decisions: list[str] = []
     tasks: list[str] = []
     facts: list[str] = []
     for content in [*user_messages, *assistant_messages]:
-        for line in [part.strip(" -\t") for part in content.splitlines() if part.strip()]:
+        for line in [
+            part.strip(" -\t") for part in content.splitlines() if part.strip()
+        ]:
             lower = line.lower()
-            if any(token in lower for token in ["decision", "decide", "agreed", "\u51b3\u5b9a", "\u786e\u5b9a"]):
+            if any(
+                token in lower
+                for token in [
+                    "decision",
+                    "decide",
+                    "agreed",
+                    "\u51b3\u5b9a",
+                    "\u786e\u5b9a",
+                ]
+            ):
                 decisions.append(line)
-            if any(token in lower for token in ["todo", "next step", "implement", "fix", "\u5f85\u529e", "\u4e0b\u4e00\u6b65"]):
+            if any(
+                token in lower
+                for token in [
+                    "todo",
+                    "next step",
+                    "implement",
+                    "fix",
+                    "\u5f85\u529e",
+                    "\u4e0b\u4e00\u6b65",
+                ]
+            ):
                 tasks.append(line)
             if len(line) > 20 and len(facts) < 10:
                 facts.append(line)
     summary = "\n\n".join(
         [
             "This conversation was compacted. Continue from the preserved recent messages and this summary.",
-            "User intent:\n" + "\n".join(f"- {clip_to_token_budget(item, 120)}" for item in user_messages[-8:]),
-            "Assistant context:\n" + "\n".join(f"- {clip_to_token_budget(item, 120)}" for item in assistant_messages[-5:]),
-            "Durable decisions:\n" + "\n".join(f"- {item}" for item in _unique_preserve_order(decisions, 12)),
-            "Pending tasks:\n" + "\n".join(f"- {item}" for item in _unique_preserve_order(tasks, 12)),
-            "Important facts:\n" + "\n".join(f"- {item}" for item in _unique_preserve_order(facts, 12)),
+            "User intent:\n"
+            + "\n".join(
+                f"- {clip_to_token_budget(item, 120)}" for item in user_messages[-8:]
+            ),
+            "Assistant context:\n"
+            + "\n".join(
+                f"- {clip_to_token_budget(item, 120)}"
+                for item in assistant_messages[-5:]
+            ),
+            "Durable decisions:\n"
+            + "\n".join(f"- {item}" for item in _unique_preserve_order(decisions, 12)),
+            "Pending tasks:\n"
+            + "\n".join(f"- {item}" for item in _unique_preserve_order(tasks, 12)),
+            "Important facts:\n"
+            + "\n".join(f"- {item}" for item in _unique_preserve_order(facts, 12)),
         ]
     )
-    return clip_to_token_budget(summary, max_tokens or settings.context_compact_summary_tokens)
+    return clip_to_token_budget(
+        summary, max_tokens or settings.context_compact_summary_tokens
+    )
 
 
 def structured_memory_from_model(parsed: dict[str, Any]) -> dict[str, Any]:
     return {
         "summary": str(parsed.get("summary") or "").strip(),
-        "facts": _unique_preserve_order([str(item) for item in parsed.get("facts") or []], 16),
-        "decisions": _unique_preserve_order([str(item) for item in parsed.get("decisions") or []], 16),
-        "open_questions": _unique_preserve_order([str(item) for item in parsed.get("open_questions") or []], 12),
-        "tasks": _unique_preserve_order([str(item) for item in parsed.get("tasks") or []], 16),
-        "user_preferences": _unique_preserve_order([str(item) for item in parsed.get("user_preferences") or []], 12),
-        "repo_context": _unique_preserve_order([str(item) for item in parsed.get("repo_context") or []], 16),
-        "citations": [item for item in parsed.get("citations") or [] if isinstance(item, dict)][:16],
+        "facts": _unique_preserve_order(
+            [str(item) for item in parsed.get("facts") or []], 16
+        ),
+        "decisions": _unique_preserve_order(
+            [str(item) for item in parsed.get("decisions") or []], 16
+        ),
+        "open_questions": _unique_preserve_order(
+            [str(item) for item in parsed.get("open_questions") or []], 12
+        ),
+        "tasks": _unique_preserve_order(
+            [str(item) for item in parsed.get("tasks") or []], 16
+        ),
+        "user_preferences": _unique_preserve_order(
+            [str(item) for item in parsed.get("user_preferences") or []], 12
+        ),
+        "repo_context": _unique_preserve_order(
+            [str(item) for item in parsed.get("repo_context") or []], 16
+        ),
+        "citations": [
+            item for item in parsed.get("citations") or [] if isinstance(item, dict)
+        ][:16],
     }
 
 
-def fallback_memory_update(user_message: str, assistant_message: str, route: str, tool_calls: list[dict[str, Any]]) -> dict[str, Any]:
+def fallback_memory_update(
+    user_message: str,
+    assistant_message: str,
+    route: str,
+    tool_calls: list[dict[str, Any]],
+) -> dict[str, Any]:
     joined = "\n".join([user_message or "", assistant_message or ""])
     lines = [line.strip(" -\t") for line in joined.splitlines() if line.strip()]
     decisions: list[str] = []
@@ -787,18 +922,48 @@ def fallback_memory_update(user_message: str, assistant_message: str, route: str
 
     for line in lines:
         lower = line.lower()
-        if "?" in line or "\uff1f" in line or lower.startswith(("why ", "how ", "what ")):
+        if (
+            "?" in line
+            or "\uff1f" in line
+            or lower.startswith(("why ", "how ", "what "))
+        ):
             open_questions.append(line)
-        if any(token in lower for token in ["decide", "decision", "agreed", "chosen", "\u786e\u5b9a", "\u51b3\u5b9a"]):
+        if any(
+            token in lower
+            for token in [
+                "decide",
+                "decision",
+                "agreed",
+                "chosen",
+                "\u786e\u5b9a",
+                "\u51b3\u5b9a",
+            ]
+        ):
             decisions.append(line)
-        if any(token in lower for token in ["todo", "next step", "action", "fix", "implement", "\u5f85\u529e", "\u4e0b\u4e00\u6b65"]):
+        if any(
+            token in lower
+            for token in [
+                "todo",
+                "next step",
+                "action",
+                "fix",
+                "implement",
+                "\u5f85\u529e",
+                "\u4e0b\u4e00\u6b65",
+            ]
+        ):
             tasks.append(line)
-        if any(token in lower for token in ["prefer", "preference", "\u559c\u6b22", "\u504f\u597d"]):
+        if any(
+            token in lower
+            for token in ["prefer", "preference", "\u559c\u6b22", "\u504f\u597d"]
+        ):
             preferences.append(line)
         if len(line) > 20 and len(facts) < 6:
             facts.append(line)
 
-    tools = ", ".join(str(call.get("tool_name") or "未知") for call in tool_calls) or "无"
+    tools = (
+        ", ".join(str(call.get("tool_name") or "未知") for call in tool_calls) or "无"
+    )
     summary = (
         f"路由：{route}\n"
         f"用户请求：{clip_to_token_budget(user_message, 90)}\n"
@@ -819,7 +984,9 @@ def fallback_memory_update(user_message: str, assistant_message: str, route: str
     )
 
 
-def merge_memory(existing: dict[str, Any], update: dict[str, Any], digest: str, max_tokens: int) -> dict[str, Any]:
+def merge_memory(
+    existing: dict[str, Any], update: dict[str, Any], digest: str, max_tokens: int
+) -> dict[str, Any]:
     existing_summary = str(existing.get("summary") or "").strip()
     update_summary = str(update.get("summary") or digest or "").strip()
     summary_parts = [part for part in [existing_summary, update_summary] if part]
@@ -827,13 +994,40 @@ def merge_memory(existing: dict[str, Any], update: dict[str, Any], digest: str, 
     summary = clip_to_token_budget(summary, max_tokens)
     return {
         "summary": summary,
-        "facts": _unique_preserve_order([*(existing.get("facts") or []), *(update.get("facts") or [])], 16),
-        "decisions": _unique_preserve_order([*(existing.get("decisions") or []), *(update.get("decisions") or [])], 16),
-        "open_questions": _unique_preserve_order([*(existing.get("open_questions") or []), *(update.get("open_questions") or [])], 12),
-        "tasks": _unique_preserve_order([*(existing.get("tasks") or []), *(update.get("tasks") or [])], 16),
-        "user_preferences": _unique_preserve_order([*(existing.get("user_preferences") or []), *(update.get("user_preferences") or [])], 12),
-        "repo_context": _unique_preserve_order([*(existing.get("repo_context") or []), *(update.get("repo_context") or [])], 16),
-        "citations": [*(existing.get("citations") or []), *(update.get("citations") or [])][-16:],
+        "facts": _unique_preserve_order(
+            [*(existing.get("facts") or []), *(update.get("facts") or [])], 16
+        ),
+        "decisions": _unique_preserve_order(
+            [*(existing.get("decisions") or []), *(update.get("decisions") or [])], 16
+        ),
+        "open_questions": _unique_preserve_order(
+            [
+                *(existing.get("open_questions") or []),
+                *(update.get("open_questions") or []),
+            ],
+            12,
+        ),
+        "tasks": _unique_preserve_order(
+            [*(existing.get("tasks") or []), *(update.get("tasks") or [])], 16
+        ),
+        "user_preferences": _unique_preserve_order(
+            [
+                *(existing.get("user_preferences") or []),
+                *(update.get("user_preferences") or []),
+            ],
+            12,
+        ),
+        "repo_context": _unique_preserve_order(
+            [
+                *(existing.get("repo_context") or []),
+                *(update.get("repo_context") or []),
+            ],
+            16,
+        ),
+        "citations": [
+            *(existing.get("citations") or []),
+            *(update.get("citations") or []),
+        ][-16:],
     }
 
 
@@ -852,7 +1046,9 @@ def render_structured_memory(memory: Any, max_tokens: int | None = None) -> str:
     ]:
         values = getattr(memory, attr, None) or []
         if values:
-            sections.append(label + ":\n" + "\n".join(f"- {item}" for item in values[:12]))
+            sections.append(
+                label + ":\n" + "\n".join(f"- {item}" for item in values[:12])
+            )
     text = "\n\n".join(sections)
     return clip_to_token_budget(text, max_tokens) if max_tokens else text
 
@@ -872,7 +1068,9 @@ def prompt_cache_model_kwargs() -> dict[str, Any]:
     return kwargs
 
 
-def compression_eval_summary(before_text: str, after_text: str, retrieved: int, kept: int) -> dict[str, Any]:
+def compression_eval_summary(
+    before_text: str, after_text: str, retrieved: int, kept: int
+) -> dict[str, Any]:
     before = estimate_tokens(before_text)
     after = estimate_tokens(after_text)
     return {

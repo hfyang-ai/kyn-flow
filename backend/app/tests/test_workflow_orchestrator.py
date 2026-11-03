@@ -42,9 +42,13 @@ def offline_workflow_models(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.mark.asyncio
-async def test_rule_fallback_planner_builds_cross_domain_workflow_for_merge_readiness() -> None:
+async def test_rule_fallback_planner_builds_cross_domain_workflow_for_merge_readiness() -> (
+    None
+):
     result = await PlannerAgent().run(
-        {"message": "这个 PR 能不能合并？请做多 agent 协作 review，检查 Issue、PR 和 CI 风险。"},
+        {
+            "message": "这个 PR 能不能合并？请做多 agent 协作 review，检查 Issue、PR 和 CI 风险。"
+        },
         {
             "repo_id": "repo-1",
             "has_issue": True,
@@ -128,23 +132,52 @@ async def test_confirmed_workflow_keeps_explicit_issue_pr_and_ci_claims_after_ne
         )
         db.add_all([requested_issue, requested_pr, requested_run])
         db.flush()
-        db.add(PRFile(pr_id=requested_pr.id, filename="backend/app/target.py", status="modified", additions=3, deletions=1, patch="target fix"))
+        db.add(
+            PRFile(
+                pr_id=requested_pr.id,
+                filename="backend/app/target.py",
+                status="modified",
+                additions=3,
+                deletions=1,
+                patch="target fix",
+            )
+        )
         db.commit()
 
         message = "请用多 Agent 检查 Issue #142、PR #86 和 CI #9001，判断能不能合并。"
         skill_context = {"_skill_registry": get_skill_registry()}
-        planning_context, _ = _build_engineering_workflow_runtime(repo, db, message, skill_context)
-        spec = WorkflowSpec.model_validate(await PlannerAgent().run({"message": message}, planning_context))
+        planning_context, _ = _build_engineering_workflow_runtime(
+            repo, db, message, skill_context
+        )
+        spec = WorkflowSpec.model_validate(
+            await PlannerAgent().run({"message": message}, planning_context)
+        )
         claims = {task.task_type: task.claim.target_id for task in spec.tasks}
         assert claims["issue_analysis"] == str(requested_issue.id)
         assert claims["pr_review"] == str(requested_pr.id)
         assert claims["ci_debug"] == str(requested_run.id)
-        assert "Issue #142" in next(task.objective for task in spec.tasks if task.task_type == "issue_analysis")
-        assert "PR #86" in next(task.objective for task in spec.tasks if task.task_type == "pr_review")
+        assert "Issue #142" in next(
+            task.objective for task in spec.tasks if task.task_type == "issue_analysis"
+        )
+        assert "PR #86" in next(
+            task.objective for task in spec.tasks if task.task_type == "pr_review"
+        )
 
         newer_at = now + timedelta(hours=1)
-        newer_issue = Issue(repo_id=repo.id, number=999, title="Newer issue", state="open", created_at=newer_at)
-        newer_pr = PullRequest(repo_id=repo.id, number=999, title="Newer PR", state="open", created_at=newer_at)
+        newer_issue = Issue(
+            repo_id=repo.id,
+            number=999,
+            title="Newer issue",
+            state="open",
+            created_at=newer_at,
+        )
+        newer_pr = PullRequest(
+            repo_id=repo.id,
+            number=999,
+            title="Newer PR",
+            state="open",
+            created_at=newer_at,
+        )
         newer_run = WorkflowRun(
             repo_id=repo.id,
             github_run_id=9999,
@@ -157,21 +190,32 @@ async def test_confirmed_workflow_keeps_explicit_issue_pr_and_ci_claims_after_ne
         db.add_all([newer_issue, newer_pr, newer_run])
         db.commit()
 
-        execution_context, runners = _build_engineering_workflow_runtime(repo, db, "确认执行这个计划", skill_context)
+        execution_context, runners = _build_engineering_workflow_runtime(
+            repo, db, "确认执行这个计划", skill_context
+        )
         assert execution_context["issue_id"] == str(newer_issue.id)
         assert execution_context["pr_id"] == str(newer_pr.id)
         assert execution_context["workflow_run_id"] == str(newer_run.id)
 
         report = await WorkflowOrchestrator(runners).run_spec(spec, execution_context)
-        summaries = {result["task_type"]: result["summary"] for result in report["task_results"]}
+        summaries = {
+            result["task_type"]: result["summary"] for result in report["task_results"]
+        }
         assert summaries["issue_analysis"].startswith("Issue #142:")
         assert summaries["pr_review"].startswith("PR #86:")
         assert summaries["ci_debug"].startswith("CI requested-ci:")
         assert captured_pr_input["number"] == 86
-        assert captured_pr_input["ci_summary"] == {"failed_runs": 2, "latest_failed_run": "requested-ci"}
+        assert captured_pr_input["ci_summary"] == {
+            "failed_runs": 2,
+            "latest_failed_run": "requested-ci",
+        }
         assert captured_pr_input["skill_name"] == "pr-review"
         assert "P1/P2" in str(captured_pr_input["skill_instructions"])
-        pr_output = next(result["output"] for result in report["task_results"] if result["task_type"] == "pr_review")
+        pr_output = next(
+            result["output"]
+            for result in report["task_results"]
+            if result["task_type"] == "pr_review"
+        )
         assert pr_output["_skill_runtime"]["validation"] == "entrypoint_completed"
 
 
@@ -198,12 +242,18 @@ async def test_workflow_rejects_claim_target_from_another_repository() -> None:
         other_repo = Repository(owner="acme", name="two", full_name="acme/two")
         db.add_all([repo, other_repo])
         db.flush()
-        local_issue = Issue(repo_id=repo.id, number=1, title="Local issue", state="open")
-        foreign_issue = Issue(repo_id=other_repo.id, number=142, title="Foreign issue", state="open")
+        local_issue = Issue(
+            repo_id=repo.id, number=1, title="Local issue", state="open"
+        )
+        foreign_issue = Issue(
+            repo_id=other_repo.id, number=142, title="Foreign issue", state="open"
+        )
         db.add_all([local_issue, foreign_issue])
         db.commit()
 
-        workflow_context, runners = _build_engineering_workflow_runtime(repo, db, "检查 Issue", {})
+        workflow_context, runners = _build_engineering_workflow_runtime(
+            repo, db, "检查 Issue", {}
+        )
         task = WorkflowTask(
             id="issue_analysis",
             agent_name="issue_analyst_agent",
@@ -218,7 +268,9 @@ async def test_workflow_rejects_claim_target_from_another_repository() -> None:
 
 
 @pytest.mark.asyncio
-async def test_orchestrator_runs_ready_tasks_in_parallel_and_observer_blocks_merge() -> None:
+async def test_orchestrator_runs_ready_tasks_in_parallel_and_observer_blocks_merge() -> (
+    None
+):
     class StaticPlanner:
         async def run(self, input_data, context):
             return WorkflowSpec(
@@ -230,14 +282,18 @@ async def test_orchestrator_runs_ready_tasks_in_parallel_and_observer_blocks_mer
                         agent_name="pr_review_agent",
                         task_type="pr_review",
                         objective="Review PR",
-                        claim=WorkflowClaim(target_type="pull_request", target_id="pr-1"),
+                        claim=WorkflowClaim(
+                            target_type="pull_request", target_id="pr-1"
+                        ),
                     ),
                     WorkflowTask(
                         id="ci_debug",
                         agent_name="ci_debug_agent",
                         task_type="ci_debug",
                         objective="Review CI",
-                        claim=WorkflowClaim(target_type="workflow_run", target_id="run-1"),
+                        claim=WorkflowClaim(
+                            target_type="workflow_run", target_id="run-1"
+                        ),
                     ),
                 ],
             ).model_dump(mode="json")
@@ -263,7 +319,11 @@ async def test_orchestrator_runs_ready_tasks_in_parallel_and_observer_blocks_mer
             task_type=task.task_type,
             status="success",
             summary="CI is failing.",
-            output={"is_merge_blocking": True, "failure_type": "test", "debug_steps": ["Fix failing tests"]},
+            output={
+                "is_merge_blocking": True,
+                "failure_type": "test",
+                "debug_steps": ["Fix failing tests"],
+            },
             evidence_count=1,
             confidence=0.8,
         )
@@ -297,7 +357,9 @@ async def test_orchestrator_replans_with_rag_when_evidence_is_missing() -> None:
                         agent_name="pr_review_agent",
                         task_type="pr_review",
                         objective="Review PR",
-                        claim=WorkflowClaim(target_type="pull_request", target_id="pr-1"),
+                        claim=WorkflowClaim(
+                            target_type="pull_request", target_id="pr-1"
+                        ),
                     )
                 ],
             ).model_dump(mode="json")
@@ -334,7 +396,10 @@ async def test_orchestrator_replans_with_rag_when_evidence_is_missing() -> None:
 
     assert report["metrics"]["replan_count"] == 1
     assert report["metrics"]["execution_rounds"] == 2
-    assert [item["task_id"] for item in report["task_results"]] == ["pr_review", "rag_search"]
+    assert [item["task_id"] for item in report["task_results"]] == [
+        "pr_review",
+        "rag_search",
+    ]
     assert "rag_search" in [task["task_type"] for task in report["spec"]["tasks"]]
     assert any(event["type"] == "workflow_replan" for event in report["agent_events"])
 
@@ -393,7 +458,9 @@ async def test_orchestrator_times_out_stuck_task() -> None:
                         agent_name="slow_agent",
                         task_type="slow_task",
                         objective="Never finish quickly",
-                        claim=WorkflowClaim(target_type="repository", target_id="repo-1"),
+                        claim=WorkflowClaim(
+                            target_type="repository", target_id="repo-1"
+                        ),
                     )
                 ],
             ).model_dump(mode="json")
@@ -411,7 +478,10 @@ async def test_orchestrator_times_out_stuck_task() -> None:
     report = await WorkflowOrchestrator(
         {"slow_task": run_slow},
         planner=StaticPlanner(),  # type: ignore[arg-type]
-    ).run({"message": "run"}, {"workflow_task_timeout_seconds": 0.01, "disable_replan": True})
+    ).run(
+        {"message": "run"},
+        {"workflow_task_timeout_seconds": 0.01, "disable_replan": True},
+    )
 
     result = report["task_results"][0]
     assert result["status"] == "error"
@@ -431,7 +501,9 @@ async def test_orchestrator_marks_dependents_skipped_when_dependency_fails() -> 
                         agent_name="root_agent",
                         task_type="root_task",
                         objective="Fail first",
-                        claim=WorkflowClaim(target_type="repository", target_id="repo-1"),
+                        claim=WorkflowClaim(
+                            target_type="repository", target_id="repo-1"
+                        ),
                     ),
                     WorkflowTask(
                         id="child",
@@ -439,7 +511,9 @@ async def test_orchestrator_marks_dependents_skipped_when_dependency_fails() -> 
                         task_type="child_task",
                         objective="Requires root",
                         dependencies=["root"],
-                        claim=WorkflowClaim(target_type="repository", target_id="repo-1"),
+                        claim=WorkflowClaim(
+                            target_type="repository", target_id="repo-1"
+                        ),
                     ),
                 ],
             ).model_dump(mode="json")
@@ -477,14 +551,18 @@ async def test_observer_flags_missing_safety_review_when_required() -> None:
         tasks=[],
     )
 
-    observation = await ObserverAgent().run({"spec": spec.model_dump(mode="json"), "task_results": []}, {})
+    observation = await ObserverAgent().run(
+        {"spec": spec.model_dump(mode="json"), "task_results": []}, {}
+    )
 
     assert observation["human_review_required"] is True
     assert observation["findings"][0]["finding_type"] == "missing_safety_review"
 
 
 @pytest.mark.asyncio
-async def test_chat_workflow_tool_persists_workflow_and_task_runs(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_chat_workflow_tool_persists_workflow_and_task_runs(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr(settings, "llm_api_key", None)
     engine = create_engine("sqlite+pysqlite:///:memory:")
     Base.metadata.create_all(engine)
@@ -515,14 +593,29 @@ async def test_chat_workflow_tool_persists_workflow_and_task_runs(monkeypatch: p
         )
         db.add_all([issue, pr])
         db.flush()
-        db.add(PRFile(pr_id=pr.id, filename="backend/app/auth.py", status="modified", additions=40, deletions=8, patch="handle login"))
+        db.add(
+            PRFile(
+                pr_id=pr.id,
+                filename="backend/app/auth.py",
+                status="modified",
+                additions=40,
+                deletions=8,
+                patch="handle login",
+            )
+        )
         db.add(
             WorkflowRun(
                 repo_id=repo.id,
                 name="backend-tests",
                 status="completed",
                 conclusion="failure",
-                jobs=[{"name": "pytest", "conclusion": "failure", "steps": [{"name": "Run tests", "conclusion": "failure"}]}],
+                jobs=[
+                    {
+                        "name": "pytest",
+                        "conclusion": "failure",
+                        "steps": [{"name": "Run tests", "conclusion": "failure"}],
+                    }
+                ],
                 logs_text="pytest tests/test_auth.py FAILED AssertionError",
                 created_at=now,
             )
@@ -532,7 +625,16 @@ async def test_chat_workflow_tool_persists_workflow_and_task_runs(monkeypatch: p
         tools = _build_conversation_tools(repo, conversation, db)
         result = await tools["workflow.run_engineering_review"](
             {"message": "这个 PR 能不能合并？请用多 agent 协作检查 Issue、PR 和 CI。"},
-            {"team_members": [{"name": "Alice", "role": "Backend", "strengths": "FastAPI auth", "techStack": "Python"}]},
+            {
+                "team_members": [
+                    {
+                        "name": "Alice",
+                        "role": "Backend",
+                        "strengths": "FastAPI auth",
+                        "techStack": "Python",
+                    }
+                ]
+            },
         )
 
         assert result["route"] == "engineering_workflow"

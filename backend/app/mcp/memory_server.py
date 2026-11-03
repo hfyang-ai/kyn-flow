@@ -25,7 +25,9 @@ for stream in (sys.stdin, sys.stdout, sys.stderr):
         stream.reconfigure(encoding="utf-8", errors="replace")
 
 
-def _json_schema(properties: dict[str, Any], required: list[str] | None = None) -> dict[str, Any]:
+def _json_schema(
+    properties: dict[str, Any], required: list[str] | None = None
+) -> dict[str, Any]:
     return {
         "type": "object",
         "properties": properties,
@@ -45,9 +47,17 @@ TOOLS: list[dict[str, Any]] = [
         "inputSchema": _json_schema(
             {
                 "query": {"type": "string", "description": "搜索查询"},
-                "limit": {"type": "integer", "minimum": 1, "maximum": 20, "description": "最大结果数"},
+                "limit": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 20,
+                    "description": "最大结果数",
+                },
                 "repo_id": {"type": "string", "description": "必填仓库 UUID。"},
-                "conversation_id": {"type": "string", "description": "可选 Kynflow 会话 UUID。"},
+                "conversation_id": {
+                    "type": "string",
+                    "description": "可选 Kynflow 会话 UUID。",
+                },
             },
             ["query", "repo_id"],
         ),
@@ -61,14 +71,40 @@ TOOLS: list[dict[str, Any]] = [
         "inputSchema": _json_schema(
             {
                 "keyword": {"type": "string", "description": "可选关键词过滤"},
-                "limit": {"type": "integer", "minimum": 1, "maximum": 100, "description": "最大消息数"},
-                "message_id": {"type": "string", "description": "可选消息 UUID；用于分页读取一条精确原文。"},
-                "before_message_id": {"type": "string", "description": "可选消息 UUID；只读取它之前的记录。"},
-                "after_message_id": {"type": "string", "description": "可选消息 UUID；只读取它之后的记录。"},
-                "offset": {"type": "integer", "minimum": 0, "description": "读取单条消息时的字符偏移量。"},
-                "max_chars": {"type": "integer", "minimum": 200, "maximum": 16000, "description": "本次最多返回的正文字符数。"},
+                "limit": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100,
+                    "description": "最大消息数",
+                },
+                "message_id": {
+                    "type": "string",
+                    "description": "可选消息 UUID；用于分页读取一条精确原文。",
+                },
+                "before_message_id": {
+                    "type": "string",
+                    "description": "可选消息 UUID；只读取它之前的记录。",
+                },
+                "after_message_id": {
+                    "type": "string",
+                    "description": "可选消息 UUID；只读取它之后的记录。",
+                },
+                "offset": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "读取单条消息时的字符偏移量。",
+                },
+                "max_chars": {
+                    "type": "integer",
+                    "minimum": 200,
+                    "maximum": 16000,
+                    "description": "本次最多返回的正文字符数。",
+                },
                 "repo_id": {"type": "string", "description": "必填仓库 UUID。"},
-                "conversation_id": {"type": "string", "description": "可选 Kynflow 会话 UUID。"},
+                "conversation_id": {
+                    "type": "string",
+                    "description": "可选 Kynflow 会话 UUID。",
+                },
             },
             ["repo_id"],
         ),
@@ -81,12 +117,31 @@ TOOLS: list[dict[str, Any]] = [
         ),
         "inputSchema": _json_schema(
             {
-                "session_id": {"type": "string", "description": "可选会话片段 UUID，默认使用最近会话。"},
-                "limit": {"type": "integer", "minimum": 1, "maximum": 20, "description": "最大会话数"},
-                "include_transcript": {"type": "boolean", "description": "是否返回封存的原始消息和工具事件，默认 true。"},
-                "max_chars": {"type": "integer", "minimum": 400, "maximum": 20000, "description": "本次最多返回的正文字符数。"},
+                "session_id": {
+                    "type": "string",
+                    "description": "可选会话片段 UUID，默认使用最近会话。",
+                },
+                "limit": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 20,
+                    "description": "最大会话数",
+                },
+                "include_transcript": {
+                    "type": "boolean",
+                    "description": "是否返回封存的原始消息和工具事件，默认 true。",
+                },
+                "max_chars": {
+                    "type": "integer",
+                    "minimum": 400,
+                    "maximum": 20000,
+                    "description": "本次最多返回的正文字符数。",
+                },
                 "repo_id": {"type": "string", "description": "必填仓库 UUID。"},
-                "conversation_id": {"type": "string", "description": "可选 Kynflow 会话 UUID。"},
+                "conversation_id": {
+                    "type": "string",
+                    "description": "可选 Kynflow 会话 UUID。",
+                },
             },
             ["repo_id"],
         ),
@@ -118,7 +173,9 @@ def _resolve_repo(db: Session, args: dict[str, Any]) -> Repository:
     return repo
 
 
-def _resolve_conversation(db: Session, repo: Repository, args: dict[str, Any]) -> Conversation:
+def _resolve_conversation(
+    db: Session, repo: Repository, args: dict[str, Any]
+) -> Conversation:
     conversation_id = args.get("conversation_id")
     if conversation_id:
         try:
@@ -144,9 +201,13 @@ async def _call_memory_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
             query = str(args.get("query") or "").strip()
             if not query:
                 raise McpError(-32602, "query 为必填项")
-            result = await tools.search_evidence({"query": query, "limit": int(args.get("limit") or 5)}, {})
+            result = await tools.search_evidence(
+                {"query": query, "limit": int(args.get("limit") or 5)}, {}
+            )
             db.commit()
-            return _content(f"仓库：{_repo_label(repo)}\n会话：{conversation.title if conversation else '全局'}\n\n{result.get('answer') or ''}")
+            return _content(
+                f"仓库：{_repo_label(repo)}\n会话：{conversation.title if conversation else '全局'}\n\n{result.get('answer') or ''}"
+            )
 
         if name == "kynflow_get_thread_context":
             result = await tools.get_thread_context(
@@ -162,7 +223,9 @@ async def _call_memory_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
                 {},
             )
             db.commit()
-            return _content(f"仓库：{_repo_label(repo)}\n会话：{conversation.title if conversation else '全局'}\n\n{result.get('answer') or ''}")
+            return _content(
+                f"仓库：{_repo_label(repo)}\n会话：{conversation.title if conversation else '全局'}\n\n{result.get('answer') or ''}"
+            )
 
         if name == "kynflow_read_session_events":
             result = await tools.read_session_events(
@@ -175,7 +238,9 @@ async def _call_memory_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
                 {},
             )
             db.commit()
-            return _content(f"仓库：{_repo_label(repo)}\n会话：{conversation.title if conversation else '全局'}\n\n{result.get('answer') or ''}")
+            return _content(
+                f"仓库：{_repo_label(repo)}\n会话：{conversation.title if conversation else '全局'}\n\n{result.get('answer') or ''}"
+            )
 
         raise McpError(-32601, f"未知工具：{name}")
     finally:
@@ -213,10 +278,18 @@ async def handle_request(request: dict[str, Any]) -> dict[str, Any] | None:
             raise McpError(-32601, f"未找到方法：{method}")
         return {"jsonrpc": "2.0", "id": request_id, "result": result}
     except McpError as exc:
-        return {"jsonrpc": "2.0", "id": request_id, "error": {"code": exc.code, "message": exc.message}}
+        return {
+            "jsonrpc": "2.0",
+            "id": request_id,
+            "error": {"code": exc.code, "message": exc.message},
+        }
     except Exception as exc:
         print(traceback.format_exc(), file=sys.stderr)
-        return {"jsonrpc": "2.0", "id": request_id, "error": {"code": -32603, "message": str(exc)}}
+        return {
+            "jsonrpc": "2.0",
+            "id": request_id,
+            "error": {"code": -32603, "message": str(exc)},
+        }
 
 
 async def main() -> None:
@@ -231,7 +304,11 @@ async def main() -> None:
         try:
             request = json.loads(line)
         except json.JSONDecodeError as exc:
-            response = {"jsonrpc": "2.0", "id": None, "error": {"code": -32700, "message": str(exc)}}
+            response = {
+                "jsonrpc": "2.0",
+                "id": None,
+                "error": {"code": -32700, "message": str(exc)},
+            }
         else:
             response = await handle_request(request)
         if response is not None:

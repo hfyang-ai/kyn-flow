@@ -27,7 +27,9 @@ class Settings(BaseSettings):
     local_embedding_device: str | None = None
     qwen_embedding_model: str = "Qwen/Qwen3-Embedding-0.6B"
     dashscope_api_key: str | None = None
-    dashscope_embedding_base_url: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    dashscope_embedding_base_url: str = (
+        "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    )
     rerank_api_key: str | None = None
     rerank_base_url: str | None = None
     qwen_rerank_model: str = "qwen3-rerank"
@@ -94,7 +96,9 @@ class Settings(BaseSettings):
     auto_sync_interval_seconds: int = 300
     auto_sync_limit: int | None = None
 
-    model_config = SettingsConfigDict(env_file=("../.env", ".env"), env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=("../.env", ".env"), env_file_encoding="utf-8", extra="ignore"
+    )
 
 
 settings = Settings()

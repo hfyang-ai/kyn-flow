@@ -9,7 +9,13 @@ from app.services.rag.chunking import chunk_code_text, chunk_document, chunk_tex
 
 
 def test_chunk_text_keeps_paragraphs_and_respects_size_limit() -> None:
-    text = "第一段说明登录流程。" * 8 + "\n\n" + "第二段说明刷新令牌。" * 8 + "\n\n" + "第三段说明退出流程。" * 8
+    text = (
+        "第一段说明登录流程。" * 8
+        + "\n\n"
+        + "第二段说明刷新令牌。" * 8
+        + "\n\n"
+        + "第三段说明退出流程。" * 8
+    )
 
     chunks = chunk_text(text, max_chars=190, overlap=20)
 
@@ -46,8 +52,13 @@ def rotate_token(token: str) -> str:
 
     assert chunks
     assert all(len(chunk["content"]) <= 180 for chunk in chunks)
-    assert any(chunk["section_path"] == ["Authentication", "Refresh tokens"] for chunk in chunks)
-    code_chunk = next(chunk for chunk in chunks if chunk["chunk_type"] == "markdown_code")
+    assert any(
+        chunk["section_path"] == ["Authentication", "Refresh tokens"]
+        for chunk in chunks
+    )
+    code_chunk = next(
+        chunk for chunk in chunks if chunk["chunk_type"] == "markdown_code"
+    )
     assert code_chunk["content"].count("```") == 2
     assert code_chunk["section_title"] == "Refresh tokens"
     assert code_chunk["start_line"] <= code_chunk["end_line"]
@@ -69,8 +80,12 @@ def test_markdown_chunk_ids_are_stable_for_the_same_content() -> None:
     first = chunk_document(text, "runbook.md", max_chars=200, overlap=20)
     second = chunk_document(text, "runbook.md", max_chars=200, overlap=20)
 
-    assert [chunk["chunk_id"] for chunk in first] == [chunk["chunk_id"] for chunk in second]
-    assert [chunk["parent_id"] for chunk in first] == [chunk["parent_id"] for chunk in second]
+    assert [chunk["chunk_id"] for chunk in first] == [
+        chunk["chunk_id"] for chunk in second
+    ]
+    assert [chunk["parent_id"] for chunk in first] == [
+        chunk["parent_id"] for chunk in second
+    ]
 
 
 def test_python_chunking_uses_ast_symbol_boundaries() -> None:
@@ -86,14 +101,20 @@ class TokenService:
 
     chunks = chunk_code_text(source, "app/token_service.py", max_chars=220)
 
-    assert {chunk["symbol"] for chunk in chunks} >= {"module", "load_settings", "TokenService"}
+    assert {chunk["symbol"] for chunk in chunks} >= {
+        "module",
+        "load_settings",
+        "TokenService",
+    }
     function = next(chunk for chunk in chunks if chunk["symbol"] == "load_settings")
     assert function["symbol_kind"] == "function"
     assert function["start_line"] == 3
     assert function["header"].startswith("File: app/token_service.py")
 
 
-def test_typescript_chunking_recognizes_exported_functions_and_arrow_functions() -> None:
+def test_typescript_chunking_recognizes_exported_functions_and_arrow_functions() -> (
+    None
+):
     source = """import { api } from './api';
 
 export async function loadUser(id: string) {
@@ -133,7 +154,9 @@ def test_csv_chunking_repeats_header_and_tracks_row_ranges() -> None:
 
 
 def test_small_json_manifest_stays_in_one_chunk() -> None:
-    chunks = chunk_document('{"name":"demo","version":"1.0.0"}', "package.json", max_chars=200, overlap=20)
+    chunks = chunk_document(
+        '{"name":"demo","version":"1.0.0"}', "package.json", max_chars=200, overlap=20
+    )
 
     assert len(chunks) == 1
     assert chunks[0]["json_path"] == "$"
@@ -147,7 +170,10 @@ def test_plain_text_overlap_is_present_and_line_numbers_keep_leading_blanks() ->
 
     assert len(chunks) > 2
     assert chunks[0]["start_line"] == 3
-    assert all(previous["content"][-12:] == current["content"][:12] for previous, current in itertools.pairwise(chunks))
+    assert all(
+        previous["content"][-12:] == current["content"][:12]
+        for previous, current in itertools.pairwise(chunks)
+    )
 
 
 def test_csv_long_rows_are_split_without_data_loss() -> None:
@@ -163,7 +189,9 @@ def test_csv_long_rows_are_split_without_data_loss() -> None:
 def test_csv_fields_larger_than_the_stdlib_default_remain_structured() -> None:
     rendered_row = "1," + "x" * 140_000
 
-    chunks = chunk_document(f"id,data\n{rendered_row}", "large-field.csv", max_chars=5000, overlap=0)
+    chunks = chunk_document(
+        f"id,data\n{rendered_row}", "large-field.csv", max_chars=5000, overlap=0
+    )
 
     reconstructed = "".join(chunk["content"].split("\n", 1)[1] for chunk in chunks)
     assert reconstructed == rendered_row
@@ -175,7 +203,9 @@ def test_csv_oversized_header_is_lossless_and_size_limited() -> None:
 
     chunks = chunk_document(f"{header}\nvalue", "header.csv", max_chars=20, overlap=2)
 
-    header_chunks = [chunk for chunk in chunks if chunk["chunk_type"] == "csv_header_part"]
+    header_chunks = [
+        chunk for chunk in chunks if chunk["chunk_type"] == "csv_header_part"
+    ]
     assert "".join(chunk["content"] for chunk in header_chunks) == header
     assert any("value" in chunk["content"] for chunk in chunks)
     assert all(len(chunk["content"]) <= 20 for chunk in chunks)
@@ -234,7 +264,9 @@ def test_duplicate_code_symbols_receive_unique_stable_ids() -> None:
 
     assert len(same_chunks) == 2
     assert same_chunks[0]["chunk_id"] != same_chunks[1]["chunk_id"]
-    assert [chunk["chunk_id"] for chunk in first] == [chunk["chunk_id"] for chunk in second]
+    assert [chunk["chunk_id"] for chunk in first] == [
+        chunk["chunk_id"] for chunk in second
+    ]
 
 
 def test_large_json_does_not_claim_invented_source_lines() -> None:
@@ -243,10 +275,14 @@ def test_large_json_does_not_claim_invented_source_lines() -> None:
     chunks = chunk_document(text, "data.json", max_chars=30, overlap=3)
 
     assert len(chunks) > 1
-    assert all(chunk["start_line"] is None and chunk["end_line"] is None for chunk in chunks)
+    assert all(
+        chunk["start_line"] is None and chunk["end_line"] is None for chunk in chunks
+    )
 
 
-def test_text_extraction_rejects_binary_and_excessive_output(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_text_extraction_rejects_binary_and_excessive_output(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr(document_extraction, "MAX_EXTRACTED_CHARS", 8)
 
     with pytest.raises(ValueError, match="character limit"):
@@ -255,7 +291,9 @@ def test_text_extraction_rejects_binary_and_excessive_output(monkeypatch: pytest
         document_extraction.decode_text(b"abc\x00def")
 
 
-def test_docx_archive_expansion_is_checked_before_parsing(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_docx_archive_expansion_is_checked_before_parsing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         archive.writestr("word/document.xml", "x" * 32)
@@ -265,7 +303,9 @@ def test_docx_archive_expansion_is_checked_before_parsing(monkeypatch: pytest.Mo
         document_extraction.extract_document_text("bomb.docx", buffer.getvalue())
 
 
-def test_pdf_page_limit_is_checked_before_page_extraction(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_pdf_page_limit_is_checked_before_page_extraction(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     from pypdf import PdfWriter
 
     buffer = io.BytesIO()

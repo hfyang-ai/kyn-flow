@@ -61,7 +61,10 @@ def _split_long_text(block: _Block, max_chars: int) -> list[_Block]:
         if unit and unit.strip()
     ]
     if len(units) <= 1:
-        units = [block.text[index : index + max_chars] for index in range(0, len(block.text), max_chars)]
+        units = [
+            block.text[index : index + max_chars]
+            for index in range(0, len(block.text), max_chars)
+        ]
 
     pieces: list[str] = []
     current = ""
@@ -73,7 +76,10 @@ def _split_long_text(block: _Block, max_chars: int) -> list[_Block]:
             if current:
                 pieces.append(current)
                 current = ""
-            pieces.extend(unit[index : index + max_chars] for index in range(0, len(unit), max_chars))
+            pieces.extend(
+                unit[index : index + max_chars]
+                for index in range(0, len(unit), max_chars)
+            )
             continue
         candidate = f"{current}\n{unit}" if current else unit
         if current and len(candidate) > max_chars:
@@ -95,7 +101,9 @@ def _split_long_text(block: _Block, max_chars: int) -> list[_Block]:
             _Block(
                 text=piece,
                 start_line=_line_for_offset(block.text, offset, block.start_line),
-                end_line=_line_for_offset(block.text, max(offset, end_offset - 1), block.start_line),
+                end_line=_line_for_offset(
+                    block.text, max(offset, end_offset - 1), block.start_line
+                ),
                 kind=block.kind,
                 section_path=block.section_path,
                 section_instance=block.section_instance,
@@ -127,7 +135,9 @@ def _split_long_code_fence(block: _Block, max_chars: int) -> list[_Block]:
         )
         return _split_long_text(plain, max_chars)
 
-    original_opener = lines[0] if lines[0].lstrip().startswith(("```", "~~~")) else "```"
+    original_opener = (
+        lines[0] if lines[0].lstrip().startswith(("```", "~~~")) else "```"
+    )
     marker = original_opener.lstrip()[:3]
     opener = marker
     has_closer = len(lines) > 1 and lines[-1].lstrip().startswith(marker)
@@ -251,13 +261,17 @@ def _overlap_blocks(blocks: list[_Block], overlap: int) -> list[_Block]:
         elif word_boundaries:
             fragment_offset = lookback_start + word_boundaries[-1].end()
         else:
-            boundary_window = block.text[offset : offset + min(48, max(8, allowance // 3))]
+            boundary_window = block.text[
+                offset : offset + min(48, max(8, allowance // 3))
+            ]
             boundary = re.search(r"\s+|[。！？.!?；;]\s*", boundary_window)
             fragment_offset = offset + boundary.end() if boundary else offset
         selected.append(
             _Block(
                 text=block.text[fragment_offset:],
-                start_line=_line_for_offset(block.text, fragment_offset, block.start_line),
+                start_line=_line_for_offset(
+                    block.text, fragment_offset, block.start_line
+                ),
                 end_line=block.end_line,
                 kind=block.kind,
                 section_path=block.section_path,
@@ -271,8 +285,12 @@ def _overlap_blocks(blocks: list[_Block], overlap: int) -> list[_Block]:
     return list(reversed(selected))
 
 
-def _section_prefix(section_path: tuple[str, ...], page: int | None, limit: int | None = None) -> str:
-    parts = [f"{'#' * min(index + 1, 6)} {title}" for index, title in enumerate(section_path)]
+def _section_prefix(
+    section_path: tuple[str, ...], page: int | None, limit: int | None = None
+) -> str:
+    parts = [
+        f"{'#' * min(index + 1, 6)} {title}" for index, title in enumerate(section_path)
+    ]
     if page is not None:
         parts.append(f"Page {page}")
     value = "\n".join(parts)
@@ -315,7 +333,9 @@ def _emit_chunk(
 ) -> dict[str, Any]:
     first = blocks[0]
     body = _join_block_text(blocks)
-    prefix = _prefix_for_chunk(first.section_path, first.page, max_chars, has_body=bool(body))
+    prefix = _prefix_for_chunk(
+        first.section_path, first.page, max_chars, has_body=bool(body)
+    )
     content = f"{prefix}\n\n{body}" if prefix and body else (prefix or body)
     parent_id = _stable_id(
         "parent",
@@ -323,7 +343,11 @@ def _emit_chunk(
         first.section_instance or tuple((title, 0) for title in first.section_path),
         first.page,
     )
-    effective_type = "markdown_code" if any(block.kind == "code_fence" for block in blocks) else chunk_type
+    effective_type = (
+        "markdown_code"
+        if any(block.kind == "code_fence" for block in blocks)
+        else chunk_type
+    )
     metadata: dict[str, Any] = {}
     for block in blocks:
         metadata.update(block.metadata)
@@ -336,8 +360,14 @@ def _emit_chunk(
         "section_path": list(first.section_path),
         "section_title": first.section_path[-1] if first.section_path else None,
         "page": first.page,
-        "start_line": min((block.start_line for block in blocks if block.start_line is not None), default=None),
-        "end_line": max((block.end_line for block in blocks if block.end_line is not None), default=None),
+        "start_line": min(
+            (block.start_line for block in blocks if block.start_line is not None),
+            default=None,
+        ),
+        "end_line": max(
+            (block.end_line for block in blocks if block.end_line is not None),
+            default=None,
+        ),
         **metadata,
     }
 
@@ -401,7 +431,10 @@ def _pack_blocks(
                 current = _overlap_blocks(previous, overlap)
                 while current:
                     candidate_body = _join_block_text([*current, block])
-                    if len(candidate_body) + len(prefix) + (2 if prefix else 0) <= max_chars:
+                    if (
+                        len(candidate_body) + len(prefix) + (2 if prefix else 0)
+                        <= max_chars
+                    ):
                         break
                     current.pop(0)
             current.append(block)
@@ -477,11 +510,15 @@ def _plain_chunks(
                     "section_title": None,
                     "page": None,
                     "start_line": _line_for_offset(text, start_offset, 1),
-                    "end_line": _line_for_offset(text, max(start_offset, end_offset - 1), 1),
+                    "end_line": _line_for_offset(
+                        text, max(start_offset, end_offset - 1), 1
+                    ),
                 }
             )
             if len(chunks) > MAX_CHUNKS_PER_DOCUMENT:
-                raise ValueError(f"document exceeds the {MAX_CHUNKS_PER_DOCUMENT} chunk limit")
+                raise ValueError(
+                    f"document exceeds the {MAX_CHUNKS_PER_DOCUMENT} chunk limit"
+                )
         if end >= text_length:
             break
         cursor = max(cursor + 1, end - overlap)
@@ -624,7 +661,9 @@ def _json_blocks(text: str, max_chars: int) -> list[_Block]:
     return blocks
 
 
-def _csv_chunks(text: str, source_path: str, max_chars: int, overlap: int) -> list[dict[str, Any]]:
+def _csv_chunks(
+    text: str, source_path: str, max_chars: int, overlap: int
+) -> list[dict[str, Any]]:
     try:
         if len(text) > csv.field_size_limit():
             csv.field_size_limit(len(text))
@@ -674,14 +713,23 @@ def _csv_chunks(text: str, source_path: str, max_chars: int, overlap: int) -> li
                 "end_line": row_end if precise_lines else None,
                 "row_start": row_start,
                 "row_end": row_end,
-                **({"row_part": row_part, "row_parts": row_parts} if row_part is not None else {}),
+                **(
+                    {"row_part": row_part, "row_parts": row_parts}
+                    if row_part is not None
+                    else {}
+                ),
             }
         )
         if len(chunks) > MAX_CHUNKS_PER_DOCUMENT:
-            raise ValueError(f"document exceeds the {MAX_CHUNKS_PER_DOCUMENT} chunk limit")
+            raise ValueError(
+                f"document exceeds the {MAX_CHUNKS_PER_DOCUMENT} chunk limit"
+            )
 
     if header and len(header) + 1 >= max_chars:
-        header_parts = [header[index : index + max_chars] for index in range(0, len(header), max_chars)] or [""]
+        header_parts = [
+            header[index : index + max_chars]
+            for index in range(0, len(header), max_chars)
+        ] or [""]
         for part_index, part in enumerate(header_parts):
             append_chunk(
                 part,
@@ -698,7 +746,9 @@ def _csv_chunks(text: str, source_path: str, max_chars: int, overlap: int) -> li
 
     if not rows[1:]:
         if not chunks:
-            append_chunk(header, row_start=1, row_end=1, precise_lines="\n" not in header)
+            append_chunk(
+                header, row_start=1, row_end=1, precise_lines="\n" not in header
+            )
         return chunks
 
     prefix_size = len(header_prefix) + (1 if header_prefix else 0)
@@ -706,9 +756,20 @@ def _csv_chunks(text: str, source_path: str, max_chars: int, overlap: int) -> li
     records: list[tuple[str, int, int | None, int | None, bool]] = []
     for row_number, row in enumerate(rows[1:], start=2):
         rendered = render(row)
-        parts = [rendered[index : index + row_budget] for index in range(0, len(rendered), row_budget)] or [""]
+        parts = [
+            rendered[index : index + row_budget]
+            for index in range(0, len(rendered), row_budget)
+        ] or [""]
         for part_index, part in enumerate(parts):
-            records.append((part, row_number, part_index + 1 if len(parts) > 1 else None, len(parts) if len(parts) > 1 else None, "\n" not in rendered))
+            records.append(
+                (
+                    part,
+                    row_number,
+                    part_index + 1 if len(parts) > 1 else None,
+                    len(parts) if len(parts) > 1 else None,
+                    "\n" not in rendered,
+                )
+            )
 
     start = 0
     while start < len(records):
@@ -717,13 +778,21 @@ def _csv_chunks(text: str, source_path: str, max_chars: int, overlap: int) -> li
         while index < len(records):
             candidate_rows = [item[0] for item in selected]
             candidate_rows.append(records[index][0])
-            candidate = "\n".join([header_prefix, *candidate_rows]) if header_prefix else "\n".join(candidate_rows)
+            candidate = (
+                "\n".join([header_prefix, *candidate_rows])
+                if header_prefix
+                else "\n".join(candidate_rows)
+            )
             if selected and len(candidate) > max_chars:
                 break
             selected.append(records[index])
             index += 1
         selected_text = [item[0] for item in selected]
-        content = "\n".join([header_prefix, *selected_text]) if header_prefix else "\n".join(selected_text)
+        content = (
+            "\n".join([header_prefix, *selected_text])
+            if header_prefix
+            else "\n".join(selected_text)
+        )
         row_start = min(item[1] for item in selected)
         row_end = max(item[1] for item in selected)
         row_part = selected[0][2] if len(selected) == 1 else None
@@ -805,7 +874,9 @@ def chunk_text(text: str, max_chars: int = 1600, overlap: int = 160) -> list[str
 
     return [
         chunk["content"]
-        for chunk in chunk_document(text, "document.txt", max_chars=max_chars, overlap=overlap)
+        for chunk in chunk_document(
+            text, "document.txt", max_chars=max_chars, overlap=overlap
+        )
     ]
 
 
@@ -822,7 +893,9 @@ def _line_windows(
     while cursor < stop:
         if len(lines[cursor]) > max_chars:
             for offset in range(0, len(lines[cursor]), max_chars):
-                output.append((lines[cursor][offset : offset + max_chars], cursor + 1, cursor + 1))
+                output.append(
+                    (lines[cursor][offset : offset + max_chars], cursor + 1, cursor + 1)
+                )
             cursor += 1
             continue
         size = 0
@@ -854,7 +927,10 @@ def _python_regions(text: str, max_chars: int) -> list[tuple[int, int, str, str]
 
     def node_start(node: ast.AST) -> int:
         decorators = getattr(node, "decorator_list", []) or []
-        positions = [getattr(node, "lineno", 1), *(getattr(item, "lineno", 1) for item in decorators)]
+        positions = [
+            getattr(node, "lineno", 1),
+            *(getattr(item, "lineno", 1) for item in decorators),
+        ]
         return min(positions)
 
     def append_node(node: ast.AST, parent: str | None = None) -> None:
@@ -863,7 +939,10 @@ def _python_regions(text: str, max_chars: int) -> list[tuple[int, int, str, str]
         name = str(getattr(node, "name", "module"))
         symbol = f"{parent}.{name}" if parent else name
         kind = "class" if isinstance(node, ast.ClassDef) else "function"
-        if isinstance(node, ast.ClassDef) and len("\n".join(lines[start - 1 : end])) > max_chars:
+        if (
+            isinstance(node, ast.ClassDef)
+            and len("\n".join(lines[start - 1 : end])) > max_chars
+        ):
             methods = [
                 item
                 for item in node.body
@@ -873,11 +952,24 @@ def _python_regions(text: str, max_chars: int) -> list[tuple[int, int, str, str]
                 method_cursor = start
                 first_method_start = node_start(methods[0])
                 if first_method_start > method_cursor:
-                    regions.append((method_cursor, first_method_start - 1, symbol, "class_header"))
+                    regions.append(
+                        (method_cursor, first_method_start - 1, symbol, "class_header")
+                    )
                 for index, method in enumerate(methods):
                     method_start = node_start(method)
-                    next_start = node_start(methods[index + 1]) if index + 1 < len(methods) else end + 1
-                    regions.append((method_start, next_start - 1, f"{symbol}.{method.name}", "method"))
+                    next_start = (
+                        node_start(methods[index + 1])
+                        if index + 1 < len(methods)
+                        else end + 1
+                    )
+                    regions.append(
+                        (
+                            method_start,
+                            next_start - 1,
+                            f"{symbol}.{method.name}",
+                            "method",
+                        )
+                    )
                 return
         regions.append((start, end, symbol, kind))
 
@@ -916,19 +1008,60 @@ def _generic_symbol(line: str, suffix: str) -> tuple[str, str] | None:
             ),
         ]
     elif suffix == ".go":
-        patterns = [(re.compile(r"^\s*(?:func\s+(?:\([^)]*\)\s*)?|type\s+)([A-Za-z_]\w*)"), "symbol")]
+        patterns = [
+            (
+                re.compile(r"^\s*(?:func\s+(?:\([^)]*\)\s*)?|type\s+)([A-Za-z_]\w*)"),
+                "symbol",
+            )
+        ]
     elif suffix == ".rs":
         patterns = [
-            (re.compile(r"^\s*(?:pub(?:\([^)]*\))?\s+)?(?:async\s+)?(?:fn|struct|enum|trait|impl)\s+([A-Za-z_]\w*)"), "symbol")
+            (
+                re.compile(
+                    r"^\s*(?:pub(?:\([^)]*\))?\s+)?(?:async\s+)?(?:fn|struct|enum|trait|impl)\s+([A-Za-z_]\w*)"
+                ),
+                "symbol",
+            )
         ]
-    elif suffix in {".java", ".kt", ".kts", ".cs", ".cpp", ".c", ".h", ".hpp", ".php", ".rb", ".swift", ".scala"}:
+    elif suffix in {
+        ".java",
+        ".kt",
+        ".kts",
+        ".cs",
+        ".cpp",
+        ".c",
+        ".h",
+        ".hpp",
+        ".php",
+        ".rb",
+        ".swift",
+        ".scala",
+    }:
         patterns = [
-            (re.compile(r"^\s*(?:(?:public|private|protected|internal|static|final|abstract|sealed|data|open)\s+)*(?:class|interface|enum|struct|trait|record)\s+([A-Za-z_]\w*)"), "type")
+            (
+                re.compile(
+                    r"^\s*(?:(?:public|private|protected|internal|static|final|abstract|sealed|data|open)\s+)*(?:class|interface|enum|struct|trait|record)\s+([A-Za-z_]\w*)"
+                ),
+                "type",
+            )
         ]
     elif suffix == ".sql":
-        patterns = [(re.compile(r"^\s*CREATE\s+(?:OR\s+REPLACE\s+)?(?:FUNCTION|PROCEDURE|TABLE|VIEW)\s+([\w.]+)", re.IGNORECASE), "sql_object")]
+        patterns = [
+            (
+                re.compile(
+                    r"^\s*CREATE\s+(?:OR\s+REPLACE\s+)?(?:FUNCTION|PROCEDURE|TABLE|VIEW)\s+([\w.]+)",
+                    re.IGNORECASE,
+                ),
+                "sql_object",
+            )
+        ]
     elif suffix in {".sh", ".bash", ".zsh", ".ps1"}:
-        patterns = [(re.compile(r"^\s*(?:function\s+)?([A-Za-z_]\w*)\s*(?:\(\))?\s*\{"), "function")]
+        patterns = [
+            (
+                re.compile(r"^\s*(?:function\s+)?([A-Za-z_]\w*)\s*(?:\(\))?\s*\{"),
+                "function",
+            )
+        ]
     for pattern, kind in patterns:
         match = pattern.match(line)
         if match:
@@ -960,7 +1093,9 @@ def _language_for_path(path: str) -> str:
     return suffix or Path(path).name.lower()
 
 
-def chunk_code_text(text: str, path: str, max_chars: int = 2200) -> list[dict[str, Any]]:
+def chunk_code_text(
+    text: str, path: str, max_chars: int = 2200
+) -> list[dict[str, Any]]:
     """Split source on language symbols, with parser and line-window fallbacks."""
 
     if max_chars <= 0:
@@ -972,16 +1107,33 @@ def chunk_code_text(text: str, path: str, max_chars: int = 2200) -> list[dict[st
     language = _language_for_path(path)
 
     if suffix in MARKDOWN_SUFFIXES | STRUCTURED_DATA_SUFFIXES | {".txt"}:
-        document_chunks = chunk_document(normalized, path, max_chars=max_chars, overlap=max(0, min(160, max_chars // 10)))
+        document_chunks = chunk_document(
+            normalized,
+            path,
+            max_chars=max_chars,
+            overlap=max(0, min(160, max_chars // 10)),
+        )
         output: list[dict[str, Any]] = []
         for chunk in document_chunks:
             symbol = chunk.get("section_title") or "document"
             header = f"File: {path}\nSection: {symbol}\nLines: {chunk['start_line']}-{chunk['end_line']}"
-            output.append({**chunk, "symbol": symbol, "symbol_kind": chunk["chunk_type"], "language": language, "header": header})
+            output.append(
+                {
+                    **chunk,
+                    "symbol": symbol,
+                    "symbol_kind": chunk["chunk_type"],
+                    "language": language,
+                    "header": header,
+                }
+            )
         return output
 
     lines = normalized.splitlines()
-    regions = _python_regions(normalized, max_chars) if suffix == ".py" else _generic_regions(normalized, suffix)
+    regions = (
+        _python_regions(normalized, max_chars)
+        if suffix == ".py"
+        else _generic_regions(normalized, suffix)
+    )
     if not regions:
         regions = [(1, len(lines), "module", "module")]
 
@@ -1006,7 +1158,9 @@ def chunk_code_text(text: str, path: str, max_chars: int = 2200) -> list[dict[st
                     "symbol": symbol,
                     "symbol_kind": symbol_kind,
                     "language": language,
-                    "chunk_type": "code_symbol" if symbol != "module" else "code_module",
+                    "chunk_type": "code_symbol"
+                    if symbol != "module"
+                    else "code_module",
                     "chunk_id": chunk_id,
                     "parent_id": parent_id,
                     "child_index": part_index,
@@ -1020,12 +1174,16 @@ def chunk_code_text(text: str, path: str, max_chars: int = 2200) -> list[dict[st
     return chunks
 
 
-def chunk_pr_files(files: list[dict[str, Any]], max_chars: int = 1800) -> list[dict[str, Any]]:
+def chunk_pr_files(
+    files: list[dict[str, Any]], max_chars: int = 1800
+) -> list[dict[str, Any]]:
     chunks: list[dict[str, Any]] = []
     for file in files:
         patch = file.get("patch") or ""
         filename = str(file.get("filename") or "patch.diff")
-        for index, content in enumerate(chunk_text(patch, max_chars=max_chars, overlap=0)):
+        for index, content in enumerate(
+            chunk_text(patch, max_chars=max_chars, overlap=0)
+        ):
             chunks.append(
                 {
                     "filename": filename,

@@ -38,9 +38,15 @@ def _db_session():
 
 
 @pytest.mark.asyncio
-async def test_delete_repo_removes_all_conversation_and_workflow_dependencies(monkeypatch) -> None:
+async def test_delete_repo_removes_all_conversation_and_workflow_dependencies(
+    monkeypatch,
+) -> None:
     db = _db_session()
-    repo = Repository(owner="kynflow", name="delete-me", full_name=f"kynflow/delete-{uuid.uuid4().hex[:8]}")
+    repo = Repository(
+        owner="kynflow",
+        name="delete-me",
+        full_name=f"kynflow/delete-{uuid.uuid4().hex[:8]}",
+    )
     db.add(repo)
     db.flush()
 
@@ -126,7 +132,9 @@ async def test_delete_repo_removes_all_conversation_and_workflow_dependencies(mo
         vector_calls.append(kwargs)
         return True
 
-    monkeypatch.setattr(repo_routes, "delete_milvus_documents", fake_delete_milvus_documents)
+    monkeypatch.setattr(
+        repo_routes, "delete_milvus_documents", fake_delete_milvus_documents
+    )
 
     result = await repo_routes.delete_repo(repo.id, db)
 

@@ -18,7 +18,9 @@ def _db_session():
 
 
 @pytest.mark.asyncio
-async def test_sync_repository_persists_facts_without_triggering_rag(monkeypatch) -> None:
+async def test_sync_repository_persists_facts_without_triggering_rag(
+    monkeypatch,
+) -> None:
     async def fake_list_issues(*_args, **_kwargs):
         return [
             {
@@ -40,9 +42,17 @@ async def test_sync_repository_persists_facts_without_triggering_rag(monkeypatch
         raise AssertionError("GitHub fact sync must not depend on embeddings or Milvus")
 
     monkeypatch.setattr("app.services.repos_sync.list_issues", fake_list_issues)
-    monkeypatch.setattr("app.services.rag.vector_store.embed_texts", fail_if_vector_runtime_is_used)
-    monkeypatch.setattr("app.services.rag.vector_store.delete_milvus_documents", fail_if_vector_runtime_is_used)
-    monkeypatch.setattr("app.services.rag.vector_store.upsert_milvus_documents", fail_if_vector_runtime_is_used)
+    monkeypatch.setattr(
+        "app.services.rag.vector_store.embed_texts", fail_if_vector_runtime_is_used
+    )
+    monkeypatch.setattr(
+        "app.services.rag.vector_store.delete_milvus_documents",
+        fail_if_vector_runtime_is_used,
+    )
+    monkeypatch.setattr(
+        "app.services.rag.vector_store.upsert_milvus_documents",
+        fail_if_vector_runtime_is_used,
+    )
 
     db = _db_session()
     repo = Repository(

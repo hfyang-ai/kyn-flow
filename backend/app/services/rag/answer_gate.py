@@ -3,8 +3,16 @@ from typing import Any
 
 AMBIGUOUS_MARKERS = ("这个", "那个", "它", "这段", "这里", "怎么办", "怎么处理")
 CONFLICT_POLARITIES = (
-    ("permission", ("允许", "可以", "enabled", "enable"), ("禁止", "不允许", "不能", "disabled", "disable")),
-    ("outcome", ("成功", "通过", "success", "passed"), ("失败", "未通过", "failure", "failed")),
+    (
+        "permission",
+        ("允许", "可以", "enabled", "enable"),
+        ("禁止", "不允许", "不能", "disabled", "disable"),
+    ),
+    (
+        "outcome",
+        ("成功", "通过", "success", "passed"),
+        ("失败", "未通过", "failure", "failed"),
+    ),
     ("requirement", ("必须", "需要", "required"), ("可选", "无需", "optional")),
 )
 
@@ -45,9 +53,16 @@ def _detect_conflict(items: list[dict[str, Any]]) -> dict[str, Any] | None:
     high_confidence = [item for item in items if float(item.get("score") or 0.0) >= 0.6]
     if len(high_confidence) < 2:
         return None
-    texts = [(str(item.get("id") or item.get("source_id") or ""), _evidence_text(item)) for item in high_confidence]
+    texts = [
+        (str(item.get("id") or item.get("source_id") or ""), _evidence_text(item))
+        for item in high_confidence
+    ]
     for conflict_type, positive_markers, negative_markers in CONFLICT_POLARITIES:
-        negative_ids = [item_id for item_id, text in texts if any(marker in text for marker in negative_markers)]
+        negative_ids = [
+            item_id
+            for item_id, text in texts
+            if any(marker in text for marker in negative_markers)
+        ]
         positive_ids = [
             item_id
             for item_id, text in texts
@@ -67,7 +82,9 @@ def _is_ambiguous_query(query: str, items: list[dict[str, Any]]) -> bool:
     compact = re.sub(r"\s+", "", query)
     if not any(marker in compact for marker in AMBIGUOUS_MARKERS):
         return False
-    source_ids = {str(item.get("source_id") or "") for item in items if item.get("source_id")}
+    source_ids = {
+        str(item.get("source_id") or "") for item in items if item.get("source_id")
+    }
     return len(source_ids) > 1 or len(compact) <= 8
 
 
@@ -82,12 +99,22 @@ def evaluate_answer_gate(
     base = {
         "evidence_count": len(items),
         "top_score": round(top_score, 4),
-        "score_threshold": round(float(score_threshold), 4) if threshold_enabled else None,
+        "score_threshold": round(float(score_threshold), 4)
+        if threshold_enabled
+        else None,
     }
     if not items:
-        return {**base, "decision": "insufficient_evidence", "reason": "没有检索到满足条件的证据"}
+        return {
+            **base,
+            "decision": "insufficient_evidence",
+            "reason": "没有检索到满足条件的证据",
+        }
     if threshold_enabled and top_score < score_threshold:
-        return {**base, "decision": "insufficient_evidence", "reason": "最高证据分数未达到回答门槛"}
+        return {
+            **base,
+            "decision": "insufficient_evidence",
+            "reason": "最高证据分数未达到回答门槛",
+        }
 
     signals = _strong_query_signals(query)
     evidence_text = "\n".join(_evidence_text(item) for item in items)
@@ -103,7 +130,12 @@ def evaluate_answer_gate(
 
     conflict = _detect_conflict(items)
     if conflict:
-        return {**base, "decision": "conflict", "reason": "高排名证据给出了相反结论", "conflict": conflict}
+        return {
+            **base,
+            "decision": "conflict",
+            "reason": "高排名证据给出了相反结论",
+            "conflict": conflict,
+        }
 
     if _is_ambiguous_query(query, items):
         return {

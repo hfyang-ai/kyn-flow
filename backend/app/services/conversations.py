@@ -39,11 +39,17 @@ def ensure_default_conversation(db: Session, repo_id: uuid.UUID) -> Conversation
     return conversation
 
 
-def ensure_conversation(db: Session, repo_id: uuid.UUID, conversation_id: uuid.UUID | None = None) -> Conversation:
+def ensure_conversation(
+    db: Session, repo_id: uuid.UUID, conversation_id: uuid.UUID | None = None
+) -> Conversation:
     if conversation_id:
         conversation = (
             db.query(Conversation)
-            .filter(Conversation.id == conversation_id, Conversation.repo_id == repo_id, Conversation.status == "active")
+            .filter(
+                Conversation.id == conversation_id,
+                Conversation.repo_id == repo_id,
+                Conversation.status == "active",
+            )
             .one_or_none()
         )
         if conversation:
@@ -63,17 +69,27 @@ def list_conversations(db: Session, repo_id: uuid.UUID) -> list[Conversation]:
     )
 
 
-def create_conversation(db: Session, repo_id: uuid.UUID, title: str | None = None) -> Conversation:
-    conversation = Conversation(repo_id=repo_id, title=(title or "").strip() or _default_title(db, repo_id))
+def create_conversation(
+    db: Session, repo_id: uuid.UUID, title: str | None = None
+) -> Conversation:
+    conversation = Conversation(
+        repo_id=repo_id, title=(title or "").strip() or _default_title(db, repo_id)
+    )
     db.add(conversation)
     db.flush()
     return conversation
 
 
-def delete_conversation(db: Session, repo_id: uuid.UUID, conversation_id: uuid.UUID) -> Conversation:
+def delete_conversation(
+    db: Session, repo_id: uuid.UUID, conversation_id: uuid.UUID
+) -> Conversation:
     conversation = (
         db.query(Conversation)
-        .filter(Conversation.id == conversation_id, Conversation.repo_id == repo_id, Conversation.status == "active")
+        .filter(
+            Conversation.id == conversation_id,
+            Conversation.repo_id == repo_id,
+            Conversation.status == "active",
+        )
         .one_or_none()
     )
     if conversation is None:
@@ -81,26 +97,52 @@ def delete_conversation(db: Session, repo_id: uuid.UUID, conversation_id: uuid.U
 
     session_ids = [
         item.id
-        for item in db.query(ChatSession.id).filter(ChatSession.conversation_id == conversation.id).all()
+        for item in db.query(ChatSession.id)
+        .filter(ChatSession.conversation_id == conversation.id)
+        .all()
     ]
     workflow_ids = [
         item.id
-        for item in db.query(AgentWorkflowRun.id).filter(AgentWorkflowRun.conversation_id == conversation.id).all()
+        for item in db.query(AgentWorkflowRun.id)
+        .filter(AgentWorkflowRun.conversation_id == conversation.id)
+        .all()
     ]
 
-    db.query(ChatFeedback).filter(ChatFeedback.conversation_id == conversation.id).delete(synchronize_session=False)
-    db.query(MemoryCandidate).filter(MemoryCandidate.conversation_id == conversation.id).delete(synchronize_session=False)
+    db.query(ChatFeedback).filter(
+        ChatFeedback.conversation_id == conversation.id
+    ).delete(synchronize_session=False)
+    db.query(MemoryCandidate).filter(
+        MemoryCandidate.conversation_id == conversation.id
+    ).delete(synchronize_session=False)
     if session_ids:
-        db.query(MemoryCandidate).filter(MemoryCandidate.session_id.in_(session_ids)).delete(synchronize_session=False)
-    db.query(RecallEvent).filter(RecallEvent.conversation_id == conversation.id).delete(synchronize_session=False)
+        db.query(MemoryCandidate).filter(
+            MemoryCandidate.session_id.in_(session_ids)
+        ).delete(synchronize_session=False)
+    db.query(RecallEvent).filter(RecallEvent.conversation_id == conversation.id).delete(
+        synchronize_session=False
+    )
     if workflow_ids:
-        db.query(AgentTaskRun).filter(AgentTaskRun.workflow_id.in_(workflow_ids)).delete(synchronize_session=False)
-    db.query(AgentWorkflowRun).filter(AgentWorkflowRun.conversation_id == conversation.id).delete(synchronize_session=False)
-    db.query(ChatMessage).filter(ChatMessage.conversation_id == conversation.id).delete(synchronize_session=False)
-    db.query(ChatSession).filter(ChatSession.conversation_id == conversation.id).delete(synchronize_session=False)
-    db.query(AgentRun).filter(AgentRun.conversation_id == conversation.id).delete(synchronize_session=False)
-    db.query(ConversationMemory).filter(ConversationMemory.conversation_id == conversation.id).delete(synchronize_session=False)
-    db.query(EvidenceItem).filter(EvidenceItem.conversation_id == conversation.id).delete(synchronize_session=False)
+        db.query(AgentTaskRun).filter(
+            AgentTaskRun.workflow_id.in_(workflow_ids)
+        ).delete(synchronize_session=False)
+    db.query(AgentWorkflowRun).filter(
+        AgentWorkflowRun.conversation_id == conversation.id
+    ).delete(synchronize_session=False)
+    db.query(ChatMessage).filter(ChatMessage.conversation_id == conversation.id).delete(
+        synchronize_session=False
+    )
+    db.query(ChatSession).filter(ChatSession.conversation_id == conversation.id).delete(
+        synchronize_session=False
+    )
+    db.query(AgentRun).filter(AgentRun.conversation_id == conversation.id).delete(
+        synchronize_session=False
+    )
+    db.query(ConversationMemory).filter(
+        ConversationMemory.conversation_id == conversation.id
+    ).delete(synchronize_session=False)
+    db.query(EvidenceItem).filter(
+        EvidenceItem.conversation_id == conversation.id
+    ).delete(synchronize_session=False)
     conversation.status = "deleted"
     conversation.updated_at = datetime.now(UTC)
     db.flush()
@@ -121,7 +163,11 @@ def touch_conversation(
     user_message: str | None = None,
     increment: int = 0,
 ) -> None:
-    if user_message and conversation.message_count == 0 and conversation.title.startswith(("默认会话", "新会话")):
+    if (
+        user_message
+        and conversation.message_count == 0
+        and conversation.title.startswith(("默认会话", "新会话"))
+    ):
         title = user_message.strip().replace("\n", " ")
         if title:
             conversation.title = title[:40]
@@ -140,8 +186,14 @@ def backfill_all_default_conversations(db: Session) -> None:
 def _backfill_repo_conversation(db: Session, repo_id: uuid.UUID) -> None:
     conversation = ensure_default_conversation(db, repo_id)
     for model in [ChatMessage, ChatSession, AgentRun]:
-        db.query(model).filter(model.repo_id == repo_id, model.conversation_id.is_(None)).update(
+        db.query(model).filter(
+            model.repo_id == repo_id, model.conversation_id.is_(None)
+        ).update(
             {model.conversation_id: conversation.id},
             synchronize_session=False,
         )
-    conversation.message_count = db.query(ChatMessage).filter(ChatMessage.conversation_id == conversation.id).count()
+    conversation.message_count = (
+        db.query(ChatMessage)
+        .filter(ChatMessage.conversation_id == conversation.id)
+        .count()
+    )

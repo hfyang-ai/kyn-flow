@@ -15,7 +15,9 @@ class InventedOwnerLLM:
 
 @pytest.mark.asyncio
 async def test_issue_agent_fallback_classifies_bug() -> None:
-    result = await IssueAgent(llm=NoopLLM()).run({"title": "API returns 500", "body": "Login fails", "labels": ["bug"]}, {})
+    result = await IssueAgent(llm=NoopLLM()).run(
+        {"title": "API returns 500", "body": "Login fails", "labels": ["bug"]}, {}
+    )
     assert result["category"] == "Bug"
     assert result["conclusion"] == "等待澄清"
     assert result["priority"] == "P1"
@@ -30,7 +32,15 @@ async def test_issue_agent_recommends_merge_for_strong_duplicate() -> None:
             "body": "Steps: expire JWT, call /login, expected 401 but actual 500. Impact: users cannot renew sessions.",
             "labels": ["bug"],
         },
-        {"duplicate_candidates": [{"issue_id": "issue-1", "title": "JWT expiry returns 500", "score": 0.91}]},
+        {
+            "duplicate_candidates": [
+                {
+                    "issue_id": "issue-1",
+                    "title": "JWT expiry returns 500",
+                    "score": 0.91,
+                }
+            ]
+        },
     )
 
     assert result["conclusion"] == "合并到已有 Issue"
@@ -97,7 +107,14 @@ async def test_issue_agent_does_not_assign_person_when_team_is_empty() -> None:
             "body": "希望把项目桌面化，支持 Electron 和窗口管理。",
             "labels": [],
         },
-        {"project_documents": [{"title": "README", "snippet": "项目文档里提到了布偶猫 / opus 这样的协作角色。"}]},
+        {
+            "project_documents": [
+                {
+                    "title": "README",
+                    "snippet": "项目文档里提到了布偶猫 / opus 这样的协作角色。",
+                }
+            ]
+        },
     )
 
     assert result["category"] == "Feature"

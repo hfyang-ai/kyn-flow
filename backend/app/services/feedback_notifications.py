@@ -60,7 +60,11 @@ async def send_negative_feedback_notification(
                 f"Agent 回答：{_clip(run.final_answer, 500)}",
             ]
         )
-    lines.append(f"执行轨迹：{_trace_url(run_id)}" if feedback.run_id else "执行轨迹：该历史回答未关联 run_id")
+    lines.append(
+        f"执行轨迹：{_trace_url(run_id)}"
+        if feedback.run_id
+        else "执行轨迹：该历史回答未关联 run_id"
+    )
 
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
@@ -70,10 +74,18 @@ async def send_negative_feedback_notification(
             )
             response.raise_for_status()
             payload = response.json()
-            status_code = payload.get("StatusCode", payload.get("code", 0)) if isinstance(payload, dict) else 0
+            status_code = (
+                payload.get("StatusCode", payload.get("code", 0))
+                if isinstance(payload, dict)
+                else 0
+            )
             if status_code not in {0, "0", None}:
-                raise RuntimeError(str(payload.get("StatusMessage") or payload.get("msg") or payload))
-    except Exception as exc:  # Notification failure must not lose the persisted feedback.
+                raise RuntimeError(
+                    str(payload.get("StatusMessage") or payload.get("msg") or payload)
+                )
+    except (
+        Exception
+    ) as exc:  # Notification failure must not lose the persisted feedback.
         logger.warning("发送飞书负反馈通知失败：%s", exc)
         return "failed", _clip(str(exc), 1000)
     return "sent", None

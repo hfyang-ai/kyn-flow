@@ -1,4 +1,5 @@
 """Exercise real HTTP pagination -> sync API -> SQL -> health workflow."""
+
 import asyncio
 import json
 import threading
@@ -44,7 +45,14 @@ from app.services.repos_sync import sync_repository
 
 @pytest.fixture
 def github_server():
-    state = {"data": {}, "errors": {}, "requests": [], "bad_shape": False, "repeat_link": False, "disconnect": False}
+    state = {
+        "data": {},
+        "errors": {},
+        "requests": [],
+        "bad_shape": False,
+        "repeat_link": False,
+        "disconnect": False,
+    }
 
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *_args):
@@ -59,9 +67,11 @@ def github_server():
             if state["disconnect"]:
                 self.close_connection = True
                 return
-            status = state["errors"].get((parsed.path, page), state["errors"].get(parsed.path, 200))
+            status = state["errors"].get(
+                (parsed.path, page), state["errors"].get(parsed.path, 200)
+            )
             items = state["data"].get(parsed.path, [])
-            batch = items[(page - 1) * per_page:page * per_page]
+            batch = items[(page - 1) * per_page : page * per_page]
             payload = batch
             if parsed.path.endswith("/actions/runs"):
                 payload = {"total_count": len(items), "workflow_runs": batch}
@@ -97,10 +107,20 @@ def github_server():
 
 @pytest.fixture
 def database(github_server):
-    engine = create_engine("sqlite+pysqlite:///:memory:", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+    engine = create_engine(
+        "sqlite+pysqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
     Base.metadata.create_all(engine)
     with Session(engine) as db:
-        repo = Repository(owner="acme", name="demo", full_name="acme/demo", provider="github_compatible", api_base_url=github_server["url"])
+        repo = Repository(
+            owner="acme",
+            name="demo",
+            full_name="acme/demo",
+            provider="github_compatible",
+            api_base_url=github_server["url"],
+        )
         db.add(repo)
         db.commit()
         yield db, repo
@@ -109,17 +129,32 @@ def database(github_server):
 
 def populate(server):
     server["data"] = {
-        "/repos/acme/demo/issues": [{"id": i, "number": i, "title": f"Issue {i}", "state": "open"} for i in range(1, 206)],
-        "/repos/acme/demo/pulls": [{"id": 1001, "number": 901, "title": "PR", "state": "open"}],
-        "/repos/acme/demo/pulls/901/files": [{"filename": f"file{i}.py", "status": "modified"} for i in range(105)],
-        "/repos/acme/demo/pulls/901/comments": [{"id": i, "body": f"Comment {i}"} for i in range(105)],
-        "/repos/acme/demo/actions/runs": [{"id": 2001, "name": "CI", "status": "completed", "conclusion": "success"}],
-        "/repos/acme/demo/actions/runs/2001/jobs": [{"id": i, "name": f"Job {i}", "conclusion": "success"} for i in range(105)],
+        "/repos/acme/demo/issues": [
+            {"id": i, "number": i, "title": f"Issue {i}", "state": "open"}
+            for i in range(1, 206)
+        ],
+        "/repos/acme/demo/pulls": [
+            {"id": 1001, "number": 901, "title": "PR", "state": "open"}
+        ],
+        "/repos/acme/demo/pulls/901/files": [
+            {"filename": f"file{i}.py", "status": "modified"} for i in range(105)
+        ],
+        "/repos/acme/demo/pulls/901/comments": [
+            {"id": i, "body": f"Comment {i}"} for i in range(105)
+        ],
+        "/repos/acme/demo/actions/runs": [
+            {"id": 2001, "name": "CI", "status": "completed", "conclusion": "success"}
+        ],
+        "/repos/acme/demo/actions/runs/2001/jobs": [
+            {"id": i, "name": f"Job {i}", "conclusion": "success"} for i in range(105)
+        ],
     }
 
 
 @pytest.mark.asyncio
-async def test_full_sync_traverses_all_lists_and_persists_facts(github_server, database):
+async def test_full_sync_traverses_all_lists_and_persists_facts(
+    github_server, database
+):
     populate(github_server)
     db, repo = database
     result = await sync_repository(db, repo, RepoSyncRequest())
@@ -141,7 +176,9 @@ async def test_full_sync_traverses_all_lists_and_persists_facts(github_server, d
 
 
 @pytest.mark.asyncio
-async def test_scheduled_sync_defaults_to_all_pages(github_server, database, monkeypatch):
+async def test_scheduled_sync_defaults_to_all_pages(
+    github_server, database, monkeypatch
+):
     from app.core.config import Settings, settings
     from app.db import session
     from app.services import scheduler
@@ -183,7 +220,9 @@ async def test_issue_limit_counts_issues_after_filtering_pr_pages(github_server)
 
 
 @pytest.mark.asyncio
-async def test_limit_over_100_fetches_more_pages_and_marks_truncation(github_server, database):
+async def test_limit_over_100_fetches_more_pages_and_marks_truncation(
+    github_server, database
+):
     populate(github_server)
     db, repo = database
     result = await sync_repository(db, repo, RepoSyncRequest(limit=150))
@@ -197,8 +236,12 @@ async def test_limit_over_100_fetches_more_pages_and_marks_truncation(github_ser
 
 @pytest.mark.asyncio
 async def test_actions_object_response_is_paginated(github_server):
-    github_server["data"]["/repos/acme/demo/actions/runs"] = [{"id": i} for i in range(205)]
-    items = await list_workflow_runs("acme", "demo", limit=None, base_url=github_server["url"])
+    github_server["data"]["/repos/acme/demo/actions/runs"] = [
+        {"id": i} for i in range(205)
+    ]
+    items = await list_workflow_runs(
+        "acme", "demo", limit=None, base_url=github_server["url"]
+    )
     assert len(items) == 205
     assert items.pages == 3 and items.complete
 
@@ -206,7 +249,9 @@ async def test_actions_object_response_is_paginated(github_server):
 @pytest.mark.asyncio
 async def test_pull_request_list_traverses_all_pages(github_server):
     github_server["data"]["/repos/acme/demo/pulls"] = [{"id": i} for i in range(205)]
-    items = await list_pull_requests("acme", "demo", limit=None, base_url=github_server["url"])
+    items = await list_pull_requests(
+        "acme", "demo", limit=None, base_url=github_server["url"]
+    )
     assert len(items) == 205
     assert items.pages == 3 and items.complete
 
@@ -262,17 +307,29 @@ async def test_failed_source_is_not_reported_as_empty(github_server, database, s
 async def test_second_page_failure_preserves_previous_records(github_server, database):
     populate(github_server)
     db, repo = database
-    db.add(Issue(repo_id=repo.id, github_issue_id=999, number=999, title="Previously synced", state="open"))
+    db.add(
+        Issue(
+            repo_id=repo.id,
+            github_issue_id=999,
+            number=999,
+            title="Previously synced",
+            state="open",
+        )
+    )
     db.commit()
     github_server["errors"][("/repos/acme/demo/issues", 2)] = 403
-    result = await sync_repository(db, repo, RepoSyncRequest(sync_pull_requests=False, sync_workflow_runs=False))
+    result = await sync_repository(
+        db, repo, RepoSyncRequest(sync_pull_requests=False, sync_workflow_runs=False)
+    )
     assert result.status == "failed"
     assert db.query(Issue).one().title == "Previously synced"
     assert result.sources["issues"]["status"] == "failed"
 
 
 @pytest.mark.asyncio
-async def test_detail_failures_keep_existing_files_comments_jobs_and_logs(github_server, database):
+async def test_detail_failures_keep_existing_files_comments_jobs_and_logs(
+    github_server, database
+):
     populate(github_server)
     db, repo = database
     await sync_repository(db, repo, RepoSyncRequest())
@@ -280,7 +337,12 @@ async def test_detail_failures_keep_existing_files_comments_jobs_and_logs(github
     run.logs_text = "previous log"
     db.commit()
     github_server["data"]["/repos/acme/demo/actions/runs"][0]["conclusion"] = "failure"
-    for suffix in ("pulls/901/files", "pulls/901/comments", "actions/runs/2001/jobs", "actions/runs/2001/logs"):
+    for suffix in (
+        "pulls/901/files",
+        "pulls/901/comments",
+        "actions/runs/2001/jobs",
+        "actions/runs/2001/logs",
+    ):
         github_server["errors"][f"/repos/acme/demo/{suffix}"] = 403
     result = await sync_repository(db, repo, RepoSyncRequest())
     assert result.status == "partial"
@@ -296,16 +358,39 @@ async def test_empty_sync_is_distinct_from_skipped(github_server, database):
     db, repo = database
     empty = await sync_repository(db, repo, RepoSyncRequest())
     assert empty.status == "empty" and not empty.errors
-    assert all(source["status"] == "empty" and source["complete"] for source in empty.sources.values())
+    assert all(
+        source["status"] == "empty" and source["complete"]
+        for source in empty.sources.values()
+    )
     previous = repo.last_sync_at
-    skipped = await sync_repository(db, repo, RepoSyncRequest(sync_issues=False, sync_pull_requests=False, sync_workflow_runs=False))
+    skipped = await sync_repository(
+        db,
+        repo,
+        RepoSyncRequest(
+            sync_issues=False, sync_pull_requests=False, sync_workflow_runs=False
+        ),
+    )
     assert skipped.status == "skipped"
     assert repo.last_sync_at == previous
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("state,expected", [("never", "not_synced"), ("empty", "empty"), ("empty_with_history", "empty"), ("failed", "failed"), ("partial", "partial"), ("old", "stale"), ("legacy", "unknown"), ("full", "ready")])
-async def test_health_summary_and_workflow_gate_missing_or_incomplete_data(github_server, database, state, expected, monkeypatch):
+@pytest.mark.parametrize(
+    "state,expected",
+    [
+        ("never", "not_synced"),
+        ("empty", "empty"),
+        ("empty_with_history", "empty"),
+        ("failed", "failed"),
+        ("partial", "partial"),
+        ("old", "stale"),
+        ("legacy", "unknown"),
+        ("full", "ready"),
+    ],
+)
+async def test_health_summary_and_workflow_gate_missing_or_incomplete_data(
+    github_server, database, state, expected, monkeypatch
+):
     monkeypatch.setattr(settings, "llm_api_key", None)
     db, repo = database
     if state in {"partial", "old", "legacy", "full"}:
@@ -314,9 +399,14 @@ async def test_health_summary_and_workflow_gate_missing_or_incomplete_data(githu
         for path in ("issues", "pulls", "actions/runs"):
             github_server["errors"][f"/repos/acme/demo/{path}"] = 403
     if state not in {"never", "legacy"}:
-        await sync_repository(db, repo, RepoSyncRequest(limit=1 if state == "partial" else None))
+        await sync_repository(
+            db, repo, RepoSyncRequest(limit=1 if state == "partial" else None)
+        )
     if state == "old":
-        repo.sync_metadata = {**repo.sync_metadata, "attempted_at": (datetime.now(UTC) - timedelta(days=2)).isoformat()}
+        repo.sync_metadata = {
+            **repo.sync_metadata,
+            "attempted_at": (datetime.now(UTC) - timedelta(days=2)).isoformat(),
+        }
     if state in {"legacy", "empty_with_history"}:
         db.add(Issue(repo_id=repo.id, number=99, title="Legacy data", state="open"))
     db.commit()
@@ -325,9 +415,17 @@ async def test_health_summary_and_workflow_gate_missing_or_incomplete_data(githu
     assert summary["data_status"] == expected
     assert "数据说明" in summary["answer"]
     context, runners = _build_engineering_workflow_runtime(repo, db, "仓库健康状态", {})
-    task = WorkflowTask(id="repo_health", agent_name="repo_health_agent", task_type="repo_health", objective="Assess health", claim=WorkflowClaim(target_type="repository", target_id=str(repo.id)))
+    task = WorkflowTask(
+        id="repo_health",
+        agent_name="repo_health_agent",
+        task_type="repo_health",
+        objective="Assess health",
+        claim=WorkflowClaim(target_type="repository", target_id=str(repo.id)),
+    )
     spec = WorkflowSpec(goal="Assess health", trigger_message="health", tasks=[task])
-    report = await WorkflowOrchestrator(runners).run_spec(spec, context, allow_replan=False)
+    report = await WorkflowOrchestrator(runners).run_spec(
+        spec, context, allow_replan=False
+    )
     result = report["task_results"][0]
     assert result["confidence"] is None
     assert result["output"]["data_status"] == expected
@@ -336,7 +434,10 @@ async def test_health_summary_and_workflow_gate_missing_or_incomplete_data(githu
         assert result["evidence_count"] == 207
         assert "整体健康仍需" in report["final_answer"]
     else:
-        assert any(f["finding_type"] == "evidence_gap" and f["severity"] == "blocker" for f in report["observation"]["findings"])
+        assert any(
+            f["finding_type"] == "evidence_gap" and f["severity"] == "blocker"
+            for f in report["observation"]["findings"]
+        )
         assert "当前不建议直接推进" in report["final_answer"]
     if state in {"never", "empty", "empty_with_history"}:
         assert result["status"] == "skipped"
@@ -346,14 +447,18 @@ async def test_health_summary_and_workflow_gate_missing_or_incomplete_data(githu
     workflow_id = _persist_engineering_workflow(db, repo, None, report)
     assert report["synthesis"]["mode"] == "rules"
     assert report["metrics"]["model_fallback_count"] == (1 if state == "full" else 0)
-    assert report["observation"]["model_review"]["reason"] == ("not_configured" if state == "full" else "hard_findings_first")
+    assert report["observation"]["model_review"]["reason"] == (
+        "not_configured" if state == "full" else "hard_findings_first"
+    )
     expected_status = "error" if state == "failed" else "partial"
     assert db.get(AgentWorkflowRun, workflow_id).status == expected_status
     response = _engineering_workflow_response(repo, workflow_id, report)
     assert response["tool_calls"][0]["status"] == expected_status
 
 
-def test_sync_api_exposes_persisted_failure_and_complete_pagination(github_server, database, monkeypatch):
+def test_sync_api_exposes_persisted_failure_and_complete_pagination(
+    github_server, database, monkeypatch
+):
     db, repo = database
     app = FastAPI()
     app.include_router(repos.router, prefix="/api/repos")
@@ -369,14 +474,19 @@ def test_sync_api_exposes_persisted_failure_and_complete_pagination(github_serve
         failed = client.post(f"/api/repos/{repo.id}/sync", json={})
         assert failed.status_code == 502
         assert failed.json()["status"] == "failed"
-        assert client.get(f"/api/repos/{repo.id}/sync-status").json()["status"] == "failed"
+        assert (
+            client.get(f"/api/repos/{repo.id}/sync-status").json()["status"] == "failed"
+        )
         github_server["errors"].clear()
         populate(github_server)
         response = client.post(f"/api/repos/{repo.id}/sync", json={})
         assert response.status_code == 200
         assert response.json()["synced"]["issues"] == 205
         assert response.json()["sources"]["issues"]["pages"] == 3
-        assert client.get(f"/api/repos/{repo.id}/sync-status").json()["status"] == "completed"
+        assert (
+            client.get(f"/api/repos/{repo.id}/sync-status").json()["status"]
+            == "completed"
+        )
         listing = client.get("/api/repos").json()
         assert listing[0]["sync_metadata"]["status"] == "completed"
 
@@ -386,15 +496,22 @@ def test_sync_api_exposes_persisted_failure_and_complete_pagination(github_serve
 async def test_invalid_pagination_fails_explicitly(github_server, fault):
     github_server[fault] = True
     with pytest.raises(ValueError):
-        await GitHubClient(base_url=github_server["url"]).get_paginated("/repos/acme/demo/issues")
+        await GitHubClient(base_url=github_server["url"]).get_paginated(
+            "/repos/acme/demo/issues"
+        )
 
 
-def test_startup_upgrades_existing_database_without_losing_repository(tmp_path, monkeypatch):
+def test_startup_upgrades_existing_database_without_losing_repository(
+    tmp_path, monkeypatch
+):
     from app import main
     from app.core.config import settings
     from app.db import session
 
-    engine = create_engine(f"sqlite+pysqlite:///{(tmp_path / 'legacy.db').as_posix()}", connect_args={"check_same_thread": False})
+    engine = create_engine(
+        f"sqlite+pysqlite:///{(tmp_path / 'legacy.db').as_posix()}",
+        connect_args={"check_same_thread": False},
+    )
     Base.metadata.create_all(engine)
     with Session(engine) as db:
         repo = Repository(owner="acme", name="legacy", full_name="acme/legacy")
@@ -412,7 +529,9 @@ def test_startup_upgrades_existing_database_without_losing_repository(tmp_path, 
     for _ in range(2):
         with TestClient(app) as client:
             assert client.get("/health").status_code == 200
-    assert "sync_metadata" in {column["name"] for column in inspect(engine).get_columns("repositories")}
+    assert "sync_metadata" in {
+        column["name"] for column in inspect(engine).get_columns("repositories")
+    }
     with Session(engine) as db:
         repo = db.query(Repository).one()
         assert str(repo.id) == repo_id and repo.full_name == "acme/legacy"

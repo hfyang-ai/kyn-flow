@@ -7,8 +7,23 @@ from app.db.models import AuditLog, User
 from app.db.session import get_db
 
 ROLE_PERMISSIONS: dict[str, set[str]] = {
-    "owner": {"repo:read", "repo:sync", "agent:run", "draft:create", "draft:approve", "eval:read", "settings:manage"},
-    "maintainer": {"repo:read", "repo:sync", "agent:run", "draft:create", "draft:approve", "eval:read"},
+    "owner": {
+        "repo:read",
+        "repo:sync",
+        "agent:run",
+        "draft:create",
+        "draft:approve",
+        "eval:read",
+        "settings:manage",
+    },
+    "maintainer": {
+        "repo:read",
+        "repo:sync",
+        "agent:run",
+        "draft:create",
+        "draft:approve",
+        "eval:read",
+    },
     "developer": {"repo:read", "agent:run", "draft:create", "eval:read"},
     "viewer": {"repo:read", "eval:read"},
 }

@@ -14,7 +14,9 @@ MAX_DOCX_UNCOMPRESSED_BYTES = 64 * 1024 * 1024
 
 def _ensure_text_limit(text: str) -> str:
     if len(text) > MAX_EXTRACTED_CHARS:
-        raise ValueError(f"extracted text exceeds the {MAX_EXTRACTED_CHARS} character limit")
+        raise ValueError(
+            f"extracted text exceeds the {MAX_EXTRACTED_CHARS} character limit"
+        )
     return text
 
 
@@ -43,7 +45,9 @@ def _extract_pdf(data: bytes) -> str:
             content = f"<!-- page: {page_number} -->\n{text}"
             extracted_chars += len(content) + (2 if pages else 0)
             if extracted_chars > MAX_EXTRACTED_CHARS:
-                raise ValueError(f"PDF text exceeds the {MAX_EXTRACTED_CHARS} character limit")
+                raise ValueError(
+                    f"PDF text exceeds the {MAX_EXTRACTED_CHARS} character limit"
+                )
             pages.append(content)
     return _ensure_text_limit("\n\n".join(pages))
 
@@ -66,7 +70,10 @@ def _paragraph_as_markdown(paragraph) -> str:
 
 
 def _table_as_markdown(table) -> str:
-    rows = [[cell.text.strip().replace("\n", " ") for cell in row.cells] for row in table.rows]
+    rows = [
+        [cell.text.strip().replace("\n", " ") for cell in row.cells]
+        for row in table.rows
+    ]
     if not rows:
         return ""
     width = max(len(row) for row in rows)
@@ -75,7 +82,13 @@ def _table_as_markdown(table) -> str:
     def render(row: list[str]) -> str:
         return "| " + " | ".join(cell.replace("|", "\\|") for cell in row) + " |"
 
-    return "\n".join([render(normalized[0]), render(["---"] * width), *(render(row) for row in normalized[1:])])
+    return "\n".join(
+        [
+            render(normalized[0]),
+            render(["---"] * width),
+            *(render(row) for row in normalized[1:]),
+        ]
+    )
 
 
 def _extract_docx(data: bytes) -> str:
@@ -113,7 +126,9 @@ def _extract_docx(data: bytes) -> str:
         if content:
             extracted_chars += len(content) + (2 if blocks else 0)
             if extracted_chars > MAX_EXTRACTED_CHARS:
-                raise ValueError(f"DOCX text exceeds the {MAX_EXTRACTED_CHARS} character limit")
+                raise ValueError(
+                    f"DOCX text exceeds the {MAX_EXTRACTED_CHARS} character limit"
+                )
             blocks.append(content)
     return _ensure_text_limit("\n\n".join(blocks))
 

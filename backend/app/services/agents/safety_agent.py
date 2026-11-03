@@ -9,7 +9,9 @@ class SafetyAgent(BaseAgent):
     description = "检查某个操作是否需要人工确认。"
     available_tools = ["classify_action_risk"]
 
-    async def run(self, input_data: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+    async def run(
+        self, input_data: dict[str, Any], context: dict[str, Any]
+    ) -> dict[str, Any]:
         action = input_data.get("action", "").lower()
         risky = any(
             token in action
@@ -35,6 +37,8 @@ class SafetyAgent(BaseAgent):
         return SafetyOutput(
             requires_confirmation=risky,
             risk_level="medium" if risky else "low",
-            reason="MVP 阶段所有外部写操作只生成草稿。" if risky else "只读分析操作不需要人工确认。",
+            reason="MVP 阶段所有外部写操作只生成草稿。"
+            if risky
+            else "只读分析操作不需要人工确认。",
             draft=input_data.get("draft"),
         ).model_dump()

@@ -60,7 +60,9 @@ def _snapshot_meta_path(path: Path) -> Path:
 
 def _write_snapshot_meta(path: Path, meta: dict[str, Any]) -> None:
     payload = {**meta, "updated_at": datetime.now(UTC).isoformat()}
-    _snapshot_meta_path(path).write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    _snapshot_meta_path(path).write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
 
 
 def _sync_pr_snapshot_analysis(
@@ -108,18 +110,35 @@ def _snapshot_response(
     }
 
 
-def prepare_pr_worktree(db: Session, repo: Repository, pr: PullRequest) -> dict[str, Any]:
+def prepare_pr_worktree(
+    db: Session, repo: Repository, pr: PullRequest
+) -> dict[str, Any]:
     """Prepare a PR branch snapshot for live search and refresh its code graph."""
     lock_key = f"{repo.id}:{pr.id}"
     lock = _snapshot_lock(lock_key)
     with lock:
         if (repo.checkout_mode or "managed") == "local":
-            return _snapshot_response(status="unsupported", message="本地仓库模式不自动创建或删除 PR 分支快照。", pr=pr, fallback=repo.local_path)
+            return _snapshot_response(
+                status="unsupported",
+                message="本地仓库模式不自动创建或删除 PR 分支快照。",
+                pr=pr,
+                fallback=repo.local_path,
+            )
         if not pr.head_branch:
-            return _snapshot_response(status="missing_head", message="PR 缺少 head branch，继续使用默认分支代码。", pr=pr)
+            return _snapshot_response(
+                status="missing_head",
+                message="PR 缺少 head branch，继续使用默认分支代码。",
+                pr=pr,
+            )
         if not shutil.which("git"):
-            return _snapshot_response(status="failed", message="未找到 git，可继续使用默认分支代码。", pr=pr)
-        token = decrypt_token(repo.github_token_encrypted, settings.token_encryption_key) if repo.github_token_encrypted else None
+            return _snapshot_response(
+                status="failed", message="未找到 git，可继续使用默认分支代码。", pr=pr
+            )
+        token = (
+            decrypt_token(repo.github_token_encrypted, settings.token_encryption_key)
+            if repo.github_token_encrypted
+            else None
+        )
         target = pr_worktree_path(repo, pr)
         try:
             base_checkout = _sync_checkout(repo, token)
@@ -131,9 +150,22 @@ def prepare_pr_worktree(db: Session, repo: Repository, pr: PullRequest) -> dict[
                 _run_git(["fetch", "origin", ref], cwd=target)
                 _run_git(["checkout", "-B", local_branch, "FETCH_HEAD"], cwd=target)
             else:
-                _run_git(["worktree", "add", "--force", "-B", local_branch, str(target), "FETCH_HEAD"], cwd=base_checkout)
+                _run_git(
+                    [
+                        "worktree",
+                        "add",
+                        "--force",
+                        "-B",
+                        local_branch,
+                        str(target),
+                        "FETCH_HEAD",
+                    ],
+                    cwd=base_checkout,
+                )
             commit_sha = _git_text(["rev-parse", "HEAD"], target)
-            indexed_symbols = _sync_pr_snapshot_analysis(db, repo, pr, target, ref, commit_sha)
+            indexed_symbols = _sync_pr_snapshot_analysis(
+                db, repo, pr, target, ref, commit_sha
+            )
             _write_snapshot_meta(
                 target,
                 {
@@ -165,7 +197,9 @@ def prepare_pr_worktree(db: Session, repo: Repository, pr: PullRequest) -> dict[
             )
 
 
-def cleanup_pr_snapshots(db: Session, repo: Repository, *, max_age_hours: int = 168) -> dict[str, Any]:
+def cleanup_pr_snapshots(
+    db: Session, repo: Repository, *, max_age_hours: int = 168
+) -> dict[str, Any]:
     root = _checkout_root() / "worktrees" / str(repo.id)
     if not root.exists():
         return {"removed": 0, "paths": []}
@@ -182,7 +216,9 @@ def cleanup_pr_snapshots(db: Session, repo: Repository, *, max_age_hours: int = 
             try:
                 metadata = json.loads(meta_path.read_text(encoding="utf-8"))
                 updated_raw = metadata.get("updated_at")
-                updated_at = datetime.fromisoformat(updated_raw) if updated_raw else None
+                updated_at = (
+                    datetime.fromisoformat(updated_raw) if updated_raw else None
+                )
                 if metadata.get("pr_id"):
                     snapshot_pr_id = uuid.UUID(str(metadata["pr_id"]))
             except (OSError, ValueError, json.JSONDecodeError):
@@ -193,9 +229,18 @@ def cleanup_pr_snapshots(db: Session, repo: Repository, *, max_age_hours: int = 
             continue
         try:
             # Remove from Git first so the main checkout does not keep stale worktree records.
-            main_checkout = next((item for item in _checkout_root().glob(f"{repo.id}-*") if item.is_dir()), None)
+            main_checkout = next(
+                (
+                    item
+                    for item in _checkout_root().glob(f"{repo.id}-*")
+                    if item.is_dir()
+                ),
+                None,
+            )
             if main_checkout:
-                _run_git(["worktree", "remove", "--force", str(path)], cwd=main_checkout)
+                _run_git(
+                    ["worktree", "remove", "--force", str(path)], cwd=main_checkout
+                )
             elif path.exists():
                 shutil.rmtree(path)
         except Exception:

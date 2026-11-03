@@ -24,7 +24,9 @@ def _repo_or_404(db: Session, repo_id: uuid.UUID) -> Repository:
 
 
 @router.get("/{repo_id}/conversations", response_model=list[ConversationResponse])
-async def get_conversations(repo_id: uuid.UUID, db: Session = Depends(get_db)) -> list[Any]:
+async def get_conversations(
+    repo_id: uuid.UUID, db: Session = Depends(get_db)
+) -> list[Any]:
     _repo_or_404(db, repo_id)
     conversations = list_conversations(db, repo_id)
     db.commit()

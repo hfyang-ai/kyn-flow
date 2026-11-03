@@ -13,7 +13,12 @@ class McpClientError(RuntimeError):
 
 
 class StdioMcpClient:
-    def __init__(self, command: str | None = None, args: list[str] | None = None, cwd: str | None = None) -> None:
+    def __init__(
+        self,
+        command: str | None = None,
+        args: list[str] | None = None,
+        cwd: str | None = None,
+    ) -> None:
         backend_root = Path(__file__).resolve().parents[2]
         self.command = command or sys.executable
         self.args = args or [str(backend_root / "app" / "mcp" / "memory_server.py")]
@@ -25,7 +30,9 @@ class StdioMcpClient:
         try:
             await self._initialize(process)
             await self._notify(process, "notifications/initialized", {})
-            return await self._request(process, "tools/call", {"name": name, "arguments": arguments})
+            return await self._request(
+                process, "tools/call", {"name": name, "arguments": arguments}
+            )
         finally:
             await self._stop(process)
 
@@ -67,13 +74,22 @@ class StdioMcpClient:
         )
         return process
 
-    async def _notify(self, process: asyncio.subprocess.Process, method: str, params: dict[str, Any]) -> None:
-        await self._write(process, {"jsonrpc": "2.0", "method": method, "params": params})
+    async def _notify(
+        self, process: asyncio.subprocess.Process, method: str, params: dict[str, Any]
+    ) -> None:
+        await self._write(
+            process, {"jsonrpc": "2.0", "method": method, "params": params}
+        )
 
-    async def _request(self, process: asyncio.subprocess.Process, method: str, params: dict[str, Any]) -> dict[str, Any]:
+    async def _request(
+        self, process: asyncio.subprocess.Process, method: str, params: dict[str, Any]
+    ) -> dict[str, Any]:
         request_id = self._next_id
         self._next_id += 1
-        await self._write(process, {"jsonrpc": "2.0", "id": request_id, "method": method, "params": params})
+        await self._write(
+            process,
+            {"jsonrpc": "2.0", "id": request_id, "method": method, "params": params},
+        )
         if process.stdout is None:
             raise McpClientError("MCP process has no stdout")
         try:
@@ -88,16 +104,22 @@ class StdioMcpClient:
         try:
             response = json.loads(line.decode("utf-8"))
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-            raise McpClientError(f"MCP server returned an invalid JSON response for {method}") from exc
+            raise McpClientError(
+                f"MCP server returned an invalid JSON response for {method}"
+            ) from exc
         if "error" in response:
             error = response["error"]
             raise McpClientError(str(error.get("message") or error))
         return response.get("result") or {}
 
-    async def _write(self, process: asyncio.subprocess.Process, payload: dict[str, Any]) -> None:
+    async def _write(
+        self, process: asyncio.subprocess.Process, payload: dict[str, Any]
+    ) -> None:
         if process.stdin is None:
             raise McpClientError("MCP process has no stdin")
-        process.stdin.write((json.dumps(payload, ensure_ascii=False) + "\n").encode("utf-8"))
+        process.stdin.write(
+            (json.dumps(payload, ensure_ascii=False) + "\n").encode("utf-8")
+        )
         await process.stdin.drain()
 
     async def _stop(self, process: asyncio.subprocess.Process) -> None:

@@ -39,21 +39,36 @@ def login_of(user: dict | None) -> str | None:
     return user.get("login") if user else None
 
 
-async def sync_repository(db: Session, repo: Repository, payload: RepoSyncRequest) -> RepoSyncResponse:
+async def sync_repository(
+    db: Session, repo: Repository, payload: RepoSyncRequest
+) -> RepoSyncResponse:
     if repo.provider not in {"github", "github_compatible"}:
-        raise HTTPException(status_code=400, detail=f"{repo.provider} sync is not implemented yet")
+        raise HTTPException(
+            status_code=400, detail=f"{repo.provider} sync is not implemented yet"
+        )
 
     synced = {"issues": 0, "pull_requests": 0, "workflow_runs": 0}
-    token = decrypt_token(repo.github_token_encrypted, settings.token_encryption_key) if repo.github_token_encrypted else None
+    token = (
+        decrypt_token(repo.github_token_encrypted, settings.token_encryption_key)
+        if repo.github_token_encrypted
+        else None
+    )
     base_url = repo.api_base_url
-    sources = {key: {"status": "skipped", "count": 0, "complete": False, "pages": 0} for key in synced}
+    sources = {
+        key: {"status": "skipped", "count": 0, "complete": False, "pages": 0}
+        for key in synced
+    }
     errors: list[str] = []
 
     async def fetch(source: str, loader, *args, detail: str | None = None, **kwargs):
         try:
             items = await loader(*args, **kwargs)
         except (httpx.HTTPError, ValueError) as exc:
-            reason = f"HTTP {exc.response.status_code}" if isinstance(exc, httpx.HTTPStatusError) else type(exc).__name__
+            reason = (
+                f"HTTP {exc.response.status_code}"
+                if isinstance(exc, httpx.HTTPStatusError)
+                else type(exc).__name__
+            )
             message = f"{source}{'/' + detail if detail else ''}: {reason}"
             errors.append(message)
             sources[source]["status"] = "partial" if detail else "failed"
@@ -62,36 +77,85 @@ async def sync_repository(db: Session, repo: Repository, payload: RepoSyncReques
         if detail is None:
             complete = getattr(items, "complete", True)
             sources[source] = {
-                "status": ("completed" if items else "empty") if complete else "partial",
-                "count": len(items), "complete": complete, "pages": getattr(items, "pages", 1),
+                "status": ("completed" if items else "empty")
+                if complete
+                else "partial",
+                "count": len(items),
+                "complete": complete,
+                "pages": getattr(items, "pages", 1),
             }
         return items
 
     if payload.sync_issues:
-        remote_issues = await fetch("issues", list_issues, repo.owner, repo.name, token=token, limit=payload.limit, base_url=base_url)
+        remote_issues = await fetch(
+            "issues",
+            list_issues,
+            repo.owner,
+            repo.name,
+            token=token,
+            limit=payload.limit,
+            base_url=base_url,
+        )
         for item in remote_issues or []:
-            issue = db.query(Issue).filter(Issue.repo_id == repo.id, Issue.github_issue_id == item.get("id")).one_or_none()
+            issue = (
+                db.query(Issue)
+                .filter(
+                    Issue.repo_id == repo.id, Issue.github_issue_id == item.get("id")
+                )
+                .one_or_none()
+            )
             if issue is None:
-                issue = Issue(repo_id=repo.id, github_issue_id=item.get("id"), number=item.get("number", 0), title=item.get("title") or "")
+                issue = Issue(
+                    repo_id=repo.id,
+                    github_issue_id=item.get("id"),
+                    number=item.get("number", 0),
+                    title=item.get("title") or "",
+                )
                 db.add(issue)
             issue.number = item.get("number", issue.number)
             issue.title = item.get("title") or issue.title
             issue.body = item.get("body")
             issue.state = item.get("state") or "open"
-            issue.labels = [label.get("name") for label in item.get("labels", []) if label.get("name")]
+            issue.labels = [
+                label.get("name")
+                for label in item.get("labels", [])
+                if label.get("name")
+            ]
             issue.author = login_of(item.get("user"))
-            issue.assignees = [login_of(user) for user in item.get("assignees", []) if login_of(user)]
+            issue.assignees = [
+                login_of(user) for user in item.get("assignees", []) if login_of(user)
+            ]
             issue.created_at = parse_github_datetime(item.get("created_at"))
             issue.updated_at = parse_github_datetime(item.get("updated_at"))
             issue.closed_at = parse_github_datetime(item.get("closed_at"))
             synced["issues"] += 1
 
     if payload.sync_pull_requests:
-        remote_prs = await fetch("pull_requests", list_pull_requests, repo.owner, repo.name, token=token, limit=payload.limit, base_url=base_url)
+        remote_prs = await fetch(
+            "pull_requests",
+            list_pull_requests,
+            repo.owner,
+            repo.name,
+            token=token,
+            limit=payload.limit,
+            base_url=base_url,
+        )
         for item in remote_prs or []:
-            pr = db.query(PullRequest).filter(PullRequest.repo_id == repo.id, PullRequest.github_pr_id == item.get("id")).one_or_none()
+            pr = (
+                db.query(PullRequest)
+                .filter(
+                    PullRequest.repo_id == repo.id,
+                    PullRequest.github_pr_id == item.get("id"),
+                )
+                .one_or_none()
+            )
             if pr is None:
-                pr = PullRequest(repo_id=repo.id, github_pr_id=item.get("id"), number=item.get("number", 0), title=item.get("title") or "")
+                pr = PullRequest(
+                    repo_id=repo.id,
+                    github_pr_id=item.get("id"),
+                    number=item.get("number", 0),
+                    title=item.get("title") or "",
+                )
                 db.add(pr)
                 db.flush()
             pr.number = item.get("number", pr.number)
@@ -105,7 +169,16 @@ async def sync_repository(db: Session, repo: Repository, payload: RepoSyncReques
             pr.created_at = parse_github_datetime(item.get("created_at"))
             pr.updated_at = parse_github_datetime(item.get("updated_at"))
 
-            files = await fetch("pull_requests", list_pull_request_files, repo.owner, repo.name, pr.number, token=token, base_url=base_url, detail=f"#{pr.number}/files")
+            files = await fetch(
+                "pull_requests",
+                list_pull_request_files,
+                repo.owner,
+                repo.name,
+                pr.number,
+                token=token,
+                base_url=base_url,
+                detail=f"#{pr.number}/files",
+            )
             if files is not None:
                 db.query(PRFile).filter(PRFile.pr_id == pr.id).delete()
             for file_item in files or []:
@@ -119,9 +192,20 @@ async def sync_repository(db: Session, repo: Repository, payload: RepoSyncReques
                         patch=file_item.get("patch"),
                     )
                 )
-            review_comments = await fetch("pull_requests", list_pull_request_review_comments, repo.owner, repo.name, pr.number, token=token, base_url=base_url, detail=f"#{pr.number}/comments")
+            review_comments = await fetch(
+                "pull_requests",
+                list_pull_request_review_comments,
+                repo.owner,
+                repo.name,
+                pr.number,
+                token=token,
+                base_url=base_url,
+                detail=f"#{pr.number}/comments",
+            )
             if review_comments is not None:
-                db.query(PRReviewComment).filter(PRReviewComment.pr_id == pr.id).delete()
+                db.query(PRReviewComment).filter(
+                    PRReviewComment.pr_id == pr.id
+                ).delete()
             for comment_item in review_comments or []:
                 db.add(
                     PRReviewComment(
@@ -129,20 +213,44 @@ async def sync_repository(db: Session, repo: Repository, payload: RepoSyncReques
                         github_comment_id=comment_item.get("id"),
                         body=comment_item.get("body"),
                         path=comment_item.get("path"),
-                        line=comment_item.get("line") or comment_item.get("original_line"),
+                        line=comment_item.get("line")
+                        or comment_item.get("original_line"),
                         author=login_of(comment_item.get("user")),
-                        created_at=parse_github_datetime(comment_item.get("created_at")),
-                        updated_at=parse_github_datetime(comment_item.get("updated_at")),
+                        created_at=parse_github_datetime(
+                            comment_item.get("created_at")
+                        ),
+                        updated_at=parse_github_datetime(
+                            comment_item.get("updated_at")
+                        ),
                     )
                 )
             synced["pull_requests"] += 1
 
     if payload.sync_workflow_runs:
-        remote_runs = await fetch("workflow_runs", list_workflow_runs, repo.owner, repo.name, token=token, limit=payload.limit, base_url=base_url)
+        remote_runs = await fetch(
+            "workflow_runs",
+            list_workflow_runs,
+            repo.owner,
+            repo.name,
+            token=token,
+            limit=payload.limit,
+            base_url=base_url,
+        )
         for item in remote_runs or []:
-            run = db.query(WorkflowRun).filter(WorkflowRun.repo_id == repo.id, WorkflowRun.github_run_id == item.get("id")).one_or_none()
+            run = (
+                db.query(WorkflowRun)
+                .filter(
+                    WorkflowRun.repo_id == repo.id,
+                    WorkflowRun.github_run_id == item.get("id"),
+                )
+                .one_or_none()
+            )
             if run is None:
-                run = WorkflowRun(repo_id=repo.id, github_run_id=item.get("id"), name=item.get("name") or "workflow")
+                run = WorkflowRun(
+                    repo_id=repo.id,
+                    github_run_id=item.get("id"),
+                    name=item.get("name") or "workflow",
+                )
                 db.add(run)
             run.name = item.get("name") or run.name
             run.status = item.get("status") or "unknown"
@@ -151,7 +259,16 @@ async def sync_repository(db: Session, repo: Repository, payload: RepoSyncReques
             run.created_at = parse_github_datetime(item.get("created_at"))
             run.updated_at = parse_github_datetime(item.get("updated_at"))
             if run.github_run_id:
-                jobs = await fetch("workflow_runs", list_workflow_run_jobs, repo.owner, repo.name, run.github_run_id, token=token, base_url=base_url, detail=f"{run.github_run_id}/jobs")
+                jobs = await fetch(
+                    "workflow_runs",
+                    list_workflow_run_jobs,
+                    repo.owner,
+                    repo.name,
+                    run.github_run_id,
+                    token=token,
+                    base_url=base_url,
+                    detail=f"{run.github_run_id}/jobs",
+                )
                 if jobs is not None:
                     run.jobs = [
                         {
@@ -175,7 +292,16 @@ async def sync_repository(db: Session, repo: Repository, payload: RepoSyncReques
                         for job in jobs
                     ]
             if run.conclusion == "failure" and run.github_run_id:
-                logs = await fetch("workflow_runs", get_workflow_run_logs, repo.owner, repo.name, run.github_run_id, token=token, base_url=base_url, detail=f"{run.github_run_id}/logs")
+                logs = await fetch(
+                    "workflow_runs",
+                    get_workflow_run_logs,
+                    repo.owner,
+                    repo.name,
+                    run.github_run_id,
+                    token=token,
+                    base_url=base_url,
+                    detail=f"{run.github_run_id}/logs",
+                )
                 if logs is not None:
                     run.logs_text = logs
             synced["workflow_runs"] += 1
@@ -199,14 +325,27 @@ async def sync_repository(db: Session, repo: Repository, payload: RepoSyncReques
     }
     if status in {"completed", "empty"}:
         repo.last_sync_at = now
-    result = RepoSyncResponse(repo_id=repo.id, status=status, synced=synced, sources=sources, errors=errors, message=messages[status])
-    repo.sync_metadata = {**result.model_dump(mode="json"), "attempted_at": now.isoformat(), "limit": payload.limit}
+    result = RepoSyncResponse(
+        repo_id=repo.id,
+        status=status,
+        synced=synced,
+        sources=sources,
+        errors=errors,
+        message=messages[status],
+    )
+    repo.sync_metadata = {
+        **result.model_dump(mode="json"),
+        "attempted_at": now.isoformat(),
+        "limit": payload.limit,
+    }
     db.flush()
     db.commit()
     return result
 
 
-async def sync_repository_by_id(repo_id: UUID, payload: RepoSyncRequest) -> RepoSyncResponse | None:
+async def sync_repository_by_id(
+    repo_id: UUID, payload: RepoSyncRequest
+) -> RepoSyncResponse | None:
     from app.db.session import SessionLocal
 
     db = SessionLocal()

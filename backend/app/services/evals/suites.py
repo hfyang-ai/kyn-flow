@@ -106,7 +106,9 @@ def list_eval_suites(
             payload, sha256 = _read_suite(path)
             if _suite_applies_to_repo(payload, repo):
                 suites.append(_suite_metadata(db, repo, path, payload, sha256))
-    suites.sort(key=lambda item: (not item["recommended"], not item["ready"], item["label"]))
+    suites.sort(
+        key=lambda item: (not item["recommended"], not item["ready"], item["label"])
+    )
     suites.append(
         {
             "id": AUTO_SMOKE_SUITE_ID,
@@ -152,7 +154,9 @@ def load_eval_suite(
         raise ValueError(f"Repository {repo_id} was not found")
     for path in sorted(suite_dir.glob("*.json")) if suite_dir.is_dir() else []:
         payload, sha256 = _read_suite(path)
-        if str(payload["name"]) != suite_id or not _suite_applies_to_repo(payload, repo):
+        if str(payload["name"]) != suite_id or not _suite_applies_to_repo(
+            payload, repo
+        ):
             continue
         metadata = _suite_metadata(db, repo, path, payload, sha256)
         if not metadata["ready"]:
@@ -164,9 +168,13 @@ def load_eval_suite(
             question = str(item.get("question") or "").strip()
             reference = str(item.get("reference") or "").strip()
             if not question or not reference:
-                raise ValueError(f"评测集 {suite_id} 的 {case_id} 缺少 question 或 reference")
+                raise ValueError(
+                    f"评测集 {suite_id} 的 {case_id} 缺少 question 或 reference"
+                )
             source_file = str(item.get("source_file") or "").strip()
-            documents = _matching_documents(db, repo.id, source_file) if source_file else []
+            documents = (
+                _matching_documents(db, repo.id, source_file) if source_file else []
+            )
             expected_source_ids = list(
                 dict.fromkeys(
                     str(value)
@@ -182,11 +190,19 @@ def load_eval_suite(
                     reference=reference,
                     expected_source_ids=expected_source_ids,
                     source_type=str(item.get("source_type") or "knowledge_file"),
-                    required_tools=[str(value) for value in item.get("required_tools") or []],
-                    expected_tool_calls=[dict(value) for value in item.get("expected_tool_calls") or []],
+                    required_tools=[
+                        str(value) for value in item.get("required_tools") or []
+                    ],
+                    expected_tool_calls=[
+                        dict(value) for value in item.get("expected_tool_calls") or []
+                    ],
                     kind=str(item.get("kind") or "positive"),
-                    must_include=[str(value) for value in item.get("must_include") or []],
-                    must_not_include=[str(value) for value in item.get("must_not_include") or []],
+                    must_include=[
+                        str(value) for value in item.get("must_include") or []
+                    ],
+                    must_not_include=[
+                        str(value) for value in item.get("must_not_include") or []
+                    ],
                     answer_regex=str(item.get("answer_regex") or "").strip() or None,
                     source_file=source_file or None,
                 )

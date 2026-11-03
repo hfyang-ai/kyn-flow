@@ -7,4 +7,11 @@ from app.services.skills.registry import (
     get_skill_registry,
 )
 
-__all__ = ["SkillActivation", "SkillDefinition", "SkillManifest", "SkillRegistry", "SkillRegistryError", "get_skill_registry"]
+__all__ = [
+    "SkillActivation",
+    "SkillDefinition",
+    "SkillManifest",
+    "SkillRegistry",
+    "SkillRegistryError",
+    "get_skill_registry",
+]

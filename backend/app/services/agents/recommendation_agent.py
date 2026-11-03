@@ -12,7 +12,9 @@ class RecommendationAgent(BaseAgent):
     description = "根据当前仓库的 Issue、PR 和 CI 状态推荐上下文相关的聊天提问。"
     available_tools = ["repository_snapshot"]
 
-    async def run(self, input_data: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+    async def run(
+        self, input_data: dict[str, Any], context: dict[str, Any]
+    ) -> dict[str, Any]:
         limit = min(max(int(input_data.get("limit") or 5), 4), 5)
         excluded = {self._normalize(item) for item in input_data.get("exclude") or []}
         candidates = self._build_candidates(input_data)
@@ -48,9 +50,15 @@ class RecommendationAgent(BaseAgent):
         }
 
     def _build_candidates(self, input_data: dict[str, Any]) -> list[str]:
-        issues = sorted(input_data.get("issues") or [], key=self._sort_key, reverse=True)
-        prs = sorted(input_data.get("pull_requests") or [], key=self._sort_key, reverse=True)
-        runs = sorted(input_data.get("workflow_runs") or [], key=self._sort_key, reverse=True)
+        issues = sorted(
+            input_data.get("issues") or [], key=self._sort_key, reverse=True
+        )
+        prs = sorted(
+            input_data.get("pull_requests") or [], key=self._sort_key, reverse=True
+        )
+        runs = sorted(
+            input_data.get("workflow_runs") or [], key=self._sort_key, reverse=True
+        )
         if not issues and not prs and not runs:
             return [
                 "概览这个新仓库的当前状态",
@@ -62,9 +70,17 @@ class RecommendationAgent(BaseAgent):
                 "帮我规划第一次项目同步和分析",
             ]
 
-        open_issues = [item for item in issues if str(item.get("state") or "").lower() == "open"]
-        open_prs = [item for item in prs if str(item.get("state") or "").lower() == "open"]
-        failed_runs = [item for item in runs if str(item.get("conclusion") or "").lower() == "failure"]
+        open_issues = [
+            item for item in issues if str(item.get("state") or "").lower() == "open"
+        ]
+        open_prs = [
+            item for item in prs if str(item.get("state") or "").lower() == "open"
+        ]
+        failed_runs = [
+            item
+            for item in runs
+            if str(item.get("conclusion") or "").lower() == "failure"
+        ]
 
         candidates: list[str] = []
 
@@ -122,7 +138,9 @@ class RecommendationAgent(BaseAgent):
             candidates.extend(
                 [
                     "最近 CI 为什么失败",
-                    "把失败 CI 和相关 PR 串起来分析" if prs else "把失败 CI 整理成排查步骤",
+                    "把失败 CI 和相关 PR 串起来分析"
+                    if prs
+                    else "把失败 CI 整理成排查步骤",
                 ]
             )
         if prs:
@@ -145,7 +163,9 @@ class RecommendationAgent(BaseAgent):
                 ]
             )
         if issues and prs:
-            candidates.extend(["把当前 Issue 和 PR 做成站会摘要", "找出最可能拖慢交付的事项"])
+            candidates.extend(
+                ["把当前 Issue 和 PR 做成站会摘要", "找出最可能拖慢交付的事项"]
+            )
 
         candidates.extend(
             [

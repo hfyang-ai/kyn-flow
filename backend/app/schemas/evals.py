@@ -22,7 +22,14 @@ class RagEvalCaseRequest(BaseModel):
 class EvalRunRequest(BaseModel):
     name: str = "basic_eval"
     repo_id: UUID | None = None
-    eval_types: list[str] = Field(default_factory=lambda: ["issue_classification", "rag", "pr_summary", "tool_calls"])
+    eval_types: list[str] = Field(
+        default_factory=lambda: [
+            "issue_classification",
+            "rag",
+            "pr_summary",
+            "tool_calls",
+        ]
+    )
     run_judge: bool = True
     top_k: int = Field(default=5, ge=1, le=20)
     suite_id: str | None = None

@@ -60,7 +60,9 @@ class RepoSyncRequest(BaseModel):
     sync_issues: bool = True
     sync_pull_requests: bool = True
     sync_workflow_runs: bool = True
-    limit: int | None = Field(default=None, ge=1, description="Total records per source; null syncs all pages")
+    limit: int | None = Field(
+        default=None, ge=1, description="Total records per source; null syncs all pages"
+    )
 
 
 class RepoSyncResponse(BaseModel):

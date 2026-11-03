@@ -36,7 +36,11 @@ def retrieval_mode(source_type: str) -> RetrievalMode:
 
 
 def normalize_source_types(source_types: Iterable[str | None] | None) -> list[str]:
-    normalized = [str(source_type).strip() for source_type in (source_types or []) if source_type and str(source_type).strip()]
+    normalized = [
+        str(source_type).strip()
+        for source_type in (source_types or [])
+        if source_type and str(source_type).strip()
+    ]
     return list(dict.fromkeys(normalized))
 
 

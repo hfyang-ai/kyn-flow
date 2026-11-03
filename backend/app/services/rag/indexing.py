@@ -24,7 +24,9 @@ def sanitize_ci_log(text: str) -> str:
         text,
         flags=re.IGNORECASE | re.DOTALL,
     )
-    sanitized = re.sub(r"\bgh[pousr]_[A-Za-z0-9]{20,}\b", "[REDACTED_GITHUB_TOKEN]", sanitized)
+    sanitized = re.sub(
+        r"\bgh[pousr]_[A-Za-z0-9]{20,}\b", "[REDACTED_GITHUB_TOKEN]", sanitized
+    )
     sanitized = re.sub(r"\bAKIA[A-Z0-9]{16}\b", "[REDACTED_AWS_ACCESS_KEY]", sanitized)
     sanitized = re.sub(
         r"\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b",
@@ -62,7 +64,9 @@ def _iso(value) -> str | None:
     return value.isoformat() if value else None
 
 
-def _payload(source_type: str, source_id, title: str, content: str, metadata: dict) -> DocumentPayload | None:
+def _payload(
+    source_type: str, source_id, title: str, content: str, metadata: dict
+) -> DocumentPayload | None:
     if not content.strip():
         return None
     return DocumentPayload(
@@ -111,7 +115,9 @@ def index_repository_documents(
 
     prs = (
         db.query(PullRequest)
-        .options(selectinload(PullRequest.files), selectinload(PullRequest.review_comments))
+        .options(
+            selectinload(PullRequest.files), selectinload(PullRequest.review_comments)
+        )
         .filter(PullRequest.repo_id == repo_id)
         .all()
     )
@@ -164,7 +170,11 @@ def index_repository_documents(
                     "status": run.status,
                     "conclusion": run.conclusion,
                     "html_url": run.html_url,
-                    "jobs": [job.get("name") for job in (run.jobs or []) if isinstance(job, dict)],
+                    "jobs": [
+                        job.get("name")
+                        for job in (run.jobs or [])
+                        if isinstance(job, dict)
+                    ],
                     "created_at": _iso(run.created_at),
                     "updated_at": _iso(run.updated_at),
                     "chunk_index": chunk_index,
@@ -179,7 +189,9 @@ def index_repository_documents(
     vectors = None
     embedding_info = None
     config = (
-        db.query(KnowledgeBaseConfig).filter(KnowledgeBaseConfig.repo_id == repo_id).one_or_none()
+        db.query(KnowledgeBaseConfig)
+        .filter(KnowledgeBaseConfig.repo_id == repo_id)
+        .one_or_none()
         if generate_embeddings
         else None
     )

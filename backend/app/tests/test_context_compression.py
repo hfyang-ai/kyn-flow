@@ -43,14 +43,18 @@ def test_retrieval_compression_prefers_query_relevant_sentence() -> None:
                 "source_type": "workspace_file",
                 "source_id": "auth",
                 "score": 1.0,
-                "_raw_content": "billing copy. " * 100 + "The auth middleware refreshes expired tokens before validating the session.",
+                "_raw_content": "billing copy. " * 100
+                + "The auth middleware refreshes expired tokens before validating the session.",
             }
         ],
         max_tokens_per_item=40,
     )
 
     assert "auth middleware refreshes expired tokens" in results[0]["snippet"]
-    assert results[0]["compression"]["compressed_estimated_tokens"] < results[0]["compression"]["original_estimated_tokens"]
+    assert (
+        results[0]["compression"]["compressed_estimated_tokens"]
+        < results[0]["compression"]["original_estimated_tokens"]
+    )
     assert "_raw_content" not in results[0]
 
 
@@ -69,7 +73,10 @@ def test_retrieval_compression_respects_global_token_budget() -> None:
         max_total_tokens=75,
     )
 
-    assert sum(item["compression"]["compressed_estimated_tokens"] for item in results) <= 75
+    assert (
+        sum(item["compression"]["compressed_estimated_tokens"] for item in results)
+        <= 75
+    )
     assert all(item["retrieval"]["selected_for_context"] is True for item in results)
     assert len(results) < 5
 
@@ -82,7 +89,16 @@ def test_memory_update_merges_structured_sections() -> None:
         [],
     )
     merged = merge_memory(
-        {"summary": "", "facts": [], "decisions": [], "open_questions": [], "tasks": [], "user_preferences": [], "repo_context": [], "citations": []},
+        {
+            "summary": "",
+            "facts": [],
+            "decisions": [],
+            "open_questions": [],
+            "tasks": [],
+            "user_preferences": [],
+            "repo_context": [],
+            "citations": [],
+        },
         update,
         update["summary"],
         max_tokens=180,
@@ -105,15 +121,24 @@ def test_microcompact_clears_old_regenerable_tool_context() -> None:
     messages = [
         {
             "role": "tool_result",
-            "content": "irrelevant setup. " * 300 + "The auth middleware refreshes expired tokens before validation.",
+            "content": "irrelevant setup. " * 300
+            + "The auth middleware refreshes expired tokens before validation.",
             "route": "workspace.read_file",
-            "tool_calls": [{"tool_name": "workspace.read_file", "arguments": {}, "status": "success"}],
+            "tool_calls": [
+                {
+                    "tool_name": "workspace.read_file",
+                    "arguments": {},
+                    "status": "success",
+                }
+            ],
         },
         {"role": "user", "content": "What did we decide about auth middleware?"},
         {"role": "assistant", "content": "Keep token refresh in middleware."},
     ]
 
-    compacted, stats = microcompact_messages(messages, "auth middleware", keep_recent=2, max_excerpt_tokens=50)
+    compacted, stats = microcompact_messages(
+        messages, "auth middleware", keep_recent=2, max_excerpt_tokens=50
+    )
 
     assert MICROCOMPACT_MARKER in compacted[0]["content"]
     assert "auth middleware refreshes expired tokens" in compacted[0]["content"]
@@ -152,7 +177,11 @@ def test_messages_after_compact_boundary_uses_latest_boundary() -> None:
         {"role": "user", "content": "old"},
         {"role": "system", "content": "first", "meta": {"subtype": "compact_boundary"}},
         {"role": "assistant", "content": "middle"},
-        {"role": "system", "content": "latest", "meta": {"subtype": "compact_boundary"}},
+        {
+            "role": "system",
+            "content": "latest",
+            "meta": {"subtype": "compact_boundary"},
+        },
         {"role": "user", "content": "current"},
     ]
 
@@ -168,7 +197,11 @@ def test_keep_start_moves_back_to_preserve_tool_use_result_pair() -> None:
             "content": "calling read",
             "tool_calls": [{"id": "call_read", "tool_name": "workspace.read_file"}],
         },
-        {"role": "tool_result", "content": "file contents", "tool_call_id": "call_read"},
+        {
+            "role": "tool_result",
+            "content": "file contents",
+            "tool_call_id": "call_read",
+        },
         {"role": "user", "content": "continue"},
     ]
 
@@ -194,7 +227,14 @@ def test_formal_compaction_keep_rows_preserves_tool_pair() -> None:
             tool_calls=[],
             meta={"tool_call_id": "call_read"},
         ),
-        SimpleNamespace(id=uuid.uuid4(), role="user", content="continue", route=None, tool_calls=[], meta={}),
+        SimpleNamespace(
+            id=uuid.uuid4(),
+            role="user",
+            content="continue",
+            route=None,
+            tool_calls=[],
+            meta={},
+        ),
     ]
 
     kept = manager._messages_to_keep(rows, keep_count=2)  # type: ignore[arg-type]

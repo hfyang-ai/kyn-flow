@@ -69,8 +69,17 @@ def test_durable_timeline_crosses_boundary_and_hides_compatibility_copies() -> N
     db = _db()
     repo, conversation = _scope(db)
     start = datetime.now(UTC)
-    first = _message(db, repo, conversation, role="user", content="first exact request", at=start)
-    answer = _message(db, repo, conversation, role="assistant", content="first exact answer", at=start + timedelta(seconds=1))
+    first = _message(
+        db, repo, conversation, role="user", content="first exact request", at=start
+    )
+    answer = _message(
+        db,
+        repo,
+        conversation,
+        role="assistant",
+        content="first exact answer",
+        at=start + timedelta(seconds=1),
+    )
     boundary = _message(
         db,
         repo,
@@ -90,7 +99,14 @@ def test_durable_timeline_crosses_boundary_and_hides_compatibility_copies() -> N
         meta={"subtype": "preserved_after_compact", "preserved_from": str(answer.id)},
         at=start + timedelta(seconds=3),
     )
-    latest = _message(db, repo, conversation, role="user", content="latest request", at=start + timedelta(seconds=4))
+    latest = _message(
+        db,
+        repo,
+        conversation,
+        role="user",
+        content="latest request",
+        at=start + timedelta(seconds=4),
+    )
 
     timeline = MessageStore(db).timeline(repo.id, conversation.id, limit=100)
 
@@ -103,7 +119,9 @@ def test_durable_timeline_cursor_is_stable_when_timestamps_are_equal() -> None:
     repo, conversation = _scope(db)
     at = datetime.now(UTC)
     rows = [
-        _message(db, repo, conversation, role="user", content=f"same-time-{index}", at=at)
+        _message(
+            db, repo, conversation, role="user", content=f"same-time-{index}", at=at
+        )
         for index in range(3)
     ]
     expected = sorted(rows, key=lambda row: row.id)
@@ -116,7 +134,9 @@ def test_durable_timeline_cursor_is_stable_when_timestamps_are_equal() -> None:
         before_message_id=newest_page[0].id,
     )
 
-    assert [row.id for row in [*older_page, *newest_page]] == [row.id for row in expected]
+    assert [row.id for row in [*older_page, *newest_page]] == [
+        row.id for row in expected
+    ]
 
 
 @pytest.mark.asyncio
@@ -142,10 +162,19 @@ async def test_exact_thread_recall_reads_pre_boundary_text_and_is_audited() -> N
         meta={"subtype": "compact_boundary", "preserved_message_ids": []},
         at=start + timedelta(seconds=1),
     )
-    _message(db, repo, conversation, role="assistant", content="new answer", at=start + timedelta(seconds=2))
+    _message(
+        db,
+        repo,
+        conversation,
+        role="assistant",
+        content="new answer",
+        at=start + timedelta(seconds=2),
+    )
 
     tools = MemoryTools(db, repo, conversation)
-    result = await tools.get_thread_context({"keyword": "UNIQUE-PRE-BOUNDARY", "limit": 10}, {})
+    result = await tools.get_thread_context(
+        {"keyword": "UNIQUE-PRE-BOUNDARY", "limit": 10}, {}
+    )
     page = await tools.get_thread_context(
         {"message_id": str(old.id), "offset": 7, "max_chars": 12},
         {},
@@ -154,7 +183,11 @@ async def test_exact_thread_recall_reads_pre_boundary_text_and_is_audited() -> N
     assert "UNIQUE-PRE-BOUNDARY original wording" in result["answer"]
     assert str(old.id) in result["answer"]
     assert old.content[7:19] in page["answer"]
-    events = db.query(RecallEvent).filter(RecallEvent.tool_name == "kynflow_get_thread_context").all()
+    events = (
+        db.query(RecallEvent)
+        .filter(RecallEvent.tool_name == "kynflow_get_thread_context")
+        .all()
+    )
     assert len(events) == 2
     assert all(event.mode == "exact_transcript" for event in events)
 
@@ -168,7 +201,9 @@ async def test_session_event_tool_returns_transcript_and_records_recall() -> Non
         conversation_id=conversation.id,
         route="chat",
         digest="short digest",
-        transcript_json={"messages": [{"role": "user", "content": "exact sealed text"}]},
+        transcript_json={
+            "messages": [{"role": "user", "content": "exact sealed text"}]
+        },
         status="sealed",
         sealed_at=datetime.now(UTC),
     )
@@ -180,20 +215,31 @@ async def test_session_event_tool_returns_transcript_and_records_recall() -> Non
         {},
     )
     continuation = await MemoryTools(db, repo, conversation).read_session_events(
-        {"session_id": str(session.id), "include_transcript": True, "offset": 5, "max_chars": 400},
+        {
+            "session_id": str(session.id),
+            "include_transcript": True,
+            "offset": 5,
+            "max_chars": 400,
+        },
         {},
     )
 
     assert "exact sealed text" in result["answer"]
     assert continuation["results"][0]["metadata"]["offset"] == 5
-    events = db.query(RecallEvent).filter(RecallEvent.tool_name == "kynflow_read_session_events").all()
+    events = (
+        db.query(RecallEvent)
+        .filter(RecallEvent.tool_name == "kynflow_read_session_events")
+        .all()
+    )
     assert len(events) == 2
     assert all(event.mode == "sealed_transcript" for event in events)
     assert all(event.result_count == 1 for event in events)
 
 
 @pytest.mark.asyncio
-async def test_formal_compaction_reuses_original_rows_and_rehydrates_working_state() -> None:
+async def test_formal_compaction_reuses_original_rows_and_rehydrates_working_state() -> (
+    None
+):
     class FakeLLM:
         async def chat_text(self, system_prompt: str, user_prompt: str) -> str:
             return "User intent, decisions, errors, pending task and next step are preserved."
@@ -241,10 +287,14 @@ async def test_formal_compaction_reuses_original_rows_and_rehydrates_working_sta
     )
     boundary = db.get(ChatMessage, uuid.UUID(result["boundary_id"]))
     assert boundary is not None
-    preserved_ids = [uuid.UUID(value) for value in boundary.meta["preserved_message_ids"]]
+    preserved_ids = [
+        uuid.UUID(value) for value in boundary.meta["preserved_message_ids"]
+    ]
     active = MessageStore(db).active_for_context(repo.id, conversation.id, limit=100)
     assert [row.id for row in active if row.role != "system"] == preserved_ids
-    assert all(row.id in {item.id for item in rows} for row in active if row.role != "system")
+    assert all(
+        row.id in {item.id for item in rows} for row in active if row.role != "system"
+    )
 
 
 @pytest.mark.asyncio
@@ -256,8 +306,17 @@ async def test_session_sealer_keeps_raw_transcript_when_extraction_fails() -> No
     db = _db()
     repo, conversation = _scope(db)
     now = datetime.now(UTC)
-    user = _message(db, repo, conversation, role="user", content="remember exact input", at=now)
-    assistant = _message(db, repo, conversation, role="assistant", content="completed answer", at=now + timedelta(seconds=1))
+    user = _message(
+        db, repo, conversation, role="user", content="remember exact input", at=now
+    )
+    assistant = _message(
+        db,
+        repo,
+        conversation,
+        role="assistant",
+        content="completed answer",
+        at=now + timedelta(seconds=1),
+    )
 
     sealed = await SessionSealer(db, llm=FailingLLM()).seal(  # type: ignore[arg-type]
         repo=repo,
@@ -278,11 +337,18 @@ def test_context_assembler_keeps_recent_history_out_of_system_context() -> None:
     db = _db()
     repo, conversation = _scope(db)
     now = datetime.now(UTC)
-    _message(db, repo, conversation, role="user", content="UNIQUE-RECENT-MESSAGE", at=now)
+    _message(
+        db, repo, conversation, role="user", content="UNIQUE-RECENT-MESSAGE", at=now
+    )
 
-    assembled = ContextAssembler(db).assemble(repo, conversation, "UNIQUE-RECENT-MESSAGE")
+    assembled = ContextAssembler(db).assemble(
+        repo, conversation, "UNIQUE-RECENT-MESSAGE"
+    )
 
     assert "UNIQUE-RECENT-MESSAGE" not in assembled.system_context
     assert assembled.history_messages[-1]["content"] == "UNIQUE-RECENT-MESSAGE"
     assert assembled.compression_stats["pending_user_estimated_tokens"] == 0
-    assert assembled.compression_stats["assembled_prompt_estimated_tokens"] >= assembled.compression_stats["history_estimated_tokens"]
+    assert (
+        assembled.compression_stats["assembled_prompt_estimated_tokens"]
+        >= assembled.compression_stats["history_estimated_tokens"]
+    )

@@ -37,7 +37,11 @@ def _db_session():
 
 def test_delete_conversation_removes_session_memory_and_workflow_dependencies() -> None:
     db = _db_session()
-    repo = Repository(owner="kynflow", name="conversation-delete", full_name=f"kynflow/{uuid.uuid4().hex}")
+    repo = Repository(
+        owner="kynflow",
+        name="conversation-delete",
+        full_name=f"kynflow/{uuid.uuid4().hex}",
+    )
     db.add(repo)
     db.flush()
     target = Conversation(repo_id=repo.id, title="hi，你好")
@@ -53,9 +57,19 @@ def test_delete_conversation_removes_session_memory_and_workflow_dependencies() 
         tool_calls=[],
         final_answer="你好",
     )
-    user_message = ChatMessage(repo_id=repo.id, conversation_id=target.id, role="user", content="hi，你好")
-    assistant_message = ChatMessage(repo_id=repo.id, conversation_id=target.id, role="assistant", content="你好")
-    session = ChatSession(repo_id=repo.id, conversation_id=target.id, route="test", transcript_json={}, digest="你好")
+    user_message = ChatMessage(
+        repo_id=repo.id, conversation_id=target.id, role="user", content="hi，你好"
+    )
+    assistant_message = ChatMessage(
+        repo_id=repo.id, conversation_id=target.id, role="assistant", content="你好"
+    )
+    session = ChatSession(
+        repo_id=repo.id,
+        conversation_id=target.id,
+        route="test",
+        transcript_json={},
+        digest="你好",
+    )
     workflow = AgentWorkflowRun(repo_id=repo.id, conversation_id=target.id, goal="test")
     db.add_all([run, user_message, assistant_message, session, workflow])
     db.flush()
@@ -77,7 +91,9 @@ def test_delete_conversation_removes_session_memory_and_workflow_dependencies() 
                 title="candidate",
                 content="must be deleted before the session",
             ),
-            RecallEvent(repo_id=repo.id, conversation_id=target.id, tool_name="memory.search"),
+            RecallEvent(
+                repo_id=repo.id, conversation_id=target.id, tool_name="memory.search"
+            ),
             AgentTaskRun(
                 workflow_id=workflow.id,
                 task_id="task-1",

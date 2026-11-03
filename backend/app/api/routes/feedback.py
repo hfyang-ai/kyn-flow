@@ -71,7 +71,11 @@ async def feedback_metrics(
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     rows = db.query(ChatFeedback).filter(ChatFeedback.repo_id == repo_id).all()
-    assistant_messages = db.query(ChatMessage).filter(ChatMessage.repo_id == repo_id, ChatMessage.role == "assistant").count()
+    assistant_messages = (
+        db.query(ChatMessage)
+        .filter(ChatMessage.repo_id == repo_id, ChatMessage.role == "assistant")
+        .count()
+    )
     helpful = sum(row.rating == "helpful" for row in rows)
     unhelpful = sum(row.rating == "unhelpful" for row in rows)
     rated = len(rows)
@@ -83,51 +87,85 @@ async def feedback_metrics(
         "repo_id": str(repo_id),
         "assistant_messages": assistant_messages,
         "rated_messages": rated,
-        "feedback_coverage": round(rated / assistant_messages, 4) if assistant_messages else 0.0,
+        "feedback_coverage": round(rated / assistant_messages, 4)
+        if assistant_messages
+        else 0.0,
         "helpful": helpful,
         "unhelpful": unhelpful,
         "helpful_rate": round(helpful / rated, 4) if rated else 0.0,
         "unhelpful_rate": round(unhelpful / rated, 4) if rated else 0.0,
-        "negative_feedback_rate": round(unhelpful / assistant_messages, 4) if assistant_messages else 0.0,
-        "open_reviews": sum(row.rating == "unhelpful" and row.review_status in {"open", "in_review"} for row in rows),
+        "negative_feedback_rate": round(unhelpful / assistant_messages, 4)
+        if assistant_messages
+        else 0.0,
+        "open_reviews": sum(
+            row.rating == "unhelpful" and row.review_status in {"open", "in_review"}
+            for row in rows
+        ),
         "reason_counts": reasons,
     }
 
 
 @router.get("/trace/{run_id}")
-async def feedback_trace(run_id: uuid.UUID, db: Session = Depends(get_db)) -> dict[str, Any]:
+async def feedback_trace(
+    run_id: uuid.UUID, db: Session = Depends(get_db)
+) -> dict[str, Any]:
     run = db.get(AgentRun, run_id)
-    feedback = db.query(ChatFeedback).filter(ChatFeedback.run_id == run_id).one_or_none()
+    feedback = (
+        db.query(ChatFeedback).filter(ChatFeedback.run_id == run_id).one_or_none()
+    )
     if run is None and feedback is None:
         raise HTTPException(status_code=404, detail="未找到对应的执行轨迹")
 
-    assistant_message = db.get(ChatMessage, feedback.assistant_message_id) if feedback else None
+    assistant_message = (
+        db.get(ChatMessage, feedback.assistant_message_id) if feedback else None
+    )
     if assistant_message is None and run is not None:
         candidates = (
             db.query(ChatMessage)
-            .filter(ChatMessage.conversation_id == run.conversation_id, ChatMessage.role == "assistant")
+            .filter(
+                ChatMessage.conversation_id == run.conversation_id,
+                ChatMessage.role == "assistant",
+            )
             .order_by(ChatMessage.created_at.desc())
             .all()
         )
-        assistant_message = next((item for item in candidates if _run_id_from_message(item) == run_id), None)
+        assistant_message = next(
+            (item for item in candidates if _run_id_from_message(item) == run_id), None
+        )
 
     session = (
-        db.query(ChatSession).filter(ChatSession.assistant_message_id == assistant_message.id).one_or_none()
+        db.query(ChatSession)
+        .filter(ChatSession.assistant_message_id == assistant_message.id)
+        .one_or_none()
         if assistant_message
         else None
     )
-    user_message = db.get(ChatMessage, session.user_message_id) if session and session.user_message_id else None
+    user_message = (
+        db.get(ChatMessage, session.user_message_id)
+        if session and session.user_message_id
+        else None
+    )
     repo_id = feedback.repo_id if feedback else run.repo_id if run else None
-    conversation_id = feedback.conversation_id if feedback else run.conversation_id if run else None
+    conversation_id = (
+        feedback.conversation_id if feedback else run.conversation_id if run else None
+    )
     repo = db.get(Repository, repo_id) if repo_id else None
     conversation = db.get(Conversation, conversation_id) if conversation_id else None
     transcript = session.transcript_json if session else {}
 
     return {
         "trace_id": str(run_id),
-        "repository": {"id": str(repo.id), "full_name": repo.full_name} if repo else None,
-        "conversation": {"id": str(conversation.id), "title": conversation.title} if conversation else None,
-        "feedback": ChatFeedbackResponse.model_validate(feedback).model_dump(mode="json") if feedback else None,
+        "repository": {"id": str(repo.id), "full_name": repo.full_name}
+        if repo
+        else None,
+        "conversation": {"id": str(conversation.id), "title": conversation.title}
+        if conversation
+        else None,
+        "feedback": ChatFeedbackResponse.model_validate(feedback).model_dump(
+            mode="json"
+        )
+        if feedback
+        else None,
         "run": {
             "id": str(run.id),
             "status": run.status,
@@ -171,7 +209,9 @@ async def list_feedback(
 
 
 @router.post("", response_model=ChatFeedbackResponse)
-async def create_feedback(payload: ChatFeedbackCreate, db: Session = Depends(get_db)) -> ChatFeedback:
+async def create_feedback(
+    payload: ChatFeedbackCreate, db: Session = Depends(get_db)
+) -> ChatFeedback:
     repo = db.get(Repository, payload.repo_id)
     conversation = db.get(Conversation, payload.conversation_id)
     if repo is None or conversation is None or conversation.repo_id != repo.id:
@@ -181,8 +221,16 @@ async def create_feedback(payload: ChatFeedbackCreate, db: Session = Depends(get
     run = db.get(AgentRun, run_id) if run_id else None
     reporter = ensure_demo_user(db)
 
-    feedback = db.query(ChatFeedback).filter(ChatFeedback.assistant_message_id == message.id).one_or_none()
-    notify = payload.rating == "unhelpful" and (feedback is None or feedback.rating != "unhelpful" or feedback.notified_at is None)
+    feedback = (
+        db.query(ChatFeedback)
+        .filter(ChatFeedback.assistant_message_id == message.id)
+        .one_or_none()
+    )
+    notify = payload.rating == "unhelpful" and (
+        feedback is None
+        or feedback.rating != "unhelpful"
+        or feedback.notified_at is None
+    )
     if feedback is None:
         feedback = ChatFeedback(
             repo_id=repo.id,
@@ -218,7 +266,10 @@ async def create_feedback(payload: ChatFeedbackCreate, db: Session = Depends(get
     db.refresh(feedback)
 
     if notify:
-        notification_status, notification_error = await send_negative_feedback_notification(
+        (
+            notification_status,
+            notification_error,
+        ) = await send_negative_feedback_notification(
             feedback=feedback,
             repo=repo,
             message=message,
@@ -227,7 +278,9 @@ async def create_feedback(payload: ChatFeedbackCreate, db: Session = Depends(get
         )
         feedback.notification_status = notification_status
         feedback.notification_error = notification_error
-        feedback.notified_at = datetime.now(UTC) if notification_status == "sent" else None
+        feedback.notified_at = (
+            datetime.now(UTC) if notification_status == "sent" else None
+        )
         db.commit()
         db.refresh(feedback)
     return feedback
@@ -244,7 +297,11 @@ async def review_feedback(
         raise HTTPException(status_code=404, detail="未找到反馈记录")
     feedback.review_status = payload.review_status
     feedback.review_note = (payload.review_note or "").strip() or None
-    feedback.reviewed_at = datetime.now(UTC) if payload.review_status in {"resolved", "dismissed"} else None
+    feedback.reviewed_at = (
+        datetime.now(UTC)
+        if payload.review_status in {"resolved", "dismissed"}
+        else None
+    )
     db.commit()
     db.refresh(feedback)
     return feedback

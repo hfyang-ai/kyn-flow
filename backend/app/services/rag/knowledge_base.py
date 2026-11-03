@@ -26,9 +26,15 @@ def as_uuid(value: str | uuid.UUID) -> uuid.UUID:
     return value if isinstance(value, uuid.UUID) else uuid.UUID(str(value))
 
 
-def get_or_create_config(db: Session, repo_id: str | uuid.UUID, *, commit: bool = True) -> KnowledgeBaseConfig:
+def get_or_create_config(
+    db: Session, repo_id: str | uuid.UUID, *, commit: bool = True
+) -> KnowledgeBaseConfig:
     repo_uuid = as_uuid(repo_id)
-    config = db.query(KnowledgeBaseConfig).filter(KnowledgeBaseConfig.repo_id == repo_uuid).one_or_none()
+    config = (
+        db.query(KnowledgeBaseConfig)
+        .filter(KnowledgeBaseConfig.repo_id == repo_uuid)
+        .one_or_none()
+    )
     if config is None:
         contract = embedding_contract()
         config = KnowledgeBaseConfig(
@@ -68,8 +74,13 @@ def config_dict(config: KnowledgeBaseConfig) -> dict[str, Any]:
 
 
 def model_catalog() -> dict[str, Any]:
-    sentence_transformers_ready = importlib.util.find_spec("sentence_transformers") is not None
-    qwen_api_ready = bool((settings.rerank_api_key or settings.dashscope_api_key) and settings.rerank_base_url)
+    sentence_transformers_ready = (
+        importlib.util.find_spec("sentence_transformers") is not None
+    )
+    qwen_api_ready = bool(
+        (settings.rerank_api_key or settings.dashscope_api_key)
+        and settings.rerank_base_url
+    )
     contract = embedding_contract()
     provider = normalize_embedding_provider(str(contract["provider"]))
     if provider in {"qwen_local", "local"}:
@@ -124,7 +135,8 @@ def runtime_status(config: KnowledgeBaseConfig) -> dict[str, Any]:
         (
             item
             for item in catalog["embedding_models"]
-            if item["provider"] == config.embedding_provider and item["model"] == config.embedding_model
+            if item["provider"] == config.embedding_provider
+            and item["model"] == config.embedding_model
         ),
         None,
     )
@@ -132,7 +144,8 @@ def runtime_status(config: KnowledgeBaseConfig) -> dict[str, Any]:
         (
             item
             for item in catalog["rerank_models"]
-            if item["provider"] == config.rerank_provider and item["model"] == config.rerank_model
+            if item["provider"] == config.rerank_provider
+            and item["model"] == config.rerank_model
         ),
         None,
     )
@@ -234,7 +247,11 @@ async def retrieve_knowledge(
     resolved_top_k = min(max(top_k or config.top_k, 1), 20)
     method = retrieval_method or config.retrieval_method
     use_rerank = config.rerank_enabled if rerank_enabled is None else rerank_enabled
-    threshold_on = config.score_threshold_enabled if score_threshold_enabled is None else score_threshold_enabled
+    threshold_on = (
+        config.score_threshold_enabled
+        if score_threshold_enabled is None
+        else score_threshold_enabled
+    )
     threshold = config.score_threshold if score_threshold is None else score_threshold
 
     requested_source_types = normalize_source_types(source_types)
@@ -268,7 +285,9 @@ async def retrieve_knowledge(
     rerank_stage: dict[str, Any] = {
         "name": "rerank",
         "input_count": len(items),
-        "requested": "qwen_api" if use_rerank and config.rerank_provider == "qwen_api" else "heuristic",
+        "requested": "qwen_api"
+        if use_rerank and config.rerank_provider == "qwen_api"
+        else "heuristic",
     }
     if use_rerank and items:
         if config.rerank_provider == "qwen_api":
@@ -290,11 +309,15 @@ async def retrieve_knowledge(
             items = rerank_documents(query, items, resolved_top_k)
             rerank_stage.update({"mode": "heuristic", "fallback": False})
     elif use_rerank:
-        rerank_stage.update({"mode": "not_run", "fallback": False, "reason": "no candidates"})
+        rerank_stage.update(
+            {"mode": "not_run", "fallback": False, "reason": "no candidates"}
+        )
     else:
         rerank_stage.update({"mode": "disabled", "fallback": False})
     items = items[:resolved_top_k]
-    pipeline_trace.setdefault("stages", []).append({**rerank_stage, "output_count": len(items)})
+    pipeline_trace.setdefault("stages", []).append(
+        {**rerank_stage, "output_count": len(items)}
+    )
 
     items, parent_stage = expand_parent_context(db, repo_id, items, neighbor_window=1)
     pipeline_trace["stages"].append(parent_stage)
@@ -320,7 +343,9 @@ async def retrieve_knowledge(
         max_tokens_per_item=260,
         max_total_tokens=context_budget_tokens,
     )
-    compressed_tokens = sum(estimate_tokens(str(item.get("snippet") or "")) for item in items)
+    compressed_tokens = sum(
+        estimate_tokens(str(item.get("snippet") or "")) for item in items
+    )
     pipeline_trace["stages"].append(
         {
             "name": "context_compression",
