@@ -46,7 +46,7 @@ export default function PullRequestsPage() {
         <Card>
           <div className="flex items-center justify-between">
             <h2 className="font-semibold text-ink">Pull Requests</h2>
-            <span className="rounded-full bg-panel px-2.5 py-1 text-xs text-stone-400">
+            <span className="rounded-full bg-panel px-2.5 py-1 text-xs text-faint">
               {prs.length} 个
             </span>
           </div>
@@ -56,7 +56,7 @@ export default function PullRequestsPage() {
                 key={pr.id}
                 onClick={() => setSelected(pr)}
                 className={
-                  selected?.id === pr.id ? "border-sage-600 bg-sage-900 text-sage-100" : ""
+                  selected?.id === pr.id ? "border-sage-700 bg-sage-100 text-accent" : ""
                 }
               >
                 #{pr.number} {pr.title}
@@ -76,10 +76,10 @@ export default function PullRequestsPage() {
                 {selected.files.map((file) => (
                   <div
                     key={file.filename}
-                    className="flex items-center justify-between rounded-md bg-panel px-3 py-2 text-sm text-stone-300"
+                    className="flex items-center justify-between rounded-md bg-panel px-3 py-2 text-sm text-muted"
                   >
                     <span className="truncate">{file.filename}</span>
-                    <span className="ml-3 whitespace-nowrap text-xs text-stone-400">
+                    <span className="ml-3 whitespace-nowrap text-xs text-faint">
                       +{file.additions} / -{file.deletions}
                     </span>
                   </div>
@@ -91,7 +91,7 @@ export default function PullRequestsPage() {
             生成 PR 分析
           </PrimaryButton>
           {analysis && (
-            <pre className="mt-4 max-h-[520px] overflow-auto rounded-md border border-stone-700 bg-stone-950 p-4 text-xs text-stone-100">
+            <pre className="mt-4 max-h-[520px] overflow-auto rounded-md border border-stone-200 bg-stone-100 p-4 text-xs text-ink">
               {analysis}
             </pre>
           )}

@@ -88,10 +88,10 @@ export default function WorkflowRunsPage() {
       />
 
       <section className="grid gap-3 border-y border-line bg-panel px-4 py-4 md:grid-cols-[minmax(280px,1fr)_repeat(3,minmax(150px,220px))]">
-        <label className="text-sm font-medium text-stone-200">
+        <label className="text-sm font-medium text-ink">
           仓库
           <select
-            className="mt-2 w-full rounded-md border border-line bg-panel px-3 py-2 outline-none focus:border-sage-500"
+            className="mt-2 w-full rounded-md border border-line bg-panel px-3 py-2 outline-none focus:border-sage-600"
             value={repoId}
             onChange={(event) => setRepoId(event.target.value)}
           >
@@ -109,7 +109,7 @@ export default function WorkflowRunsPage() {
 
       <div className="mt-4 grid min-h-[560px] gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
         <aside className="border-r border-line bg-panel pr-4">
-          <div className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-stone-400">
+          <div className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-faint">
             运行列表
           </div>
           <div className="space-y-2">
@@ -117,10 +117,10 @@ export default function WorkflowRunsPage() {
               <button
                 key={run.id}
                 onClick={() => setSelectedId(run.id)}
-                className={`w-full rounded-md border px-3 py-3 text-left transition ${selected?.id === run.id ? "border-sage-600 bg-sage-900" : "border-line bg-panel hover:bg-panel"}`}
+                className={`w-full rounded-md border px-3 py-3 text-left transition ${selected?.id === run.id ? "border-sage-700 bg-sage-100" : "border-line bg-panel hover:bg-panel"}`}
               >
                 <div className="line-clamp-2 text-sm font-semibold text-ink">{run.goal}</div>
-                <div className="mt-2 flex items-center justify-between text-xs text-stone-400">
+                <div className="mt-2 flex items-center justify-between text-xs text-faint">
                   <span>{statusLabel[run.status] || run.status}</span>
                   <span>
                     {run.created_at
@@ -136,7 +136,7 @@ export default function WorkflowRunsPage() {
               </button>
             ))}
             {!loading && runs.length === 0 && (
-              <div className="rounded-md border border-dashed border-line p-4 text-sm text-stone-400">
+              <div className="rounded-md border border-dashed border-line p-4 text-sm text-faint">
                 暂无工作流运行记录。
               </div>
             )}
@@ -148,14 +148,14 @@ export default function WorkflowRunsPage() {
             <div className="space-y-5">
               <section className="border-b border-line pb-4">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-sage-500 px-3 py-1 text-xs font-semibold text-[#062a1d]">
+                  <span className="rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-ink">
                     {statusLabel[selected.status] || selected.status}
                   </span>
-                  <span className="inline-flex items-center gap-1 text-xs text-stone-400">
+                  <span className="inline-flex items-center gap-1 text-xs text-faint">
                     <GitBranch className="h-3.5 w-3.5" />
                     {selected.spec.workflow_id || selected.id.slice(0, 8)}
                   </span>
-                  <span className="inline-flex items-center gap-1 text-xs text-stone-400">
+                  <span className="inline-flex items-center gap-1 text-xs text-faint">
                     <Database className="h-3.5 w-3.5" />
                     已持久化
                   </span>
@@ -166,7 +166,7 @@ export default function WorkflowRunsPage() {
               <section>
                 <div className="mb-3 flex items-center justify-between">
                   <h3 className="font-semibold text-ink">Agent 执行链</h3>
-                  <span className="text-xs text-stone-400">
+                  <span className="text-xs text-faint">
                     {completedTasks}/{selected.tasks.length} 完成
                   </span>
                 </div>
@@ -177,14 +177,14 @@ export default function WorkflowRunsPage() {
                       className="relative rounded-md border border-line bg-panel p-3"
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-sage-900 text-xs font-semibold text-sage-300">
+                        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-sage-100 text-xs font-semibold text-accent">
                           {index + 1}
                         </span>
-                        <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                        <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                       </div>
                       <div className="mt-3 text-sm font-semibold text-ink">{task.agent_name}</div>
-                      <div className="mt-1 text-xs text-stone-400">{task.task_type}</div>
-                      <p className="mt-3 text-xs leading-5 text-stone-300">
+                      <div className="mt-1 text-xs text-faint">{task.task_type}</div>
+                      <p className="mt-3 text-xs leading-5 text-muted">
                         {task.summary || "任务已完成"}
                       </p>
                     </div>
@@ -193,15 +193,15 @@ export default function WorkflowRunsPage() {
               </section>
 
               <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(300px,0.7fr)]">
-                <div className="rounded-md border border-sage-700 bg-sage-900/70 p-4">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-sage-100">
+                <div className="rounded-md border border-sage-700 bg-sage-100 p-4">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-accent">
                     <Workflow className="h-4 w-4" />
                     Synthesis 最终结论
                   </div>
-                  <p className="mt-3 text-sm leading-7 text-stone-200">{selected.final_answer}</p>
+                  <p className="mt-3 text-sm leading-7 text-ink">{selected.final_answer}</p>
                 </div>
-                <div className="rounded-md border border-amber-800/60 bg-amber-50/70 p-4">
-                  <div className="flex items-center justify-between gap-2 text-sm font-semibold text-amber-100">
+                <div className="rounded-md border border-amber-200 bg-amber-50/70 p-4">
+                  <div className="flex items-center justify-between gap-2 text-sm font-semibold text-amber-600">
                     <span className="inline-flex items-center gap-2">
                       <AlertTriangle className="h-4 w-4" />
                       Observer 交叉检查
@@ -214,7 +214,7 @@ export default function WorkflowRunsPage() {
                   </div>
                   <div className="mt-3 space-y-2">
                     {findings.map((finding, index) => (
-                      <div key={index} className="text-sm leading-6 text-stone-200">
+                      <div key={index} className="text-sm leading-6 text-ink">
                         {finding.message}
                       </div>
                     ))}
@@ -222,7 +222,7 @@ export default function WorkflowRunsPage() {
                 </div>
               </section>
 
-              <div className="flex items-center gap-2 border-t border-line pt-3 text-xs text-stone-400">
+              <div className="flex items-center gap-2 border-t border-line pt-3 text-xs text-faint">
                 <Clock3 className="h-3.5 w-3.5" />
                 创建于{" "}
                 {selected.created_at
@@ -232,7 +232,7 @@ export default function WorkflowRunsPage() {
               </div>
             </div>
           ) : (
-            <div className="text-sm text-stone-400">
+            <div className="text-sm text-faint">
               {loading ? "正在读取工作流记录..." : "请选择一条运行记录。"}
             </div>
           )}
@@ -253,9 +253,9 @@ function Metric({
 }) {
   return (
     <div className="flex items-center gap-3 border-l border-line pl-4">
-      <Icon className="h-5 w-5 text-sage-300" />
+      <Icon className="h-5 w-5 text-accent" />
       <div>
-        <div className="text-xs text-stone-400">{label}</div>
+        <div className="text-xs text-faint">{label}</div>
         <div className="mt-1 text-xl font-semibold text-ink">{value}</div>
       </div>
     </div>

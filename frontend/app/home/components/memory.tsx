@@ -74,9 +74,9 @@ export function MemoryIndexPromptCard({
 
   return (
     <div className="flex justify-start">
-      <div className="w-full rounded-md border border-sage-800 bg-panel px-4 py-4 text-sm shadow-sm">
+      <div className="w-full rounded-md border border-sage-700 bg-panel px-4 py-4 text-sm shadow-sm">
         <div className="flex items-start gap-3">
-          <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-sage-900 text-accent">
+          <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-sage-100 text-accent">
             {isFailed ? (
               <AlertTriangle className="h-5 w-5" />
             ) : scanning ? (
@@ -87,9 +87,9 @@ export function MemoryIndexPromptCard({
           </div>
           <div className="min-w-0 flex-1">
             <div className="font-semibold text-ink">{title}</div>
-            <p className="mt-1 text-xs leading-5 text-stone-400">{description}</p>
+            <p className="mt-1 text-xs leading-5 text-faint">{description}</p>
             {!isFailed && (
-              <div className="mt-3 grid gap-2 text-xs text-stone-400 sm:grid-cols-3">
+              <div className="mt-3 grid gap-2 text-xs text-faint sm:grid-cols-3">
                 <div className="inline-flex items-center gap-1.5">
                   <Folder className="h-3.5 w-3.5 text-accent" />
                   README / docs / manifest
@@ -105,7 +105,7 @@ export function MemoryIndexPromptCard({
               </div>
             )}
             {error && !isFailed && (
-              <div className="mt-3 rounded-md border border-rose-800/60 bg-rose-900/40 px-3 py-2 text-xs text-rose-300">
+              <div className="mt-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-600">
                 {error}
               </div>
             )}
@@ -113,19 +113,19 @@ export function MemoryIndexPromptCard({
               <button
                 onClick={onSnooze}
                 disabled={scanning}
-                className="rounded-md border border-line bg-panel px-3 py-2 text-xs font-medium text-stone-400 transition hover:bg-panel disabled:opacity-60"
+                className="rounded-md border border-line bg-panel px-3 py-2 text-xs font-medium text-faint transition hover:bg-panel disabled:opacity-60"
               >
                 稍后再说
               </button>
               <button
                 onClick={onStartScan}
                 disabled={scanning}
-                className="inline-flex items-center gap-1.5 rounded-md bg-accent px-3 py-2 text-xs font-medium text-[#062a1d] transition hover:bg-sage-400 disabled:opacity-60"
+                className="inline-flex items-center gap-1.5 rounded-md bg-accent px-3 py-2 text-xs font-medium text-accent-ink transition hover:bg-accent-bright disabled:opacity-60"
               >
                 <RefreshCw className={`h-3.5 w-3.5 ${scanning ? "animate-spin" : ""}`} />
                 {actionLabel}
               </button>
-              <span className="text-xs text-stone-500">
+              <span className="text-xs text-faint">
                 稍后提醒会冷却 7 天，也可以在知识库页手动管理索引内容。
               </span>
             </div>
@@ -292,7 +292,7 @@ export function MemoryHubWorkspace({
             type="button"
             onClick={() => setActiveTab(tab.id)}
             className={`shrink-0 rounded-md px-3 py-1.5 text-xs font-medium transition ${
-              activeTab === tab.id ? "bg-accent text-[#062a1d]" : "text-stone-300 hover:bg-panel"
+              activeTab === tab.id ? "bg-accent text-accent-ink" : "text-muted hover:bg-panel"
             }`}
           >
             {tab.label}
@@ -301,7 +301,7 @@ export function MemoryHubWorkspace({
       </div>
 
       {error && (
-        <div className="rounded-md border border-red-800/60 bg-red-900/40 p-3 text-sm text-red-300">
+        <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-600">
           {error}
         </div>
       )}
@@ -313,18 +313,18 @@ export function MemoryHubWorkspace({
             <button
               type="button"
               onClick={loadRecallEvents}
-              className="rounded-md border border-line px-2 py-1 text-xs text-stone-300 hover:bg-panel"
+              className="rounded-md border border-line px-2 py-1 text-xs text-muted hover:bg-panel"
             >
               刷新
             </button>
           </div>
           {loadingPanel === "recall" && (
-            <div className="rounded-md border border-line bg-panel p-4 text-sm text-stone-400">
+            <div className="rounded-md border border-line bg-panel p-4 text-sm text-faint">
               正在读取召回记录...
             </div>
           )}
           {!loadingPanel && recallEvents.length === 0 && (
-            <div className="rounded-md border border-line bg-panel p-4 text-sm text-stone-400">
+            <div className="rounded-md border border-line bg-panel p-4 text-sm text-faint">
               还没有召回记录。智能体调用 search_evidence 或 RAG 搜索后会显示在这里。
             </div>
           )}
@@ -336,11 +336,11 @@ export function MemoryHubWorkspace({
                   <div className="mt-1 line-clamp-2 text-sm font-semibold text-ink">
                     {event.query || "空查询"}
                   </div>
-                  <div className="mt-1 text-xs text-stone-400">
+                  <div className="mt-1 text-xs text-faint">
                     {event.result_count} 个结果 · {event.mode} · {formatDateTime(event.created_at)}
                   </div>
                 </div>
-                <span className="rounded-md bg-panel px-2 py-1 text-[11px] text-stone-300">
+                <span className="rounded-md bg-panel px-2 py-1 text-[11px] text-muted">
                   {event.scope}
                 </span>
               </div>
@@ -348,7 +348,7 @@ export function MemoryHubWorkspace({
                 {(event.results ?? []).slice(0, 3).map((item, index) => (
                   <div
                     key={`${event.id}-${index}`}
-                    className="rounded-md bg-panel px-3 py-2 text-xs text-stone-300"
+                    className="rounded-md bg-panel px-3 py-2 text-xs text-muted"
                   >
                     <span className="font-medium text-ink">
                       {String(item.source_type || "source")}
@@ -375,13 +375,13 @@ export function MemoryHubWorkspace({
                   if (event.key === "Enter") void runMemorySearch();
                 }}
                 placeholder="搜索 Issue、PR、CI、文档、会话记忆..."
-                className="h-9 min-w-0 flex-1 rounded-md border border-line px-3 text-sm outline-none focus:border-sage-500 focus:ring-2 focus:ring-sage-100"
+                className="h-9 min-w-0 flex-1 rounded-md border border-line px-3 text-sm outline-none focus:border-sage-600 focus:ring-2 focus:ring-sage-100"
               />
               <button
                 type="button"
                 onClick={runMemorySearch}
                 disabled={!searchQuery.trim() || loadingPanel === "search"}
-                className="inline-flex h-9 items-center justify-center rounded-md bg-accent px-3 text-sm font-medium text-[#062a1d] transition hover:bg-sage-400 disabled:opacity-60"
+                className="inline-flex h-9 items-center justify-center rounded-md bg-accent px-3 text-sm font-medium text-accent-ink transition hover:bg-accent-bright disabled:opacity-60"
               >
                 搜索
               </button>
@@ -396,7 +396,7 @@ export function MemoryHubWorkspace({
                     {knowledgeTypeLabel(item.source_type)}
                   </div>
                   <div className="mt-1 text-sm font-semibold text-ink">{item.title}</div>
-                  <div className="mt-1 line-clamp-3 text-xs leading-5 text-stone-300">
+                  <div className="mt-1 line-clamp-3 text-xs leading-5 text-muted">
                     {item.snippet}
                   </div>
                 </div>
@@ -406,7 +406,7 @@ export function MemoryHubWorkspace({
 
           <section className="rounded-md border border-line bg-panel p-4">
             <h3 className="text-sm font-semibold text-ink">项目记忆</h3>
-            <p className="mt-1 text-xs leading-5 text-stone-400">
+            <p className="mt-1 text-xs leading-5 text-faint">
               记录项目约定、架构背景和长期偏好，会写入当前项目的 RAG 文档。
             </p>
             <div className="mt-4 grid gap-2">
@@ -414,18 +414,18 @@ export function MemoryHubWorkspace({
                 value={draft.title}
                 onChange={(event) => onDraftChange({ ...draft, title: event.target.value })}
                 placeholder="标题，例如 认证模块约定"
-                className="h-9 rounded-md border border-line bg-panel px-3 text-sm outline-none focus:border-sage-500 focus:ring-2 focus:ring-sage-100"
+                className="h-9 rounded-md border border-line bg-panel px-3 text-sm outline-none focus:border-sage-600 focus:ring-2 focus:ring-sage-100"
               />
               <textarea
                 value={draft.content}
                 onChange={(event) => onDraftChange({ ...draft, content: event.target.value })}
                 placeholder="记忆内容，例如 登录相关 Issue 优先分给熟悉 JWT 和 FastAPI 的成员"
-                className="min-h-24 resize-none rounded-md border border-line bg-panel px-3 py-2 text-sm outline-none focus:border-sage-500 focus:ring-2 focus:ring-sage-100"
+                className="min-h-24 resize-none rounded-md border border-line bg-panel px-3 py-2 text-sm outline-none focus:border-sage-600 focus:ring-2 focus:ring-sage-100"
               />
               <button
                 onClick={onAddNote}
                 disabled={!draft.title.trim() && !draft.content.trim()}
-                className="inline-flex h-9 items-center justify-center rounded-md bg-accent px-3 text-sm font-medium text-[#062a1d] transition hover:bg-sage-400 disabled:opacity-60"
+                className="inline-flex h-9 items-center justify-center rounded-md bg-accent px-3 text-sm font-medium text-accent-ink transition hover:bg-accent-bright disabled:opacity-60"
               >
                 保存记忆
               </button>
@@ -436,18 +436,18 @@ export function MemoryHubWorkspace({
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h3 className="text-sm font-semibold text-ink">知识库文件</h3>
-                <p className="mt-1 text-xs leading-5 text-stone-400">
+                <p className="mt-1 text-xs leading-5 text-faint">
                   上传文档后会切片写入向量索引，并参与统一记忆搜索。
                 </p>
               </div>
               <FileText className="h-4 w-4 text-accent" />
             </div>
-            <label className="mt-4 flex min-h-24 cursor-pointer flex-col items-center justify-center rounded-md border border-dashed border-sage-700 bg-sage-900/50 px-3 py-4 text-center transition hover:bg-sage-900">
+            <label className="mt-4 flex min-h-24 cursor-pointer flex-col items-center justify-center rounded-md border border-dashed border-sage-700 bg-sage-100 px-3 py-4 text-center transition hover:bg-sage-100">
               <Upload className="h-5 w-5 text-accent" />
               <span className="mt-2 text-sm font-medium text-ink">
                 {uploading ? "上传并索引中..." : "上传文件到知识库"}
               </span>
-              <span className="mt-1 text-xs text-stone-400">
+              <span className="mt-1 text-xs text-faint">
                 支持文本、Markdown、JSON、CSV、PDF、DOCX 等可抽取文本的文件
               </span>
               <input
@@ -461,7 +461,7 @@ export function MemoryHubWorkspace({
                 }}
               />
             </label>
-            <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-stone-300">
+            <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-muted">
               <div className="rounded-md bg-panel px-3 py-2">
                 知识条目：{visibleKnowledgeItems.length}
               </div>
@@ -484,12 +484,12 @@ export function MemoryHubWorkspace({
             <button
               type="button"
               onClick={loadMemoryStatus}
-              className="rounded-md border border-line px-2 py-1 text-xs text-stone-300 hover:bg-panel"
+              className="rounded-md border border-line px-2 py-1 text-xs text-muted hover:bg-panel"
             >
               刷新
             </button>
           </div>
-          <div className="grid grid-cols-2 gap-2 text-xs text-stone-300">
+          <div className="grid grid-cols-2 gap-2 text-xs text-muted">
             <MemoryStatusTile
               label="索引状态"
               value={String(memoryStatus?.index?.status ?? "missing")}
@@ -512,7 +512,7 @@ export function MemoryHubWorkspace({
             />
             <MemoryStatusTile label="向量后端" value={vectorBackend} />
           </div>
-          <div className="rounded-md border border-line bg-panel p-3 text-xs leading-5 text-stone-300">
+          <div className="rounded-md border border-line bg-panel p-3 text-xs leading-5 text-muted">
             <div>最后扫描：{String(memoryStatus?.index?.last_scan_at ?? "暂无")}</div>
             <div>Embedding Provider：{String(vectorEmbedding.provider ?? "未配置")}</div>
             <div>Embedding：{String(vectorEmbedding.model ?? "未配置")}</div>
@@ -530,13 +530,13 @@ export function MemoryHubWorkspace({
             <button
               type="button"
               onClick={() => loadCandidates()}
-              className="rounded-md border border-line px-2 py-1 text-xs text-stone-300 hover:bg-panel"
+              className="rounded-md border border-line px-2 py-1 text-xs text-muted hover:bg-panel"
             >
               刷新
             </button>
           </div>
           {candidates.length === 0 && (
-            <div className="rounded-md border border-line bg-panel p-4 text-sm text-stone-400">
+            <div className="rounded-md border border-line bg-panel p-4 text-sm text-faint">
               还没有待确认知识。新的会话总结会在这里沉淀为候选项。
             </div>
           )}
@@ -546,7 +546,7 @@ export function MemoryHubWorkspace({
                 {memoryCandidateKindLabel(candidate.kind)}
               </div>
               <div className="mt-1 text-sm font-semibold text-ink">{candidate.title}</div>
-              <div className="mt-2 whitespace-pre-wrap text-xs leading-5 text-stone-300">
+              <div className="mt-2 whitespace-pre-wrap text-xs leading-5 text-muted">
                 {candidate.content}
               </div>
               <div className="mt-3 flex gap-2">
@@ -554,7 +554,7 @@ export function MemoryHubWorkspace({
                   type="button"
                   disabled={loadingPanel === candidate.id}
                   onClick={() => approveCandidate(candidate.id)}
-                  className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-[#062a1d] hover:bg-sage-400 disabled:opacity-60"
+                  className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-accent-ink hover:bg-accent-bright disabled:opacity-60"
                 >
                   确认入库
                 </button>
@@ -562,7 +562,7 @@ export function MemoryHubWorkspace({
                   type="button"
                   disabled={loadingPanel === candidate.id}
                   onClick={() => rejectCandidate(candidate.id)}
-                  className="rounded-md border border-line px-3 py-1.5 text-xs text-stone-300 hover:bg-panel disabled:opacity-60"
+                  className="rounded-md border border-line px-3 py-1.5 text-xs text-muted hover:bg-panel disabled:opacity-60"
                 >
                   拒绝
                 </button>
@@ -578,7 +578,7 @@ export function MemoryHubWorkspace({
 export function MemoryStatusTile({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="rounded-md border border-line bg-panel px-3 py-2">
-      <div className="text-[11px] text-stone-400">{label}</div>
+      <div className="text-[11px] text-faint">{label}</div>
       <div className="mt-1 font-semibold text-ink">{value}</div>
     </div>
   );
@@ -599,7 +599,7 @@ export function MemoryItemLists({
     <>
       <section className="space-y-2">
         {notes.length === 0 && (
-          <div className="rounded-md border border-line bg-panel p-4 text-sm text-stone-400">
+          <div className="rounded-md border border-line bg-panel p-4 text-sm text-faint">
             还没有项目记忆。
           </div>
         )}
@@ -609,12 +609,12 @@ export function MemoryItemLists({
               <div className="font-medium text-ink">{note.title}</div>
               <button
                 onClick={() => onRemoveNote(note.id)}
-                className="rounded-md border border-line px-2 py-1 text-xs text-stone-400 hover:bg-panel"
+                className="rounded-md border border-line px-2 py-1 text-xs text-faint hover:bg-panel"
               >
                 移除
               </button>
             </div>
-            <div className="mt-2 whitespace-pre-wrap text-xs leading-6 text-stone-300">
+            <div className="mt-2 whitespace-pre-wrap text-xs leading-6 text-muted">
               {note.content || "无内容"}
             </div>
           </div>
@@ -623,7 +623,7 @@ export function MemoryItemLists({
 
       <section className="space-y-2">
         {knowledgeItems.length === 0 && (
-          <div className="rounded-md border border-line bg-panel p-4 text-sm text-stone-400">
+          <div className="rounded-md border border-line bg-panel p-4 text-sm text-faint">
             还没有上传文件或生成周报。
           </div>
         )}
@@ -635,18 +635,18 @@ export function MemoryItemLists({
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="line-clamp-1 font-medium text-ink">{item.title}</div>
-                <div className="mt-1 text-xs text-stone-400">
+                <div className="mt-1 text-xs text-faint">
                   {knowledgeTypeLabel(item.source_type)} · {item.chunk_count} 个切片
                 </div>
               </div>
               <button
                 onClick={() => onRemoveKnowledgeItem(item)}
-                className="rounded-md border border-line px-2 py-1 text-xs text-stone-400 hover:bg-panel"
+                className="rounded-md border border-line px-2 py-1 text-xs text-faint hover:bg-panel"
               >
                 移除
               </button>
             </div>
-            <div className="mt-2 line-clamp-3 text-xs leading-6 text-stone-300">
+            <div className="mt-2 line-clamp-3 text-xs leading-6 text-muted">
               {item.content_preview || "无内容预览"}
             </div>
           </div>

@@ -89,7 +89,7 @@ export default function WorkspacesPage() {
       />
       <div className="grid gap-4 lg:grid-cols-[380px_1fr]">
         <Card>
-          <label className="text-sm font-medium text-stone-200">
+          <label className="text-sm font-medium text-ink">
             Workspace 名称
             <input
               className="mt-2 w-full rounded-md border border-line px-3 py-2 outline-none"
@@ -97,7 +97,7 @@ export default function WorkspacesPage() {
               onChange={(event) => setName(event.target.value)}
             />
           </label>
-          <div className="mt-4 text-sm font-medium text-stone-200">仓库</div>
+          <div className="mt-4 text-sm font-medium text-ink">仓库</div>
           <div className="mt-2 grid gap-2">
             {repos.map((repo) => (
               <label
@@ -128,7 +128,7 @@ export default function WorkspacesPage() {
           </PrimaryButton>
 
           <div className="mt-6 grid gap-3 border-t border-line pt-4">
-            <label className="text-sm font-medium text-stone-200">
+            <label className="text-sm font-medium text-ink">
               报表范围
               <select
                 className="mt-2 w-full rounded-md border border-line px-3 py-2"
@@ -171,24 +171,24 @@ export default function WorkspacesPage() {
               {workspaces.map((item) => (
                 <div
                   key={item.id}
-                  className="rounded-md border border-line bg-panel px-3 py-2 text-sm text-stone-200"
+                  className="rounded-md border border-line bg-panel px-3 py-2 text-sm text-ink"
                 >
                   {item.name} · {item.repo_ids.length} 个仓库
                 </div>
               ))}
               {workspaces.length === 0 && (
-                <div className="text-sm text-stone-400">暂无 workspace。</div>
+                <div className="text-sm text-faint">暂无 workspace。</div>
               )}
             </div>
           </Card>
           <Card>
             <h2 className="font-semibold text-ink">多仓库周报</h2>
             {report ? (
-              <pre className="mt-4 max-h-[620px] overflow-auto rounded-md border border-stone-700 bg-stone-950 p-4 text-sm leading-7 text-stone-100">
+              <pre className="mt-4 max-h-[620px] overflow-auto rounded-md border border-stone-200 bg-stone-100 p-4 text-sm leading-7 text-ink">
                 {report.report_markdown}
               </pre>
             ) : (
-              <div className="mt-4 rounded-md border border-line bg-panel p-4 text-sm text-stone-300">
+              <div className="mt-4 rounded-md border border-line bg-panel p-4 text-sm text-muted">
                 创建 workspace 或勾选仓库后生成周报。
               </div>
             )}

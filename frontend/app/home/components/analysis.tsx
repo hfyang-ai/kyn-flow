@@ -46,19 +46,19 @@ export function IssueAnalysisOverlay({
 
   return (
     <div className="absolute inset-0 z-50 grid grid-cols-1 items-center gap-3 bg-stone-950/35 p-4 backdrop-blur-sm xl:grid-cols-[280px_minmax(0,1fr)] xl:p-6">
-      <aside className="order-2 flex max-h-[28vh] min-h-0 flex-col overflow-hidden rounded-lg border border-sage-800 bg-panel/95 shadow-xl xl:order-1 xl:h-[86vh] xl:max-h-[86vh]">
+      <aside className="order-2 flex max-h-[28vh] min-h-0 flex-col overflow-hidden rounded-lg border border-sage-700 bg-panel/95 shadow-xl xl:order-1 xl:h-[86vh] xl:max-h-[86vh]">
         <div className="border-b border-line px-4 py-3">
           <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">
             Thinking Trace
           </div>
           <h3 className="mt-1 text-sm font-semibold text-ink">公开分析过程</h3>
-          <p className="mt-1 text-xs leading-5 text-stone-400">
+          <p className="mt-1 text-xs leading-5 text-faint">
             展示工具调用、证据收集和面向用户的分析摘要。
           </p>
         </div>
         <div ref={traceScrollRef} className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3">
           {traceItems.length === 0 && (
-            <div className="rounded-md border border-dashed border-line bg-panel p-3 text-xs leading-5 text-stone-400">
+            <div className="rounded-md border border-dashed border-line bg-panel p-3 text-xs leading-5 text-faint">
               点击“重新分析”后，这里会流式显示分析步骤。
             </div>
           )}
@@ -67,10 +67,10 @@ export function IssueAnalysisOverlay({
               key={item.id}
               className={`rounded-md border p-3 text-xs leading-5 shadow-sm ${
                 item.kind === "error"
-                  ? "border-rose-800/60 bg-rose-900/40 text-rose-300"
+                  ? "border-rose-200 bg-rose-50 text-rose-600"
                   : item.kind === "thinking"
-                    ? "border-sage-700 bg-sage-900/80 text-stone-200"
-                    : "border-line bg-panel text-stone-300"
+                    ? "border-sage-700 bg-sage-100 text-ink"
+                    : "border-line bg-panel text-muted"
               }`}
             >
               <div className="mb-1 flex items-center justify-between gap-2">
@@ -107,7 +107,7 @@ export function IssueAnalysisOverlay({
             <button
               onClick={onRetry}
               disabled={loading}
-              className="inline-flex h-8 items-center gap-1 rounded-md border border-line bg-panel px-2.5 text-xs text-stone-300 transition hover:bg-sage-900 disabled:opacity-50"
+              className="inline-flex h-8 items-center gap-1 rounded-md border border-line bg-panel px-2.5 text-xs text-muted transition hover:bg-sage-100 disabled:opacity-50"
               title="重新分析"
             >
               <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
@@ -115,7 +115,7 @@ export function IssueAnalysisOverlay({
             </button>
             <button
               onClick={onClose}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-panel text-stone-400 transition hover:bg-panel"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-panel text-faint transition hover:bg-panel"
               title="关闭"
             >
               <X className="h-4 w-4" />
@@ -125,45 +125,45 @@ export function IssueAnalysisOverlay({
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
           {loading && !analysis && (
-            <div className="rounded-md border border-line bg-panel p-4 text-sm text-stone-300">
+            <div className="rounded-md border border-line bg-panel p-4 text-sm text-muted">
               Issue Agent 正在检索 Issue、相似历史、代码、文档和会话上下文...
             </div>
           )}
 
           {error && (
-            <div className="rounded-md border border-rose-800/60 bg-rose-900/40 p-4 text-sm leading-6 text-rose-300">
+            <div className="rounded-md border border-rose-200 bg-rose-50 p-4 text-sm leading-6 text-rose-600">
               分析失败：{error}
             </div>
           )}
 
           {analysis && (
             <div className="space-y-4">
-              <section className="rounded-md border border-sage-700 bg-sage-900/60 p-4">
+              <section className="rounded-md border border-sage-700 bg-sage-100 p-4">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-accent px-3 py-1 text-xs font-semibold text-[#062a1d]">
+                  <span className="rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-ink">
                     {analysis.conclusion}
                   </span>
-                  <span className="rounded-full bg-panel px-2.5 py-1 text-xs text-stone-300">
+                  <span className="rounded-full bg-panel px-2.5 py-1 text-xs text-muted">
                     优先级 {analysis.priority}
                   </span>
-                  <span className="rounded-full bg-panel px-2.5 py-1 text-xs text-stone-300">
+                  <span className="rounded-full bg-panel px-2.5 py-1 text-xs text-muted">
                     复杂度 {analysis.complexity}
                   </span>
-                  <span className="rounded-full bg-panel px-2.5 py-1 text-xs text-stone-300">
+                  <span className="rounded-full bg-panel px-2.5 py-1 text-xs text-muted">
                     分类 {analysis.category}
                   </span>
-                  <span className="rounded-full bg-panel px-2.5 py-1 text-xs text-stone-300">
+                  <span className="rounded-full bg-panel px-2.5 py-1 text-xs text-muted">
                     置信度 {Math.round((analysis.confidence ?? 0) * 100)}%
                   </span>
                 </div>
-                <p className="mt-3 text-sm leading-6 text-stone-200">
+                <p className="mt-3 text-sm leading-6 text-ink">
                   {analysis.conclusion_reason || analysis.summary}
                 </p>
               </section>
 
               <section className="rounded-md border border-line bg-panel p-4">
                 <h4 className="text-sm font-semibold text-ink">建议负责人</h4>
-                <p className="mt-2 text-sm leading-6 text-stone-200">
+                <p className="mt-2 text-sm leading-6 text-ink">
                   <span className="font-semibold text-ink">{analysis.suggested_owner}</span>
                   <span className="ml-2">{analysis.owner_reason}</span>
                 </p>
@@ -173,20 +173,20 @@ export function IssueAnalysisOverlay({
                 <h4 className="text-sm font-semibold text-ink">证据</h4>
                 <div className="mt-3 space-y-2">
                   {(analysis.evidence ?? []).length === 0 && (
-                    <div className="text-sm text-stone-400">暂无可用证据。</div>
+                    <div className="text-sm text-faint">暂无可用证据。</div>
                   )}
                   {(analysis.evidence ?? []).map((item, index) => (
                     <div
                       key={`${item.source_type}-${item.reference ?? "ref"}-${index}`}
-                      className="rounded-md bg-[#0e1a16] p-3 text-sm leading-6 text-stone-200"
+                      className="rounded-md bg-panel-2 p-3 text-sm leading-6 text-ink"
                     >
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="rounded-full bg-panel px-2 py-0.5 text-[11px] uppercase tracking-[0.08em] text-stone-400">
+                        <span className="rounded-full bg-panel px-2 py-0.5 text-[11px] uppercase tracking-[0.08em] text-faint">
                           {item.source_type}
                         </span>
                         <span className="font-medium text-ink">{item.title}</span>
                         {typeof item.confidence === "number" && (
-                          <span className="text-xs text-stone-500">
+                          <span className="text-xs text-faint">
                             {Math.round(item.confidence * 100)}%
                           </span>
                         )}
@@ -199,7 +199,7 @@ export function IssueAnalysisOverlay({
 
               <section className="rounded-md border border-line bg-panel p-4">
                 <h4 className="text-sm font-semibold text-ink">下一步 checklist</h4>
-                <ul className="mt-3 space-y-2 text-sm leading-6 text-stone-200">
+                <ul className="mt-3 space-y-2 text-sm leading-6 text-ink">
                   {checklist.map((item) => (
                     <li key={item} className="flex gap-2">
                       <CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-accent" />
@@ -213,14 +213,14 @@ export function IssueAnalysisOverlay({
                 <section className="rounded-md border border-line bg-panel p-4">
                   <h4 className="text-sm font-semibold text-ink">可选草稿</h4>
                   {drafts?.clarification_comment && (
-                    <div className="mt-3 rounded-md bg-panel p-3 text-sm leading-6 text-stone-200">
-                      <div className="mb-2 text-xs font-semibold text-stone-400">澄清评论</div>
+                    <div className="mt-3 rounded-md bg-panel p-3 text-sm leading-6 text-ink">
+                      <div className="mb-2 text-xs font-semibold text-faint">澄清评论</div>
                       <MarkdownMessage content={drafts.clarification_comment} />
                     </div>
                   )}
                   {drafts?.task_breakdown && (
-                    <div className="mt-3 rounded-md bg-panel p-3 text-sm leading-6 text-stone-200">
-                      <div className="mb-2 text-xs font-semibold text-stone-400">任务拆分说明</div>
+                    <div className="mt-3 rounded-md bg-panel p-3 text-sm leading-6 text-ink">
+                      <div className="mb-2 text-xs font-semibold text-faint">任务拆分说明</div>
                       <MarkdownMessage content={drafts.task_breakdown} />
                     </div>
                   )}
@@ -256,17 +256,17 @@ export function AgentTraceAside({
   }, [traceItems]);
 
   return (
-    <aside className="order-2 flex max-h-[28vh] min-h-0 flex-col overflow-hidden rounded-lg border border-sage-800 bg-panel/95 shadow-xl xl:order-1 xl:h-[86vh] xl:max-h-[86vh]">
+    <aside className="order-2 flex max-h-[28vh] min-h-0 flex-col overflow-hidden rounded-lg border border-sage-700 bg-panel/95 shadow-xl xl:order-1 xl:h-[86vh] xl:max-h-[86vh]">
       <div className="border-b border-line px-4 py-3">
         <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">
           {eyebrow}
         </div>
         <h3 className="mt-1 text-sm font-semibold text-ink">{title}</h3>
-        <p className="mt-1 text-xs leading-5 text-stone-400">{description}</p>
+        <p className="mt-1 text-xs leading-5 text-faint">{description}</p>
       </div>
       <div ref={traceScrollRef} className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3">
         {traceItems.length === 0 && (
-          <div className="rounded-md border border-dashed border-line bg-panel p-3 text-xs leading-5 text-stone-400">
+          <div className="rounded-md border border-dashed border-line bg-panel p-3 text-xs leading-5 text-faint">
             {emptyLabel}
           </div>
         )}
@@ -275,10 +275,10 @@ export function AgentTraceAside({
             key={item.id}
             className={`rounded-md border p-3 text-xs leading-5 shadow-sm ${
               item.kind === "error"
-                ? "border-rose-800/60 bg-rose-900/40 text-rose-300"
+                ? "border-rose-200 bg-rose-50 text-rose-600"
                 : item.kind === "thinking"
-                  ? "border-sage-700 bg-sage-900/80 text-stone-200"
-                  : "border-line bg-panel text-stone-300"
+                  ? "border-sage-700 bg-sage-100 text-ink"
+                  : "border-line bg-panel text-muted"
             }`}
           >
             <div className="mb-1 flex items-center justify-between gap-2">
@@ -344,7 +344,7 @@ export function PRAnalysisOverlay({
             <button
               onClick={onRetry}
               disabled={loading}
-              className="inline-flex h-8 items-center gap-1 rounded-md border border-line bg-panel px-2.5 text-xs text-stone-300 transition hover:bg-sage-900 disabled:opacity-50"
+              className="inline-flex h-8 items-center gap-1 rounded-md border border-line bg-panel px-2.5 text-xs text-muted transition hover:bg-sage-100 disabled:opacity-50"
               title="重新分析"
             >
               <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
@@ -352,7 +352,7 @@ export function PRAnalysisOverlay({
             </button>
             <button
               onClick={onClose}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-panel text-stone-400 transition hover:bg-panel"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-panel text-faint transition hover:bg-panel"
               title="关闭"
             >
               <X className="h-4 w-4" />
@@ -362,35 +362,35 @@ export function PRAnalysisOverlay({
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
           {loading && !analysis && (
-            <div className="rounded-md border border-line bg-panel p-4 text-sm text-stone-300">
+            <div className="rounded-md border border-line bg-panel p-4 text-sm text-muted">
               PR Agent 正在制定 Review 计划，并检查 diff、代码、CI、文档和 review comments...
             </div>
           )}
 
           {error && (
-            <div className="rounded-md border border-rose-800/60 bg-rose-900/40 p-4 text-sm leading-6 text-rose-300">
+            <div className="rounded-md border border-rose-200 bg-rose-50 p-4 text-sm leading-6 text-rose-600">
               分析失败：{error}
             </div>
           )}
 
           {analysis && (
             <div className="space-y-4">
-              <section className="rounded-md border border-sage-700 bg-sage-900/60 p-4">
+              <section className="rounded-md border border-sage-700 bg-sage-100 p-4">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-accent px-3 py-1 text-xs font-semibold text-[#062a1d]">
+                  <span className="rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-ink">
                     {analysis.merge_recommendation}
                   </span>
-                  <span className="rounded-full bg-panel px-2.5 py-1 text-xs text-stone-300">
+                  <span className="rounded-full bg-panel px-2.5 py-1 text-xs text-muted">
                     置信度 {Math.round((analysis.confidence ?? 0) * 100)}%
                   </span>
-                  <span className="rounded-full bg-panel px-2.5 py-1 text-xs text-stone-300">
+                  <span className="rounded-full bg-panel px-2.5 py-1 text-xs text-muted">
                     风险点 {(analysis.risk_points ?? []).length}
                   </span>
-                  <span className="rounded-full bg-panel px-2.5 py-1 text-xs text-stone-300">
+                  <span className="rounded-full bg-panel px-2.5 py-1 text-xs text-muted">
                     阻塞项 {(analysis.blocking_issues ?? []).length}
                   </span>
                 </div>
-                <p className="mt-3 text-sm leading-6 text-stone-200">
+                <p className="mt-3 text-sm leading-6 text-ink">
                   {analysis.recommendation_reason || analysis.summary}
                 </p>
               </section>
@@ -515,7 +515,7 @@ export function CIAnalysisOverlay({
             <button
               onClick={onRetry}
               disabled={loading}
-              className="inline-flex h-8 items-center gap-1 rounded-md border border-line bg-panel px-2.5 text-xs text-stone-300 transition hover:bg-sage-900 disabled:opacity-50"
+              className="inline-flex h-8 items-center gap-1 rounded-md border border-line bg-panel px-2.5 text-xs text-muted transition hover:bg-sage-100 disabled:opacity-50"
               title="重新分析"
             >
               <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
@@ -523,7 +523,7 @@ export function CIAnalysisOverlay({
             </button>
             <button
               onClick={onClose}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-panel text-stone-400 transition hover:bg-panel"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-panel text-faint transition hover:bg-panel"
               title="关闭"
             >
               <X className="h-4 w-4" />
@@ -533,38 +533,38 @@ export function CIAnalysisOverlay({
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
           {loading && !analysis && (
-            <div className="rounded-md border border-line bg-panel p-4 text-sm text-stone-300">
+            <div className="rounded-md border border-line bg-panel p-4 text-sm text-muted">
               CI Agent 正在制定排查计划，并检查失败 job、错误日志、相关文件和最近 PR...
             </div>
           )}
 
           {error && (
-            <div className="rounded-md border border-rose-800/60 bg-rose-900/40 p-4 text-sm leading-6 text-rose-300">
+            <div className="rounded-md border border-rose-200 bg-rose-50 p-4 text-sm leading-6 text-rose-600">
               分析失败：{error}
             </div>
           )}
 
           {analysis && (
             <div className="space-y-4">
-              <section className="rounded-md border border-sage-700 bg-sage-900/60 p-4">
+              <section className="rounded-md border border-sage-700 bg-sage-100 p-4">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-accent px-3 py-1 text-xs font-semibold text-[#062a1d]">
+                  <span className="rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-ink">
                     {analysis.failure_type}
                   </span>
                   <span
-                    className={`rounded-full px-2.5 py-1 text-xs ${analysis.is_merge_blocking ? "bg-rose-900/40 text-rose-300" : "bg-emerald-900/40 text-emerald-300"}`}
+                    className={`rounded-full px-2.5 py-1 text-xs ${analysis.is_merge_blocking ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"}`}
                   >
                     {analysis.is_merge_blocking ? "阻塞合并" : "不阻塞合并"}
                   </span>
-                  <span className="rounded-full bg-panel px-2.5 py-1 text-xs text-stone-300">
+                  <span className="rounded-full bg-panel px-2.5 py-1 text-xs text-muted">
                     置信度 {Math.round((analysis.confidence ?? 0) * 100)}%
                   </span>
                 </div>
-                <p className="mt-3 text-sm leading-6 text-stone-200">
+                <p className="mt-3 text-sm leading-6 text-ink">
                   {analysis.root_cause || analysis.failure_summary}
                 </p>
                 {analysis.blocking_reason && (
-                  <p className="mt-2 text-xs leading-5 text-stone-400">
+                  <p className="mt-2 text-xs leading-5 text-faint">
                     {analysis.blocking_reason}
                   </p>
                 )}
@@ -589,7 +589,7 @@ export function CIAnalysisOverlay({
               {analysis.first_error && (
                 <section className="rounded-md border border-line bg-panel p-4">
                   <h4 className="text-sm font-semibold text-ink">首个关键错误块</h4>
-                  <pre className="mt-3 max-h-56 overflow-auto whitespace-pre-wrap rounded-md border border-rose-800/60 bg-rose-900/40 p-3 text-xs leading-5 text-rose-100">
+                  <pre className="mt-3 max-h-56 overflow-auto whitespace-pre-wrap rounded-md border border-rose-200 bg-rose-50 p-3 text-xs leading-5 text-rose-600">
                     {analysis.first_error}
                   </pre>
                 </section>
@@ -641,15 +641,15 @@ export function AnalysisBulletList({
   tone?: "default" | "warn" | "danger";
 }) {
   const iconClass =
-    tone === "danger" ? "text-rose-400" : tone === "warn" ? "text-amber-400" : "text-accent";
+    tone === "danger" ? "text-rose-600" : tone === "warn" ? "text-amber-600" : "text-accent";
   const Icon = tone === "default" ? CheckCircle2 : AlertTriangle;
   return (
-    <div className="rounded-md bg-[#0e1a16] p-3">
-      {title && <div className="text-xs font-semibold text-stone-400">{title}</div>}
+    <div className="rounded-md bg-panel-2 p-3">
+      {title && <div className="text-xs font-semibold text-faint">{title}</div>}
       {items.length === 0 ? (
-        <div className={`${title ? "mt-2" : ""} text-sm text-stone-400`}>{emptyLabel}</div>
+        <div className={`${title ? "mt-2" : ""} text-sm text-faint`}>{emptyLabel}</div>
       ) : (
-        <ul className={`${title ? "mt-2" : ""} space-y-2 text-sm leading-6 text-stone-200`}>
+        <ul className={`${title ? "mt-2" : ""} space-y-2 text-sm leading-6 text-ink`}>
           {items.map((item) => (
             <li key={item} className="flex gap-2">
               <Icon className={`mt-1 h-4 w-4 shrink-0 ${iconClass}`} />

@@ -31,9 +31,7 @@ export function CardHeader({
 export function PageTitle({ title, description }: { title: string; description: string }) {
   return (
     <div className="mb-6 flex flex-col gap-2 border-b border-line pb-5">
-      <h1 className="font-mono text-2xl font-semibold tracking-tight text-ink md:text-3xl">
-        <span className="text-accent">&gt;_</span> {title}
-      </h1>
+      <h1 className="text-2xl font-semibold tracking-tight text-ink md:text-3xl">{title}</h1>
       <p className="max-w-3xl text-sm leading-6 text-muted">{description}</p>
     </div>
   );
@@ -65,7 +63,7 @@ export function GhostButton({
   return (
     <button
       className={clsx(
-        "w-full rounded-md border border-line bg-panel px-3 py-2 text-left text-sm text-stone-300 transition-colors hover:border-sage-500 hover:bg-sage-900/40 hover:text-ink",
+        "w-full rounded-md border border-line bg-panel px-3 py-2 text-left text-sm text-muted transition-colors hover:border-sage-600 hover:bg-sage-50 hover:text-ink",
         className,
       )}
       {...props}
@@ -85,12 +83,12 @@ export function Badge({
   className?: string;
 }) {
   const tones: Record<string, string> = {
-    neutral: "border-line bg-panel-2 text-stone-300",
-    accent: "border-sage-600 bg-sage-900/40 text-sage-200",
-    warn: "border-[#5a3a1a] bg-[#2a1f10] text-[#fbbf24]",
-    success: "border-emerald-900/70 bg-emerald-900/30 text-emerald-300",
-    danger: "border-rose-900/70 bg-rose-900/30 text-rose-300",
-    info: "border-sky-900/70 bg-sky-900/30 text-sky-300",
+    neutral: "border-line bg-panel-2 text-muted",
+    accent: "border-sage-700 bg-sage-50 text-accent",
+    warn: "border-amber-200 bg-amber-50 text-amber-700",
+    success: "border-emerald-200 bg-emerald-50 text-emerald-600",
+    danger: "border-rose-200 bg-rose-50 text-rose-600",
+    info: "border-sky-200 bg-sky-50 text-sky-600",
   };
   return (
     <span

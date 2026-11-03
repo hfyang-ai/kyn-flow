@@ -47,7 +47,7 @@ export default function IssuesPage() {
         <Card>
           <div className="flex items-center justify-between">
             <h2 className="font-semibold text-ink">Issue 列表</h2>
-            <span className="rounded-full bg-panel px-2.5 py-1 text-xs text-stone-400">
+            <span className="rounded-full bg-panel px-2.5 py-1 text-xs text-faint">
               {issues.length} 条
             </span>
           </div>
@@ -57,14 +57,14 @@ export default function IssuesPage() {
                 key={issue.id}
                 onClick={() => setSelected(issue)}
                 className={
-                  selected?.id === issue.id ? "border-sage-600 bg-sage-900 text-sage-100" : ""
+                  selected?.id === issue.id ? "border-sage-700 bg-sage-100 text-accent" : ""
                 }
               >
                 <div className="flex items-center justify-between gap-3">
                   <span>
                     #{issue.number} {issue.title}
                   </span>
-                  <span className="rounded-full bg-stone-800 px-2 py-0.5 text-xs">
+                  <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs">
                     {issue.state}
                   </span>
                 </div>
@@ -76,7 +76,7 @@ export default function IssuesPage() {
         <Card>
           <h2 className="font-semibold text-ink">分析结果</h2>
           {selected && (
-            <div className="mt-3 rounded-md bg-panel p-3 text-sm leading-6 text-stone-300">
+            <div className="mt-3 rounded-md bg-panel p-3 text-sm leading-6 text-muted">
               <div className="font-medium text-ink">
                 #{selected.number} {selected.title}
               </div>
@@ -87,7 +87,7 @@ export default function IssuesPage() {
             分析当前 Issue
           </PrimaryButton>
           {analysis && (
-            <pre className="mt-4 max-h-[520px] overflow-auto rounded-md border border-stone-700 bg-stone-950 p-4 text-xs text-stone-100">
+            <pre className="mt-4 max-h-[520px] overflow-auto rounded-md border border-stone-200 bg-stone-100 p-4 text-xs text-ink">
               {analysis}
             </pre>
           )}

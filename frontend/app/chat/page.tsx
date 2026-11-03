@@ -69,17 +69,17 @@ export default function ChatPage() {
           ))}
         </select>
         <textarea
-          className="h-32 w-full rounded-md border border-line bg-panel px-3 py-3 text-sm leading-6 outline-none transition focus:border-sage-500 focus:ring-2 focus:ring-sage-100"
+          className="h-32 w-full rounded-md border border-line bg-panel px-3 py-3 text-sm leading-6 outline-none transition focus:border-sage-600 focus:ring-2 focus:ring-sage-100"
           value={message}
           onChange={(event) => setMessage(event.target.value)}
         />
 
-        <div className="mt-3 flex flex-wrap gap-2 text-xs text-stone-400">
+        <div className="mt-3 flex flex-wrap gap-2 text-xs text-faint">
           {samples.map((sample) => (
             <button
               key={sample}
               onClick={() => setMessage(sample)}
-              className="rounded-full border border-line bg-panel px-3 py-1.5 transition hover:border-sage-700 hover:bg-sage-900"
+              className="rounded-full border border-line bg-panel px-3 py-1.5 transition hover:border-sage-700 hover:bg-sage-100"
             >
               {sample}
             </button>
@@ -95,7 +95,7 @@ export default function ChatPage() {
         </PrimaryButton>
 
         {result && (
-          <pre className="mt-4 max-h-[560px] overflow-auto rounded-md border border-stone-700 bg-stone-950 p-4 text-xs text-stone-100">
+          <pre className="mt-4 max-h-[560px] overflow-auto rounded-md border border-stone-200 bg-stone-100 p-4 text-xs text-ink">
             {result}
           </pre>
         )}

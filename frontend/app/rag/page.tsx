@@ -305,15 +305,15 @@ export default function RAGPage() {
   }
 
   return (
-    <div className="-m-3 flex min-h-[calc(100vh-53px)] flex-col bg-[#0e1a16] lg:h-[calc(100vh-53px)] lg:overflow-hidden">
+    <div className="-m-3 flex min-h-[calc(100vh-53px)] flex-col bg-panel-2 lg:h-[calc(100vh-53px)] lg:overflow-hidden">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-panel px-4 py-3">
         <div className="flex items-center gap-3">
-          <span className="flex h-9 w-9 items-center justify-center rounded-md bg-[#0f766e] text-white">
+          <span className="flex h-9 w-9 items-center justify-center rounded-md bg-accent text-white">
             <BookOpen className="h-4 w-4" />
           </span>
           <div>
             <h1 className="text-base font-semibold text-ink">RAG 工作室</h1>
-            <p className="text-xs text-stone-400">{currentRepo?.full_name ?? "未选择项目"}</p>
+            <p className="text-xs text-faint">{currentRepo?.full_name ?? "未选择项目"}</p>
           </div>
         </div>
         <div className="flex min-w-0 items-center gap-2">
@@ -324,7 +324,7 @@ export default function RAGPage() {
               setTurns([]);
               setSources([]);
             }}
-            className="h-9 min-w-0 max-w-64 rounded-md border border-line bg-panel px-3 text-sm outline-none focus:border-sage-600"
+            className="h-9 min-w-0 max-w-64 rounded-md border border-line bg-panel px-3 text-sm outline-none focus:border-sage-700"
             aria-label="选择项目"
           >
             {repos.length === 0 && <option value="">暂无项目</option>}
@@ -337,7 +337,7 @@ export default function RAGPage() {
           {repoId ? (
             <Link
               href={`/knowledge/${repoId}`}
-              className="hidden h-9 items-center rounded-md border border-line bg-panel px-3 text-sm text-stone-300 hover:bg-stone-800 sm:inline-flex"
+              className="hidden h-9 items-center rounded-md border border-line bg-panel px-3 text-sm text-muted hover:bg-stone-100 sm:inline-flex"
             >
               管理项目知识
             </Link>
@@ -345,7 +345,7 @@ export default function RAGPage() {
           <button
             type="button"
             onClick={() => repoId && loadKnowledge(repoId)}
-            className="flex h-9 w-9 items-center justify-center rounded-md border border-line bg-panel text-stone-300 hover:bg-stone-800"
+            className="flex h-9 w-9 items-center justify-center rounded-md border border-line bg-panel text-muted hover:bg-stone-100"
             title="刷新"
             aria-label="刷新"
           >
@@ -379,7 +379,7 @@ export default function RAGPage() {
 
       {!alertHidden && (
         <div
-          className={`flex items-center justify-between border-b px-4 py-2 text-sm transition-opacity duration-300 ${alertDismissed ? "opacity-0" : "opacity-100"} ${error ? "border-red-800/60 bg-red-900/40 text-red-300" : "border-emerald-800/60 bg-emerald-900/40 text-emerald-200"}`}
+          className={`flex items-center justify-between border-b px-4 py-2 text-sm transition-opacity duration-300 ${alertDismissed ? "opacity-0" : "opacity-100"} ${error ? "border-red-200 bg-red-50 text-red-600" : "border-emerald-200 bg-emerald-50 text-emerald-600"}`}
           onTransitionEnd={() => {
             if (alertDismissed) setAlertHidden(true);
           }}
@@ -397,10 +397,10 @@ export default function RAGPage() {
       )}
 
       <div className="grid min-h-0 flex-1 lg:grid-cols-[300px_minmax(420px,1fr)_340px] lg:overflow-hidden">
-        <aside className="flex min-h-[360px] flex-col border-r border-line bg-[#0e1a16]">
+        <aside className="flex min-h-[360px] flex-col border-r border-line bg-panel-2">
           <div className="flex items-center justify-between border-b border-line px-4 py-3">
             <div className="flex items-center gap-2 text-sm font-semibold text-ink">
-              <Database className="h-4 w-4 text-sage-300" />
+              <Database className="h-4 w-4 text-accent" />
               知识库
             </div>
             <button
@@ -409,7 +409,7 @@ export default function RAGPage() {
               disabled={!repoId || busy === "reindex"}
               title="重建向量索引"
               aria-label="重建向量索引"
-              className="flex h-8 w-8 items-center justify-center rounded-md text-stone-400 hover:bg-panel disabled:opacity-50"
+              className="flex h-8 w-8 items-center justify-center rounded-md text-faint hover:bg-panel disabled:opacity-50"
             >
               <RefreshCw className={`h-4 w-4 ${busy === "reindex" ? "animate-spin" : ""}`} />
             </button>
@@ -426,7 +426,7 @@ export default function RAGPage() {
               type="button"
               disabled={!repoId || busy === "upload"}
               onClick={() => fileInput.current?.click()}
-              className="flex h-11 w-full items-center justify-center gap-2 rounded-md border border-dashed border-sage-500 bg-panel text-sm font-medium text-sage-200 hover:bg-sage-900 disabled:opacity-50"
+              className="flex h-11 w-full items-center justify-center gap-2 rounded-md border border-dashed border-sage-600 bg-panel text-sm font-medium text-accent hover:bg-sage-100 disabled:opacity-50"
             >
               {busy === "upload" ? (
                 <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -448,7 +448,7 @@ export default function RAGPage() {
                     <div className="truncate text-sm font-medium text-ink" title={item.title}>
                       {item.title}
                     </div>
-                    <div className="mt-1 text-xs text-stone-400">
+                    <div className="mt-1 text-xs text-faint">
                       {sourceLabel(item.source_type)} · {item.chunk_count} 切片{" "}
                       {formatDate(item.created_at)}
                     </div>
@@ -459,12 +459,12 @@ export default function RAGPage() {
                     disabled={busy === `delete:${item.id}`}
                     title="删除资料"
                     aria-label="删除资料"
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-stone-500 opacity-0 hover:bg-red-900/40 hover:text-red-300 group-hover:opacity-100 focus:opacity-100"
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-faint opacity-0 hover:bg-red-50 hover:text-red-600 group-hover:opacity-100 focus:opacity-100"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </div>
-                <p className="mt-2 line-clamp-3 text-xs leading-5 text-stone-300">
+                <p className="mt-2 line-clamp-3 text-xs leading-5 text-muted">
                   {item.content_preview}
                 </p>
               </div>
@@ -475,7 +475,7 @@ export default function RAGPage() {
         <main className="flex min-h-[520px] min-w-0 flex-col bg-panel">
           <div className="flex items-center justify-between border-b border-line px-4 py-3">
             <div className="flex items-center gap-2 text-sm font-semibold text-ink">
-              <Sparkles className="h-4 w-4 text-[#fbbf24]" />
+              <Sparkles className="h-4 w-4 text-amber-500" />
               问答
             </div>
             {turns.length > 0 && (
@@ -485,7 +485,7 @@ export default function RAGPage() {
                   setTurns([]);
                   setSources([]);
                 }}
-                className="text-xs text-stone-400 hover:text-ink"
+                className="text-xs text-faint hover:text-ink"
               >
                 清空会话
               </button>
@@ -504,7 +504,7 @@ export default function RAGPage() {
                 className={turn.role === "user" ? "ml-auto max-w-[82%]" : "max-w-[92%]"}
               >
                 <div
-                  className={`rounded-md px-4 py-3 text-sm leading-7 ${turn.role === "user" ? "bg-[#0f766e] text-white" : "border border-line bg-[#0e1a16] text-ink"}`}
+                  className={`rounded-md px-4 py-3 text-sm leading-7 ${turn.role === "user" ? "bg-accent text-white" : "border border-line bg-panel-2 text-ink"}`}
                 >
                   {turn.role === "assistant" ? (
                     <div className="markdown-body">
@@ -515,7 +515,7 @@ export default function RAGPage() {
                   )}
                 </div>
                 {turn.role === "assistant" && (
-                  <div className="mt-1.5 flex flex-wrap gap-2 text-[11px] text-stone-400">
+                  <div className="mt-1.5 flex flex-wrap gap-2 text-[11px] text-faint">
                     <span>
                       {turn.mode === "llm"
                         ? "LLM 生成"
@@ -530,13 +530,13 @@ export default function RAGPage() {
               </div>
             ))}
             {busy === "ask" && (
-              <div className="flex items-center gap-2 text-sm text-stone-400">
+              <div className="flex items-center gap-2 text-sm text-faint">
                 <LoaderCircle className="h-4 w-4 animate-spin" />
                 正在检索并生成回答
               </div>
             )}
           </div>
-          <div className="border-t border-line bg-[#0e1a16] p-3">
+          <div className="border-t border-line bg-panel-2 p-3">
             <textarea
               value={question}
               onChange={(event) => setQuestion(event.target.value)}
@@ -548,13 +548,13 @@ export default function RAGPage() {
               }}
               placeholder="向当前知识库提问"
               rows={3}
-              className="w-full resize-none rounded-md border border-line bg-panel px-3 py-2 text-sm leading-6 text-ink outline-none focus:border-sage-600 focus:ring-2 focus:ring-sage-100"
+              className="w-full resize-none rounded-md border border-line bg-panel px-3 py-2 text-sm leading-6 text-ink outline-none focus:border-sage-700 focus:ring-2 focus:ring-sage-100"
             />
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <select
                 value={sourceType}
                 onChange={(event) => setSourceType(event.target.value)}
-                className="h-9 rounded-md border border-line bg-panel px-2 text-xs text-stone-300"
+                className="h-9 rounded-md border border-line bg-panel px-2 text-xs text-muted"
                 aria-label="资料类型"
               >
                 <option value="">全部资料</option>
@@ -564,7 +564,7 @@ export default function RAGPage() {
                   </option>
                 ))}
               </select>
-              <label className="flex h-9 items-center gap-2 rounded-md border border-line bg-panel px-2 text-xs text-stone-300">
+              <label className="flex h-9 items-center gap-2 rounded-md border border-line bg-panel px-2 text-xs text-muted">
                 Top K
                 <select
                   value={topK}
@@ -584,7 +584,7 @@ export default function RAGPage() {
                 title="只检索证据"
                 onClick={searchOnly}
                 disabled={!repoId || !question.trim() || Boolean(busy)}
-                className="flex h-9 w-9 items-center justify-center rounded-md border border-line bg-panel text-stone-300 hover:bg-stone-800 disabled:opacity-40"
+                className="flex h-9 w-9 items-center justify-center rounded-md border border-line bg-panel text-muted hover:bg-stone-100 disabled:opacity-40"
               >
                 <Search className="h-4 w-4" />
               </button>
@@ -592,7 +592,7 @@ export default function RAGPage() {
                 type="button"
                 onClick={ask}
                 disabled={!repoId || !question.trim() || Boolean(busy)}
-                className="inline-flex h-9 items-center gap-2 rounded-md bg-sage-500 px-4 text-sm font-medium text-[#062a1d] hover:bg-sage-400 disabled:opacity-40"
+                className="inline-flex h-9 items-center gap-2 rounded-md bg-accent px-4 text-sm font-medium text-accent-ink hover:bg-accent-bright disabled:opacity-40"
               >
                 <Send className="h-4 w-4" />
                 提问
@@ -601,13 +601,13 @@ export default function RAGPage() {
           </div>
         </main>
 
-        <aside className="flex min-h-[360px] flex-col border-l border-line bg-[#0e1a16]">
+        <aside className="flex min-h-[360px] flex-col border-l border-line bg-panel-2">
           <div className="flex items-center justify-between border-b border-line px-4 py-3">
             <div className="flex items-center gap-2 text-sm font-semibold text-ink">
-              <Search className="h-4 w-4 text-sage-300" />
+              <Search className="h-4 w-4 text-accent" />
               检索证据
             </div>
-            <span className="text-xs text-stone-400">{sources.length} 条</span>
+            <span className="text-xs text-faint">{sources.length} 条</span>
           </div>
           <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
             {sources.length === 0 && <EmptyPanel icon={Search} label="暂无检索结果" />}
@@ -617,29 +617,29 @@ export default function RAGPage() {
                 className="rounded-md border border-line bg-panel p-3"
               >
                 <div className="flex items-start gap-2">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-[#0f766e] text-xs font-semibold text-white">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-accent text-xs font-semibold text-white">
                     {source.citation}
                   </span>
                   <div className="min-w-0 flex-1">
                     <h2 className="break-words text-sm font-medium leading-5 text-ink">
                       {source.title}
                     </h2>
-                    <div className="mt-1 text-xs text-stone-400">
+                    <div className="mt-1 text-xs text-faint">
                       {sourceLabel(source.source_type)} · {(source.score * 100).toFixed(1)}%
                     </div>
                   </div>
                 </div>
-                <div className="mt-2 h-1 overflow-hidden rounded bg-stone-800">
+                <div className="mt-2 h-1 overflow-hidden rounded bg-stone-100">
                   <div
-                    className="h-full bg-sage-500"
+                    className="h-full bg-accent"
                     style={{ width: `${Math.max(3, Math.min(100, source.score * 100))}%` }}
                   />
                 </div>
-                <p className="mt-3 whitespace-pre-wrap text-xs leading-5 text-stone-300">
+                <p className="mt-3 whitespace-pre-wrap text-xs leading-5 text-muted">
                   {source.snippet}
                 </p>
                 {Boolean(source.metadata.filename || source.metadata.path) && (
-                  <div className="mt-2 break-all border-t border-line pt-2 text-[11px] text-stone-400">
+                  <div className="mt-2 break-all border-t border-line pt-2 text-[11px] text-faint">
                     {String(source.metadata.filename ?? source.metadata.path)}
                   </div>
                 )}
@@ -655,7 +655,7 @@ export default function RAGPage() {
 function StatusItem({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0 border-r border-line px-4 py-2.5 last:border-r-0">
-      <div className="text-[11px] font-medium uppercase text-stone-400">{label}</div>
+      <div className="text-[11px] font-medium uppercase text-faint">{label}</div>
       <div className="mt-0.5 truncate text-sm font-semibold text-ink" title={value}>
         {value}
       </div>
@@ -665,8 +665,8 @@ function StatusItem({ label, value }: { label: string; value: string }) {
 
 function EmptyPanel({ icon: Icon, label }: { icon: typeof Search; label: string }) {
   return (
-    <div className="flex min-h-36 flex-col items-center justify-center gap-2 rounded-md border border-dashed border-line bg-panel/60 p-4 text-center text-sm text-stone-400">
-      <Icon className="h-5 w-5 text-stone-500" />
+    <div className="flex min-h-36 flex-col items-center justify-center gap-2 rounded-md border border-dashed border-line bg-panel/60 p-4 text-center text-sm text-faint">
+      <Icon className="h-5 w-5 text-faint" />
       <span>{label}</span>
     </div>
   );

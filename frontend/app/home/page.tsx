@@ -1935,7 +1935,7 @@ export default function DashboardPage() {
 
   return (
     <div
-      className="relative grid h-[calc(100vh-24px)] min-h-0 overflow-hidden rounded-lg border border-line bg-panel/80 shadow-sm"
+      className="relative grid h-[calc(100vh-77px)] min-h-0 overflow-hidden rounded-lg border border-line bg-panel"
       style={{
         gridTemplateColumns: isMobileViewport
           ? "minmax(0,1fr)"
@@ -1944,24 +1944,24 @@ export default function DashboardPage() {
       }}
     >
       <aside
-        className={`${isMobileViewport ? "hidden" : "flex"} min-h-0 min-w-0 flex-col overflow-hidden border-r border-line bg-[#0e1a16] transition-all duration-300`}
+        className={`${isMobileViewport ? "hidden" : "flex"} min-h-0 min-w-0 flex-col overflow-hidden border-r border-line bg-panel-2 transition-all duration-300`}
       >
         <div className={`border-b border-line ${isSidebarCollapsed ? "p-2" : "p-4"}`}>
           <div className={`flex items-center ${isSidebarCollapsed ? "flex-col gap-3" : "gap-3"}`}>
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-accent text-sm font-bold text-[#062a1d]">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-accent text-sm font-bold text-accent-ink">
               DF
             </div>
             {!isSidebarCollapsed && (
               <div className="min-w-0 flex-1">
                 <div className="text-sm font-semibold text-ink">Kynflow</div>
-                <div className="truncate text-xs text-stone-400">
+                <div className="truncate text-xs text-faint">
                   研发团队 PR / Issue 智能协作 Agent
                 </div>
               </div>
             )}
             <button
               onClick={() => setIsSidebarCollapsed((value) => !value)}
-              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-line bg-panel text-stone-300 transition hover:bg-sage-900"
+              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-line bg-panel text-muted transition hover:bg-sage-100"
               title={isSidebarCollapsed ? "展开项目侧边栏" : "隐藏项目侧边栏"}
             >
               {isSidebarCollapsed ? (
@@ -1976,7 +1976,7 @@ export default function DashboardPage() {
             <div className="mt-4 flex flex-col items-center gap-3">
               <button
                 onClick={openAddProject}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-md text-stone-200 transition hover:bg-panel"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-md text-ink transition hover:bg-panel"
                 title="添加项目"
               >
                 <Plus className="h-4 w-4" />
@@ -1984,7 +1984,7 @@ export default function DashboardPage() {
               <button
                 onClick={refreshSelectedRepo}
                 disabled={!selectedRepo || syncing}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-md text-stone-200 transition hover:bg-panel disabled:opacity-50"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-md text-ink transition hover:bg-panel disabled:opacity-50"
                 title="刷新当前项目"
               >
                 <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
@@ -2000,7 +2000,7 @@ export default function DashboardPage() {
               </div>
               <button
                 onClick={openAddProject}
-                className="inline-flex items-center gap-1 rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-[#062a1d]"
+                className="inline-flex items-center gap-1 rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-accent-ink"
               >
                 <Plus className="h-3.5 w-3.5" />
                 添加项目
@@ -2013,12 +2013,12 @@ export default function DashboardPage() {
           className={`min-h-0 flex-1 overflow-y-auto ${isSidebarCollapsed ? "p-2" : "px-3 py-2"}`}
         >
           {repos.length === 0 && !isSidebarCollapsed && (
-            <div className="rounded-md bg-panel p-3 text-sm leading-6 text-stone-300">
+            <div className="rounded-md bg-panel p-3 text-sm leading-6 text-muted">
               还没有项目。请先添加一个项目。
             </div>
           )}
           {!isSidebarCollapsed && repos.length > 0 && (
-            <div className="mb-2 px-1 text-xs text-stone-500">项目</div>
+            <div className="mb-2 px-1 text-xs text-faint">项目</div>
           )}
           {repos.map((repo) => {
             const conversations = conversationMap[repo.id] ?? [];
@@ -2029,7 +2029,7 @@ export default function DashboardPage() {
                 key={repo.id}
                 onClick={() => selectProject(repo).catch(() => undefined)}
                 className={`mb-2 inline-flex h-9 w-9 items-center justify-center rounded-md transition ${
-                  isSelectedRepo ? "bg-panel text-ink shadow-sm" : "text-stone-300 hover:bg-panel"
+                  isSelectedRepo ? "bg-panel text-ink shadow-sm" : "text-muted hover:bg-panel"
                 }`}
                 title={repo.full_name}
               >
@@ -2038,11 +2038,11 @@ export default function DashboardPage() {
             ) : (
               <div key={repo.id} className="mb-1">
                 <div
-                  className={`group flex h-9 items-center gap-1 rounded-md px-1 transition ${isSelectedRepo ? "bg-[#16271f]" : "hover:bg-[#16271f]"}`}
+                  className={`group flex h-9 items-center gap-1 rounded-md px-1 transition ${isSelectedRepo ? "bg-panel-3" : "hover:bg-panel-3"}`}
                 >
                   <button
                     onClick={() => selectProject(repo).catch(() => undefined)}
-                    className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-stone-400 transition hover:bg-panel"
+                    className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-faint transition hover:bg-panel"
                   >
                     <ChevronDown
                       className={`h-3.5 w-3.5 transition ${isExpanded ? "" : "-rotate-90"}`}
@@ -2052,8 +2052,8 @@ export default function DashboardPage() {
                     onClick={() => selectProject(repo).catch(() => undefined)}
                     className="flex min-w-0 flex-1 items-center gap-2 text-left"
                   >
-                    <Folder className="h-4 w-4 shrink-0 text-stone-400" />
-                    <span className="truncate text-sm text-stone-200" title={repo.full_name}>
+                    <Folder className="h-4 w-4 shrink-0 text-faint" />
+                    <span className="truncate text-sm text-ink" title={repo.full_name}>
                       {repo.name || repo.full_name}
                     </span>
                   </button>
@@ -2062,7 +2062,7 @@ export default function DashboardPage() {
                       event.stopPropagation();
                       addConversation(repo).catch(() => undefined);
                     }}
-                    className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-stone-500 opacity-0 transition hover:bg-panel hover:text-ink group-hover:opacity-100"
+                    className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-faint opacity-0 transition hover:bg-panel hover:text-ink group-hover:opacity-100"
                     title="添加会话"
                   >
                     <Plus className="h-3.5 w-3.5" />
@@ -2072,7 +2072,7 @@ export default function DashboardPage() {
                       event.stopPropagation();
                       removeRepo(repo).catch(() => undefined);
                     }}
-                    className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-stone-500 opacity-0 transition hover:bg-rose-900/40 hover:text-rose-400 group-hover:opacity-100"
+                    className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-faint opacity-0 transition hover:bg-rose-50 hover:text-rose-600 group-hover:opacity-100"
                     title="移除项目"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -2081,7 +2081,7 @@ export default function DashboardPage() {
                 {isExpanded && (
                   <div className="ml-7 mt-1 space-y-0.5">
                     {conversations.length === 0 && (
-                      <div className="px-2 py-1.5 text-xs text-stone-500">暂无会话</div>
+                      <div className="px-2 py-1.5 text-xs text-faint">暂无会话</div>
                     )}
                     {conversations.map((conversation) => (
                       <div
@@ -2095,12 +2095,12 @@ export default function DashboardPage() {
                           className={`flex h-8 min-w-0 flex-1 items-center justify-between gap-2 rounded-md px-2 text-left text-sm transition ${
                             selectedConversationId === conversation.id
                               ? "bg-panel text-ink shadow-sm"
-                              : "text-stone-300 hover:bg-panel"
+                              : "text-muted hover:bg-panel"
                           }`}
                           title={conversation.title}
                         >
                           <span className="truncate">{conversation.title}</span>
-                          <span className="shrink-0 text-xs text-stone-500">
+                          <span className="shrink-0 text-xs text-faint">
                             {formatRelativeTime(conversation.updated_at)}
                           </span>
                         </button>
@@ -2108,7 +2108,7 @@ export default function DashboardPage() {
                           onClick={() =>
                             removeConversation(repo, conversation).catch(() => undefined)
                           }
-                          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-stone-500 opacity-0 transition hover:bg-rose-900/40 hover:text-rose-400 group-hover/conversation:opacity-100"
+                          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-faint opacity-0 transition hover:bg-rose-50 hover:text-rose-600 group-hover/conversation:opacity-100"
                           title="删除会话"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -2127,7 +2127,7 @@ export default function DashboardPage() {
             <button
               onClick={refreshSelectedRepo}
               disabled={!selectedRepo || syncing}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-line bg-panel px-3 py-2 text-sm font-medium text-stone-200 transition hover:bg-sage-900 disabled:opacity-60"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-line bg-panel px-3 py-2 text-sm font-medium text-ink transition hover:bg-sage-100 disabled:opacity-60"
             >
               <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
               {syncing ? "刷新中..." : "刷新当前项目"}
@@ -2137,7 +2137,7 @@ export default function DashboardPage() {
       </aside>
 
       <section
-        className="grid min-h-0 min-w-0 bg-[#0d1612]"
+        className="grid min-h-0 min-w-0 bg-panel"
         style={{
           gridTemplateColumns: isMobileViewport
             ? "minmax(0,1fr)"
@@ -2165,7 +2165,7 @@ export default function DashboardPage() {
               </select>
               <button
                 onClick={openAddProject}
-                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-line bg-panel text-ink transition hover:bg-sage-900"
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-line bg-panel text-ink transition hover:bg-sage-100"
                 aria-label="添加项目"
                 title="添加项目"
               >
@@ -2177,19 +2177,19 @@ export default function DashboardPage() {
             <div className="min-w-0">
               <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
                 <h2 className="font-semibold text-ink">总览</h2>
-                <span className="text-xs text-stone-400">当前代码仓</span>
+                <span className="text-xs text-faint">当前代码仓</span>
                 <span className="truncate text-sm font-semibold text-ink">
                   {selectedRepo?.full_name || "未选择仓库"}
                 </span>
                 {selectedConversation && (
-                  <span className="rounded-full bg-panel px-2 py-0.5 text-xs text-stone-300">
+                  <span className="rounded-full bg-panel px-2 py-0.5 text-xs text-muted">
                     会话：{selectedConversation.title}
                   </span>
                 )}
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-3">
-              <div className="rounded-full border border-sage-700 bg-sage-900 px-3 py-1 text-xs font-medium text-sage-200">
+              <div className="rounded-full border border-sage-700 bg-sage-100 px-3 py-1 text-xs font-medium text-accent">
                 Production Workspace
               </div>
               <button onClick={openAddProject} className="text-xs text-accent hover:underline">
@@ -2197,7 +2197,7 @@ export default function DashboardPage() {
               </button>
             </div>
           </div>
-          <div className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
+          <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-5 md:grid-cols-3">
             <MetricCard icon={ListTodo} label="待处理 Issue" value={openIssues.length} />
             <MetricCard icon={GitPullRequest} label="待 Review PR" value={openPrs.length} />
             <MetricCard icon={CheckCircle2} label="已处理 Issue" value={handledIssues.length} />
@@ -2208,25 +2208,25 @@ export default function DashboardPage() {
         </section>
 
         <div
-          className={`${isMobileViewport ? "hidden" : ""} col-start-2 row-span-2 row-start-1 cursor-col-resize border-x border-line bg-stone-800 transition hover:bg-sage-900`}
+          className={`${isMobileViewport ? "hidden" : ""} col-start-2 row-span-2 row-start-1 cursor-col-resize border-x border-line bg-stone-100 transition hover:bg-sage-100`}
           onMouseDown={startResize}
           title="拖拽调整 Workspace 宽度"
         />
 
         <aside
-          className={`${isMobileViewport ? "hidden" : "flex"} col-start-3 row-span-2 row-start-1 min-h-0 min-w-0 flex-col bg-[#0d1612]`}
+          className={`${isMobileViewport ? "hidden" : "flex"} col-start-3 row-span-2 row-start-1 min-h-0 min-w-0 flex-col bg-panel`}
         >
           <div className="border-b border-line bg-panel/80 px-4 py-3">
             <div className="flex items-center justify-between gap-3">
               <h2 className="font-semibold text-ink">Workspace</h2>
               <div className="flex shrink-0 items-center gap-2">
-                <div className="text-[11px] text-stone-400">
+                <div className="text-[11px] text-faint">
                   Issues: {filteredIssues.length} · PRs: {filteredPrs.length}
                 </div>
                 <button
                   onClick={refreshSelectedRepo}
                   disabled={!selectedRepo || syncing}
-                  className="inline-flex h-8 items-center gap-1.5 rounded-md border border-line bg-panel px-2 text-xs font-medium text-stone-200 transition hover:bg-sage-900 disabled:opacity-60"
+                  className="inline-flex h-8 items-center gap-1.5 rounded-md border border-line bg-panel px-2 text-xs font-medium text-ink transition hover:bg-sage-100 disabled:opacity-60"
                   title="刷新 Issue/PR/CI"
                   aria-label="刷新 Issue/PR/CI"
                 >
@@ -2248,8 +2248,8 @@ export default function DashboardPage() {
                   }}
                   className={`shrink-0 rounded-md px-3 py-1.5 text-xs font-medium transition ${
                     workspaceTab === tab
-                      ? "bg-accent text-[#062a1d]"
-                      : "bg-panel text-stone-300 hover:bg-sage-900"
+                      ? "bg-accent text-accent-ink"
+                      : "bg-panel text-muted hover:bg-sage-100"
                   }`}
                 >
                   {tab}
@@ -2459,7 +2459,7 @@ export default function DashboardPage() {
           </div>
         </aside>
 
-        <section className="flex min-h-0 min-w-0 flex-col bg-[#0d1612]">
+        <section className="flex min-h-0 min-w-0 flex-col bg-panel">
           <div ref={chatScrollRef} className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
             <div className="flex w-full flex-col gap-4">
               {messages.map((item) => {
@@ -2477,10 +2477,10 @@ export default function DashboardPage() {
                     className={`flex ${item.role === "user" ? "justify-end" : "justify-start"}`}
                   >
                     <div
-                      className={`${isWelcome ? "w-full max-w-none rounded-md" : "max-w-[80%] rounded-2xl"} px-4 py-3 text-sm leading-7 shadow-sm ${
+                      className={`${isWelcome ? "w-full max-w-none rounded-md" : "max-w-[80%] rounded-xl"} px-4 py-3 text-sm leading-7 ${
                         item.role === "user"
-                          ? "bg-[#3a1a10] text-stone-100"
-                          : "border border-line bg-panel text-stone-200"
+                          ? "bg-accent text-accent-ink"
+                          : "border border-line bg-panel text-ink"
                       }`}
                     >
                       {item.role === "assistant" ? (
@@ -2502,18 +2502,18 @@ export default function DashboardPage() {
                               <MarkdownMessage content={item.content} />
                             </div>
                           ) : traceItems.length === 0 ? (
-                            <div className="text-stone-400">Agent 正在分析...</div>
+                            <div className="text-faint">Agent 正在分析...</div>
                           ) : null}
                         </>
                       ) : (
                         <div className="whitespace-pre-wrap">{item.content}</div>
                       )}
                       {item.route && (
-                        <div className="mt-3 flex flex-wrap gap-2 border-t border-line pt-2 text-xs text-stone-400">
+                        <div className="mt-3 flex flex-wrap gap-2 border-t border-line pt-2 text-xs text-faint">
                           <span>route: {item.route}</span>
                           <span>tools: {item.toolCalls?.length ?? 0}</span>
                           {failedTools.length > 0 && (
-                            <span className="text-rose-400" title={failedToolTitle}>
+                            <span className="text-rose-600" title={failedToolTitle}>
                               failed: {failedTools.length}
                             </span>
                           )}
@@ -2544,7 +2544,7 @@ export default function DashboardPage() {
                       {item.role === "assistant" &&
                         item.responsePending &&
                         (traceItems.length > 0 || item.content.trim()) && (
-                          <div className="mt-3 flex items-center gap-2 rounded-md border border-sage-800 bg-sage-900 px-3 py-2 text-xs text-stone-300">
+                          <div className="mt-3 flex items-center gap-2 rounded-md border border-sage-700 bg-sage-100 px-3 py-2 text-xs text-muted">
                             <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-accent" />
                             <span>Agent 正在回复，工具结果已收集，正在整理最终回答...</span>
                           </div>
@@ -2599,7 +2599,7 @@ export default function DashboardPage() {
                   <div ref={promptRowRef} className="relative min-w-0 flex-1 overflow-hidden">
                     <div className="flex min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap">
                       {loadingPrompts && promptSuggestions.length === 0 && (
-                        <span className="shrink-0 rounded-full border border-line bg-panel px-3 py-1.5 text-xs text-stone-400">
+                        <span className="shrink-0 rounded-full border border-line bg-panel px-3 py-1.5 text-xs text-faint">
                           推荐生成中{promptLoadingDots}
                         </span>
                       )}
@@ -2608,7 +2608,7 @@ export default function DashboardPage() {
                           key={prompt}
                           onClick={() => askAgent(prompt)}
                           disabled={!selectedRepo || loading || loadingPrompts}
-                          className="max-w-full shrink-0 truncate rounded-full border border-line bg-panel px-3 py-1.5 text-xs text-stone-300 transition hover:border-sage-700 hover:bg-sage-900 disabled:opacity-60"
+                          className="max-w-full shrink-0 truncate rounded-full border border-line bg-panel px-3 py-1.5 text-xs text-muted transition hover:border-sage-700 hover:bg-sage-100 disabled:opacity-60"
                           title={prompt}
                         >
                           {prompt}
@@ -2625,7 +2625,7 @@ export default function DashboardPage() {
                           key={prompt}
                           type="button"
                           data-prompt-chip-measure
-                          className="shrink-0 rounded-full border border-line bg-panel px-3 py-1.5 text-xs text-stone-300"
+                          className="shrink-0 rounded-full border border-line bg-panel px-3 py-1.5 text-xs text-muted"
                           tabIndex={-1}
                         >
                           {prompt}
@@ -2637,7 +2637,7 @@ export default function DashboardPage() {
                     <button
                       onClick={refreshPromptSuggestions}
                       disabled={!selectedRepo || loading || loadingPrompts}
-                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-line bg-panel text-stone-400 transition hover:border-sage-700 hover:bg-sage-900 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-line bg-panel text-faint transition hover:border-sage-700 hover:bg-sage-100 disabled:cursor-not-allowed disabled:opacity-50"
                       title="刷新推荐提示语"
                       aria-label="刷新推荐提示语"
                     >
@@ -2648,7 +2648,7 @@ export default function DashboardPage() {
               )}
               <div className="flex items-stretch gap-3">
                 <textarea
-                  className={`max-h-40 min-h-[5.5rem] flex-1 resize-none rounded-md border bg-panel px-3 py-3 text-sm leading-6 outline-none transition focus:border-sage-500 focus:ring-2 focus:ring-sage-100 ${
+                  className={`max-h-40 min-h-[5.5rem] flex-1 resize-none rounded-md border bg-panel px-3 py-3 text-sm leading-6 outline-none transition focus:border-sage-600 focus:ring-2 focus:ring-sage-100 ${
                     planMode ? "border-sage-700" : "border-line"
                   }`}
                   value={message}
@@ -2671,8 +2671,8 @@ export default function DashboardPage() {
                     aria-pressed={planMode}
                     className={`inline-flex h-8 w-12 items-center justify-center rounded-md border transition disabled:opacity-60 ${
                       planMode
-                        ? "border-sage-500 bg-sage-500 text-[#062a1d] shadow-sm"
-                        : "border-line bg-panel text-stone-400 hover:border-sage-700 hover:bg-sage-900"
+                        ? "border-sage-600 bg-accent text-accent-ink shadow-sm"
+                        : "border-line bg-panel text-faint hover:border-sage-700 hover:bg-sage-100"
                     }`}
                     title={planMode ? "切换到对话模式" : "切换到计划模式"}
                   >
@@ -2683,7 +2683,7 @@ export default function DashboardPage() {
                       loading ? stopAgentResponse() : planMode ? createWorkflowPlan() : askAgent()
                     }
                     disabled={!selectedRepo || (!loading && !message.trim())}
-                    className="inline-flex min-h-12 flex-1 items-center justify-center rounded-md bg-accent text-[#062a1d] transition hover:bg-sage-400 disabled:opacity-60"
+                    className="inline-flex min-h-12 flex-1 items-center justify-center rounded-md bg-accent text-accent-ink transition hover:bg-accent-bright disabled:opacity-60"
                     title={loading ? "停止响应" : "发送"}
                   >
                     {loading ? (

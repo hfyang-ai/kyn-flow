@@ -19,10 +19,10 @@ const navItems = [
 function BrandMark() {
   return (
     <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden="true">
-      <rect width="24" height="24" rx="4" fill="#2dd4a7" />
-      <path d="M7.5 12h9" stroke="#062a1d" strokeWidth="1.5" strokeLinecap="round" />
-      <circle cx="7.5" cy="12" r="2.2" fill="#062a1d" />
-      <circle cx="16.5" cy="12" r="2.2" fill="#062a1d" />
+      <rect width="24" height="24" rx="6" fill="#166534" />
+      <path d="M7.5 12h9" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round" />
+      <circle cx="7.5" cy="12" r="2.2" fill="#ffffff" />
+      <circle cx="16.5" cy="12" r="2.2" fill="#ffffff" />
     </svg>
   );
 }
@@ -40,9 +40,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             aria-label="Kynflow 首页"
           >
             <BrandMark />
-            <span className="font-mono text-[15px] font-semibold tracking-tight text-ink">
-              <span className="text-accent">~$</span> kynflow
-            </span>
+            <span className="text-[15px] font-semibold tracking-tight text-ink">kynflow</span>
           </Link>
 
           <nav
@@ -57,14 +55,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   key={item.href}
                   href={item.href}
                   aria-current={active ? "page" : undefined}
-                  className={`relative shrink-0 whitespace-nowrap px-3 py-3 font-mono text-sm transition-colors ${
-                    active ? "font-medium text-accent" : "text-stone-400 hover:text-ink"
+                  className={`relative shrink-0 whitespace-nowrap px-3 py-3 text-sm transition-colors ${
+                    active ? "font-medium text-ink" : "text-muted hover:text-ink"
                   }`}
                 >
                   {item.label}
                   <span
-                    className={`absolute inset-x-3 bottom-0 h-[2px] ${
-                      active ? "bg-accent shadow-[0_0_6px_rgba(45,212,167,0.6)]" : "bg-transparent"
+                    className={`absolute inset-x-3 bottom-0 h-[2px] rounded-full ${
+                      active ? "bg-accent" : "bg-transparent"
                     }`}
                   />
                 </Link>

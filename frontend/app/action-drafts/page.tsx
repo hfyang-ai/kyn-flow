@@ -34,14 +34,14 @@ type AuditLog = {
 const statusMeta: Record<string, { label: string; className: string }> = {
   pending_confirmation: {
     label: "等待人工确认",
-    className: "bg-amber-900/40 text-amber-200 border-amber-800/60",
+    className: "bg-amber-50 text-amber-600 border-amber-200",
   },
   executed: {
     label: "已确认并执行",
-    className: "bg-emerald-900/40 text-emerald-300 border-emerald-800/60",
+    className: "bg-emerald-50 text-emerald-600 border-emerald-200",
   },
-  cancelled: { label: "已取消", className: "bg-stone-800 text-stone-300 border-stone-800" },
-  failed: { label: "执行失败", className: "bg-rose-900/40 text-rose-300 border-rose-800/60" },
+  cancelled: { label: "已取消", className: "bg-stone-100 text-muted border-stone-200" },
+  failed: { label: "执行失败", className: "bg-rose-50 text-rose-600 border-rose-200" },
 };
 
 export default function ActionDraftsPage() {
@@ -128,16 +128,16 @@ export default function ActionDraftsPage() {
       <div className="mt-4 grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
         <section className="self-start rounded-md border border-line bg-panel p-5">
           <div className="flex items-center gap-2 text-sm font-semibold text-ink">
-            <ShieldAlert className="h-4 w-4 text-amber-400" />
+            <ShieldAlert className="h-4 w-4 text-amber-600" />
             创建安全草稿
           </div>
-          <p className="mt-2 text-xs leading-5 text-stone-400">
+          <p className="mt-2 text-xs leading-5 text-faint">
             这里只保存建议内容，不会直接写入外部系统。
           </p>
-          <label className="mt-4 block text-sm font-medium text-stone-200">
+          <label className="mt-4 block text-sm font-medium text-ink">
             仓库
             <select
-              className="mt-2 w-full rounded-md border border-line bg-panel px-3 py-2 outline-none focus:border-sage-500"
+              className="mt-2 w-full rounded-md border border-line bg-panel px-3 py-2 outline-none focus:border-sage-600"
               value={repoId}
               onChange={(event) => {
                 setRepoId(event.target.value);
@@ -151,18 +151,18 @@ export default function ActionDraftsPage() {
               ))}
             </select>
           </label>
-          <label className="mt-4 block text-sm font-medium text-stone-200">
+          <label className="mt-4 block text-sm font-medium text-ink">
             标题
             <input
-              className="mt-2 w-full rounded-md border border-line px-3 py-2 outline-none focus:border-sage-500"
+              className="mt-2 w-full rounded-md border border-line px-3 py-2 outline-none focus:border-sage-600"
               value={title}
               onChange={(event) => setTitle(event.target.value)}
             />
           </label>
-          <label className="mt-4 block text-sm font-medium text-stone-200">
+          <label className="mt-4 block text-sm font-medium text-ink">
             待审查内容
             <textarea
-              className="mt-2 min-h-40 w-full resize-none rounded-md border border-line px-3 py-2 text-sm leading-6 outline-none focus:border-sage-500"
+              className="mt-2 min-h-40 w-full resize-none rounded-md border border-line px-3 py-2 text-sm leading-6 outline-none focus:border-sage-600"
               value={content}
               onChange={(event) => setContent(event.target.value)}
               placeholder="输入准备发送的报告或评论内容"
@@ -182,7 +182,7 @@ export default function ActionDraftsPage() {
           {drafts.map((draft) => {
             const meta = statusMeta[draft.status] || {
               label: draft.status,
-              className: "bg-panel text-stone-300 border-line",
+              className: "bg-panel text-muted border-line",
             };
             return (
               <article key={draft.id} className="rounded-md border border-line bg-panel p-5">
@@ -196,12 +196,12 @@ export default function ActionDraftsPage() {
                         {meta.label}
                       </span>
                       <span
-                        className={`rounded-full px-2.5 py-1 text-xs ${draft.risk_level === "high" ? "bg-rose-900/40 text-rose-300" : "bg-stone-800 text-stone-300"}`}
+                        className={`rounded-full px-2.5 py-1 text-xs ${draft.risk_level === "high" ? "bg-rose-50 text-rose-600" : "bg-stone-100 text-muted"}`}
                       >
                         {draft.risk_level === "high" ? "高风险" : "中低风险"}
                       </span>
                     </div>
-                    <div className="mt-2 text-xs text-stone-400">
+                    <div className="mt-2 text-xs text-faint">
                       {draft.draft_type} · {draft.target_type} ·{" "}
                       {new Date(draft.created_at).toLocaleString("zh-CN")}
                     </div>
@@ -209,7 +209,7 @@ export default function ActionDraftsPage() {
                   {draft.status === "pending_confirmation" && (
                     <div className="flex gap-2">
                       <button
-                        className="inline-flex items-center gap-1 rounded-md bg-sage-500 px-3 py-2 text-sm font-medium text-[#062a1d] transition hover:bg-sage-400 disabled:opacity-60"
+                        className="inline-flex items-center gap-1 rounded-md bg-accent px-3 py-2 text-sm font-medium text-accent-ink transition hover:bg-accent-bright disabled:opacity-60"
                         disabled={loading}
                         onClick={() => changeDraft(draft.id, "confirm")}
                       >
@@ -217,7 +217,7 @@ export default function ActionDraftsPage() {
                         确认执行
                       </button>
                       <button
-                        className="inline-flex items-center gap-1 rounded-md border border-line px-3 py-2 text-sm text-stone-300 transition hover:bg-panel disabled:opacity-60"
+                        className="inline-flex items-center gap-1 rounded-md border border-line px-3 py-2 text-sm text-muted transition hover:bg-panel disabled:opacity-60"
                         disabled={loading}
                         onClick={() => changeDraft(draft.id, "cancel")}
                       >
@@ -227,17 +227,17 @@ export default function ActionDraftsPage() {
                     </div>
                   )}
                 </div>
-                <div className="mt-4 whitespace-pre-wrap rounded-md border-l-4 border-sage-400 bg-panel px-4 py-3 text-sm leading-7 text-stone-200">
+                <div className="mt-4 whitespace-pre-wrap rounded-md border-l-4 border-sage-500 bg-panel px-4 py-3 text-sm leading-7 text-ink">
                   {draft.content}
                 </div>
                 {draft.status === "executed" && (
-                  <div className="mt-3 flex items-center gap-2 text-sm text-emerald-300">
+                  <div className="mt-3 flex items-center gap-2 text-sm text-emerald-600">
                     <CheckCircle2 className="h-4 w-4" />
                     人工确认完成，执行结果和操作者已经写入审计记录。
                   </div>
                 )}
                 {draft.error_message && (
-                  <div className="mt-3 rounded-md bg-rose-900/40 p-3 text-sm text-rose-300">
+                  <div className="mt-3 rounded-md bg-rose-50 p-3 text-sm text-rose-600">
                     {draft.error_message}
                   </div>
                 )}
@@ -245,14 +245,14 @@ export default function ActionDraftsPage() {
             );
           })}
           {drafts.length === 0 && (
-            <div className="rounded-md border border-dashed border-line bg-panel p-5 text-sm text-stone-400">
+            <div className="rounded-md border border-dashed border-line bg-panel p-5 text-sm text-faint">
               暂无安全草稿。
             </div>
           )}
 
           <section className="rounded-md border border-line bg-panel p-5">
             <div className="flex items-center gap-2 font-semibold text-ink">
-              <Send className="h-4 w-4 text-sage-300" />
+              <Send className="h-4 w-4 text-accent" />
               审计时间线
             </div>
             <div className="mt-4 space-y-0">
@@ -262,17 +262,17 @@ export default function ActionDraftsPage() {
                     <span className="absolute left-[7px] top-4 h-full w-px bg-line" />
                   )}
                   <span
-                    className={`relative mt-1 h-4 w-4 shrink-0 rounded-full border-4 border-white ${item.status === "success" ? "bg-emerald-500" : "bg-rose-500"}`}
+                    className={`relative mt-1 h-4 w-4 shrink-0 rounded-full border-4 border-panel ${item.status === "success" ? "bg-emerald-500" : "bg-rose-500"}`}
                   />
                   <div>
                     <div className="text-sm font-medium text-ink">{auditLabel(item.action)}</div>
-                    <div className="mt-1 text-xs text-stone-400">
+                    <div className="mt-1 text-xs text-faint">
                       {item.status} · {new Date(item.created_at).toLocaleString("zh-CN")}
                     </div>
                   </div>
                 </div>
               ))}
-              {audits.length === 0 && <div className="text-sm text-stone-400">暂无审计记录。</div>}
+              {audits.length === 0 && <div className="text-sm text-faint">暂无审计记录。</div>}
             </div>
           </section>
         </div>
@@ -293,12 +293,12 @@ function Summary({
   tone?: "indigo" | "amber" | "green";
 }) {
   const color =
-    tone === "amber" ? "text-amber-400" : tone === "green" ? "text-emerald-400" : "text-sage-300";
+    tone === "amber" ? "text-amber-600" : tone === "green" ? "text-emerald-600" : "text-accent";
   return (
     <div className="flex items-center gap-3">
       <Icon className={`h-5 w-5 ${color}`} />
       <div>
-        <div className="text-xs text-stone-400">{label}</div>
+        <div className="text-xs text-faint">{label}</div>
         <div className="mt-1 text-xl font-semibold text-ink">{value}</div>
       </div>
     </div>

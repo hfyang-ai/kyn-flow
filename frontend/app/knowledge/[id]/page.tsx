@@ -213,36 +213,36 @@ export default function KnowledgeBaseDetailPage() {
 
   if (loading)
     return (
-      <div className="grid min-h-[70vh] place-items-center text-sm text-stone-400">
+      <div className="grid min-h-[70vh] place-items-center text-sm text-faint">
         正在加载项目知识...
       </div>
     );
   if (!knowledge || !config)
     return (
-      <div className="m-6 border border-red-800/60 bg-red-900/40 p-4 text-sm text-red-300">
+      <div className="m-6 border border-red-200 bg-red-50 p-4 text-sm text-red-600">
         {error || "未找到仓库"}
       </div>
     );
 
   return (
-    <div className="min-h-[calc(100vh-74px)] bg-[#0e1a16]">
+    <div className="min-h-[calc(100vh-74px)] bg-panel-2">
       <header className="border-b border-line bg-panel px-4 py-3">
         <div className="flex min-w-0 items-center gap-3">
           <Link
             href="/knowledge"
             title="返回项目知识"
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-md border border-line text-stone-300 hover:text-ink"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-md border border-line text-muted hover:text-ink"
           >
             <ArrowLeft className="h-4 w-4" />
           </Link>
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-sage-900 text-sage-300">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-sage-100 text-accent">
             <BookOpen className="h-4 w-4" />
           </span>
           <div className="min-w-0">
             <h1 className="truncate text-sm font-semibold text-ink">{knowledge.name}</h1>
-            <p className="truncate text-xs text-stone-500">{knowledge.full_name}</p>
+            <p className="truncate text-xs text-faint">{knowledge.full_name}</p>
           </div>
-          <div className="ml-auto hidden items-center gap-5 text-xs text-stone-400 sm:flex">
+          <div className="ml-auto hidden items-center gap-5 text-xs text-faint sm:flex">
             <span>{formatNumber(knowledge.document_count)} 文档</span>
             <span>{formatNumber(knowledge.chunk_count)} 分段</span>
             <span>{formatNumber(knowledge.character_count)} 字符</span>
@@ -260,19 +260,19 @@ export default function KnowledgeBaseDetailPage() {
                   key={item.value}
                   type="button"
                   onClick={() => changeTab(item.value)}
-                  className={`flex h-10 shrink-0 items-center gap-2 rounded-md px-3 text-sm transition md:w-full ${tab === item.value ? "bg-sage-900 font-medium text-sage-200" : "text-stone-300 hover:bg-stone-800"}`}
+                  className={`flex h-10 shrink-0 items-center gap-2 rounded-md px-3 text-sm transition md:w-full ${tab === item.value ? "bg-sage-100 font-medium text-accent" : "text-muted hover:bg-stone-100"}`}
                 >
                   <Icon className="h-4 w-4" /> {item.label}
                 </button>
               );
             })}
           </nav>
-          <div className="mt-5 hidden border-t border-line pt-4 text-xs leading-5 text-stone-500 md:block">
-            <div className="font-medium text-stone-300">运行状态</div>
+          <div className="mt-5 hidden border-t border-line pt-4 text-xs leading-5 text-faint md:block">
+            <div className="font-medium text-muted">运行状态</div>
             <div className="mt-2">Embedding</div>
             <div
               className={
-                knowledge.runtime.embedding.available ? "text-emerald-300" : "text-amber-300"
+                knowledge.runtime.embedding.available ? "text-emerald-600" : "text-amber-600"
               }
             >
               {knowledge.runtime.embedding.available
@@ -281,7 +281,7 @@ export default function KnowledgeBaseDetailPage() {
             </div>
             <div className="mt-2">Rerank</div>
             <div
-              className={knowledge.runtime.rerank.available ? "text-emerald-300" : "text-amber-300"}
+              className={knowledge.runtime.rerank.available ? "text-emerald-600" : "text-amber-600"}
             >
               {knowledge.runtime.rerank.available
                 ? `${knowledge.runtime.rerank.provider} 就绪`
@@ -294,7 +294,7 @@ export default function KnowledgeBaseDetailPage() {
 
         <main className="min-w-0 p-4 sm:p-6">
           {error ? (
-            <div className="mb-4 flex items-center justify-between bg-red-900/40 px-4 py-3 text-sm text-red-300">
+            <div className="mb-4 flex items-center justify-between bg-red-50 px-4 py-3 text-sm text-red-600">
               <span>{error}</span>
               <button onClick={() => setError("")} title="关闭">
                 <X className="h-4 w-4" />
@@ -307,7 +307,7 @@ export default function KnowledgeBaseDetailPage() {
               <div className="flex items-end justify-between gap-4">
                 <div>
                   <h2 className="text-lg font-semibold text-ink">文档</h2>
-                  <p className="mt-1 text-sm text-stone-400">查看解析状态和真实分段内容。</p>
+                  <p className="mt-1 text-sm text-faint">查看解析状态和真实分段内容。</p>
                 </div>
                 <input
                   ref={fileInput}
@@ -321,7 +321,7 @@ export default function KnowledgeBaseDetailPage() {
                   type="button"
                   onClick={() => fileInput.current?.click()}
                   disabled={uploading}
-                  className="inline-flex h-10 items-center gap-2 rounded-md bg-sage-500 px-4 text-sm font-medium text-[#062a1d] disabled:opacity-50"
+                  className="inline-flex h-10 items-center gap-2 rounded-md bg-accent px-4 text-sm font-medium text-accent-ink disabled:opacity-50"
                 >
                   {uploading ? (
                     <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -333,7 +333,7 @@ export default function KnowledgeBaseDetailPage() {
               </div>
 
               <div className="mt-5 overflow-hidden border border-line bg-panel shadow-sm">
-                <div className="hidden grid-cols-[minmax(220px,1fr)_120px_100px_100px_140px_34px] gap-3 border-b border-line bg-stone-900 px-4 py-2.5 text-xs font-medium text-stone-400 md:grid">
+                <div className="hidden grid-cols-[minmax(220px,1fr)_120px_100px_100px_140px_34px] gap-3 border-b border-line bg-stone-100 px-4 py-2.5 text-xs font-medium text-faint md:grid">
                   <span>名称</span>
                   <span>状态</span>
                   <span>分段</span>
@@ -346,26 +346,26 @@ export default function KnowledgeBaseDetailPage() {
                     key={document.id}
                     type="button"
                     onClick={() => document.status === "completed" && openChunks(document)}
-                    className="grid w-full gap-2 border-b border-stone-800 px-4 py-3 text-left last:border-b-0 hover:bg-stone-800 md:grid-cols-[minmax(220px,1fr)_120px_100px_100px_140px_34px] md:items-center md:gap-3"
+                    className="grid w-full gap-2 border-b border-stone-200 px-4 py-3 text-left last:border-b-0 hover:bg-stone-100 md:grid-cols-[minmax(220px,1fr)_120px_100px_100px_140px_34px] md:items-center md:gap-3"
                   >
                     <span className="flex min-w-0 items-center gap-2">
-                      <FileText className="h-4 w-4 shrink-0 text-sage-300" />
+                      <FileText className="h-4 w-4 shrink-0 text-accent" />
                       <span className="truncate text-sm font-medium text-ink">{document.name}</span>
                     </span>
                     <span
-                      className={`w-fit rounded px-2 py-1 text-xs ${document.status === "completed" ? "bg-emerald-900/40 text-emerald-300" : document.status === "failed" ? "bg-red-900/40 text-red-300" : "bg-amber-900/40 text-amber-300"}`}
+                      className={`w-fit rounded px-2 py-1 text-xs ${document.status === "completed" ? "bg-emerald-50 text-emerald-600" : document.status === "failed" ? "bg-red-50 text-red-600" : "bg-amber-50 text-amber-600"}`}
                     >
                       {statusLabel[document.status]}
                     </span>
-                    <span className="text-xs text-stone-400">
+                    <span className="text-xs text-faint">
                       <span className="md:hidden">分段 </span>
                       {formatNumber(document.chunk_count)}
                     </span>
-                    <span className="text-xs text-stone-400">
+                    <span className="text-xs text-faint">
                       <span className="md:hidden">字符 </span>
                       {formatNumber(document.character_count)}
                     </span>
-                    <span className="text-xs text-stone-500">
+                    <span className="text-xs text-faint">
                       {formatDate(document.created_at)}
                     </span>
                     {document.status === "failed" ? (
@@ -375,17 +375,17 @@ export default function KnowledgeBaseDetailPage() {
                           retry(document);
                         }}
                         title="重试"
-                        className="grid h-7 w-7 place-items-center text-red-400"
+                        className="grid h-7 w-7 place-items-center text-red-600"
                       >
                         <RotateCcw className="h-4 w-4" />
                       </span>
                     ) : (
-                      <ChevronRight className="hidden h-4 w-4 text-stone-500 md:block" />
+                      <ChevronRight className="hidden h-4 w-4 text-faint md:block" />
                     )}
                   </button>
                 ))}
                 {!documents.length ? (
-                  <div className="py-20 text-center text-sm text-stone-400">
+                  <div className="py-20 text-center text-sm text-faint">
                     还没有文档，添加一份资料开始构建。
                   </div>
                 ) : null}
@@ -397,14 +397,14 @@ export default function KnowledgeBaseDetailPage() {
             <div className="mx-auto max-w-7xl">
               <div>
                 <h2 className="text-lg font-semibold text-ink">召回测试</h2>
-                <p className="mt-1 text-sm text-stone-400">
+                <p className="mt-1 text-sm text-faint">
                   输入真实问题，观察被召回的分段、分数和排序。
                 </p>
               </div>
               <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(360px,.72fr)_minmax(520px,1.28fr)]">
                 <div className="space-y-5">
                   <section className="border border-line bg-panel p-4 shadow-sm">
-                    <label className="text-xs font-medium text-stone-300">查询文本</label>
+                    <label className="text-xs font-medium text-muted">查询文本</label>
                     <textarea
                       value={query}
                       onChange={(event) => setQuery(event.target.value)}
@@ -414,15 +414,15 @@ export default function KnowledgeBaseDetailPage() {
                       }}
                       maxLength={250}
                       placeholder="例如：新员工可以请几天年假？"
-                      className="mt-2 min-h-36 w-full resize-y rounded-md border border-line p-3 text-sm leading-6 outline-none focus:border-sage-600"
+                      className="mt-2 min-h-36 w-full resize-y rounded-md border border-line p-3 text-sm leading-6 outline-none focus:border-sage-700"
                     />
                     <div className="mt-3 flex items-center justify-between">
-                      <span className="text-xs text-stone-500">{query.length} / 250</span>
+                      <span className="text-xs text-faint">{query.length} / 250</span>
                       <button
                         type="button"
                         disabled={!query.trim() || testing}
                         onClick={runRetrieval}
-                        className="inline-flex h-9 items-center gap-2 rounded-md bg-sage-500 px-4 text-sm font-medium text-[#062a1d] disabled:opacity-40"
+                        className="inline-flex h-9 items-center gap-2 rounded-md bg-accent px-4 text-sm font-medium text-accent-ink disabled:opacity-40"
                       >
                         {testing ? (
                           <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -438,13 +438,13 @@ export default function KnowledgeBaseDetailPage() {
                       <h3 className="flex items-center gap-2 text-sm font-semibold text-ink">
                         <History className="h-4 w-4" /> 测试记录
                       </h3>
-                      <span className="text-xs text-stone-500">最近 {history.length} 条</span>
+                      <span className="text-xs text-faint">最近 {history.length} 条</span>
                     </div>
-                    <div className="mt-3 divide-y divide-stone-800">
+                    <div className="mt-3 divide-y divide-stone-200">
                       {history.map((item) => (
                         <div key={item.id} className="py-3">
-                          <div className="truncate text-sm text-stone-200">{item.query}</div>
-                          <div className="mt-1 flex gap-3 text-xs text-stone-500">
+                          <div className="truncate text-sm text-ink">{item.query}</div>
+                          <div className="mt-1 flex gap-3 text-xs text-faint">
                             <span>{item.result_count} 条结果</span>
                             <span>{item.took_ms} ms</span>
                             <span>{formatDate(item.created_at)}</span>
@@ -452,7 +452,7 @@ export default function KnowledgeBaseDetailPage() {
                         </div>
                       ))}
                       {!history.length ? (
-                        <div className="py-8 text-center text-xs text-stone-500">暂无测试记录</div>
+                        <div className="py-8 text-center text-xs text-faint">暂无测试记录</div>
                       ) : null}
                     </div>
                   </section>
@@ -462,7 +462,7 @@ export default function KnowledgeBaseDetailPage() {
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-semibold text-ink">召回结果</h3>
                     {retrieval ? (
-                      <span className="text-xs text-stone-400">
+                      <span className="text-xs text-faint">
                         {retrieval.result_count} 条 · {retrieval.took_ms} ms
                       </span>
                     ) : null}
@@ -470,9 +470,9 @@ export default function KnowledgeBaseDetailPage() {
                   {retrieval?.retrieval_config.pipeline?.stages?.length ? (
                     <div className="mt-3 border border-line bg-panel p-4 shadow-sm">
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="text-xs font-medium text-stone-300">Retrieval Trace</div>
+                        <div className="text-xs font-medium text-muted">Retrieval Trace</div>
                         <span
-                          className={`rounded px-2 py-1 text-xs font-medium ${retrieval.retrieval_config.answer_gate?.decision === "answer" ? "bg-emerald-900/40 text-emerald-300" : "bg-amber-900/40 text-amber-300"}`}
+                          className={`rounded px-2 py-1 text-xs font-medium ${retrieval.retrieval_config.answer_gate?.decision === "answer" ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600"}`}
                         >
                           {answerGateLabel[
                             String(retrieval.retrieval_config.answer_gate?.decision ?? "")
@@ -485,8 +485,8 @@ export default function KnowledgeBaseDetailPage() {
                           const outputCount = stage.output_count ?? stage.candidate_count;
                           return (
                             <div key={`${name}-${index}`} className="flex items-center gap-2">
-                              {index ? <span className="text-stone-500">→</span> : null}
-                              <span className="rounded border border-stone-800 bg-stone-900 px-2 py-1 text-xs text-stone-300">
+                              {index ? <span className="text-faint">→</span> : null}
+                              <span className="rounded border border-stone-200 bg-stone-100 px-2 py-1 text-xs text-muted">
                                 {pipelineStageLabel[name] ?? name}
                                 {typeof outputCount === "number" ? ` · ${outputCount}` : ""}
                               </span>
@@ -495,7 +495,7 @@ export default function KnowledgeBaseDetailPage() {
                         })}
                       </div>
                       {retrieval.retrieval_config.answer_gate?.reason ? (
-                        <p className="mt-3 text-xs leading-5 text-stone-400">
+                        <p className="mt-3 text-xs leading-5 text-faint">
                           {retrieval.retrieval_config.answer_gate.reason}
                         </p>
                       ) : null}
@@ -507,26 +507,26 @@ export default function KnowledgeBaseDetailPage() {
                         key={`${result.document_id}-${index}`}
                         className="border border-line bg-panel p-4 shadow-sm"
                       >
-                        <div className="flex items-center gap-3 border-b border-stone-800 pb-3">
-                          <span className="grid h-7 w-7 shrink-0 place-items-center rounded bg-sage-900 text-xs font-semibold text-sage-300">
+                        <div className="flex items-center gap-3 border-b border-stone-200 pb-3">
+                          <span className="grid h-7 w-7 shrink-0 place-items-center rounded bg-sage-100 text-xs font-semibold text-accent">
                             {index + 1}
                           </span>
                           <div className="min-w-0 flex-1">
                             <h4 className="truncate text-sm font-medium text-ink">
                               {result.title}
                             </h4>
-                            <p className="mt-0.5 truncate text-xs text-stone-500">
+                            <p className="mt-0.5 truncate text-xs text-faint">
                               {String(result.metadata.filename ?? result.source_type)}
                             </p>
                           </div>
-                          <span className="rounded bg-emerald-900/40 px-2 py-1 text-xs font-semibold text-emerald-300">
+                          <span className="rounded bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-600">
                             {result.score.toFixed(3)}
                           </span>
                         </div>
-                        <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-stone-200">
+                        <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-ink">
                           {result.snippet}
                         </p>
-                        <div className="mt-3 flex flex-wrap gap-3 text-xs text-stone-500">
+                        <div className="mt-3 flex flex-wrap gap-3 text-xs text-faint">
                           <span>分段 #{String(result.metadata.chunk_index ?? index + 1)}</span>
                           <span>{result.snippet.length} 字符</span>
                           <span>
@@ -552,15 +552,15 @@ export default function KnowledgeBaseDetailPage() {
                       </article>
                     ))}
                     {!retrieval ? (
-                      <div className="grid min-h-80 place-items-center border border-dashed border-stone-700 bg-panel text-center">
+                      <div className="grid min-h-80 place-items-center border border-dashed border-stone-200 bg-panel text-center">
                         <div>
-                          <FileSearch className="mx-auto h-8 w-8 text-stone-500" />
-                          <p className="mt-3 text-sm text-stone-400">输入问题后查看真实召回分段</p>
+                          <FileSearch className="mx-auto h-8 w-8 text-faint" />
+                          <p className="mt-3 text-sm text-faint">输入问题后查看真实召回分段</p>
                         </div>
                       </div>
                     ) : null}
                     {retrieval && !retrieval.results.length ? (
-                      <div className="grid min-h-64 place-items-center border border-line bg-panel text-sm text-stone-400">
+                      <div className="grid min-h-64 place-items-center border border-line bg-panel text-sm text-faint">
                         没有分段通过当前检索条件。
                       </div>
                     ) : null}
@@ -574,14 +574,14 @@ export default function KnowledgeBaseDetailPage() {
             <div className="mx-auto max-w-4xl">
               <div>
                 <h2 className="text-lg font-semibold text-ink">知识库设置</h2>
-                <p className="mt-1 text-sm text-stone-400">
+                <p className="mt-1 text-sm text-faint">
                   控制后续入库和召回测试使用的模型与参数。
                 </p>
               </div>
               <div className="mt-5 border border-line bg-panel p-5 shadow-sm sm:p-7">
                 <RetrievalSettings value={config} catalog={catalog} onChange={setConfig} />
                 {message ? (
-                  <div className="mt-5 flex items-center gap-2 bg-emerald-900/40 px-3 py-2.5 text-sm text-emerald-300">
+                  <div className="mt-5 flex items-center gap-2 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-600">
                     <Check className="h-4 w-4" /> {message}
                   </div>
                 ) : null}
@@ -590,7 +590,7 @@ export default function KnowledgeBaseDetailPage() {
                     type="button"
                     onClick={saveSettings}
                     disabled={saving || config.chunk_overlap >= config.chunk_size}
-                    className="inline-flex h-10 items-center gap-2 rounded-md bg-sage-500 px-5 text-sm font-medium text-[#062a1d] disabled:opacity-40"
+                    className="inline-flex h-10 items-center gap-2 rounded-md bg-accent px-5 text-sm font-medium text-accent-ink disabled:opacity-40"
                   >
                     {saving ? (
                       <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -612,21 +612,21 @@ export default function KnowledgeBaseDetailPage() {
           onMouseDown={() => setSelectedDocument(null)}
         >
           <div
-            className="h-full w-full max-w-2xl overflow-y-auto border-l border-line bg-[#0e1a16] shadow-2xl"
+            className="h-full w-full max-w-2xl overflow-y-auto border-l border-line bg-panel-2 shadow-2xl"
             onMouseDown={(event) => event.stopPropagation()}
           >
             <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-line bg-panel px-5 py-4">
-              <FileText className="h-5 w-5 text-sage-300" />
+              <FileText className="h-5 w-5 text-accent" />
               <div className="min-w-0 flex-1">
                 <h2 className="truncate text-sm font-semibold text-ink">{selectedDocument.name}</h2>
-                <p className="text-xs text-stone-500">
+                <p className="text-xs text-faint">
                   {selectedDocument.chunk_count} 个分段 · {formatBytes(selectedDocument.file_size)}
                 </p>
               </div>
               <button
                 title="关闭"
                 onClick={() => setSelectedDocument(null)}
-                className="grid h-8 w-8 place-items-center text-stone-400"
+                className="grid h-8 w-8 place-items-center text-faint"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -635,18 +635,18 @@ export default function KnowledgeBaseDetailPage() {
               {chunks.map((chunk) => (
                 <article key={chunk.id} className="border border-line bg-panel p-4 shadow-sm">
                   <div className="mb-3 flex items-center justify-between">
-                    <span className="text-xs font-semibold text-sage-300">
+                    <span className="text-xs font-semibold text-accent">
                       分段 #{chunk.position}
                     </span>
-                    <span className="text-xs text-stone-500">{chunk.character_count} 字符</span>
+                    <span className="text-xs text-faint">{chunk.character_count} 字符</span>
                   </div>
-                  <p className="whitespace-pre-wrap text-sm leading-6 text-stone-200">
+                  <p className="whitespace-pre-wrap text-sm leading-6 text-ink">
                     {chunk.content}
                   </p>
                 </article>
               ))}
               {!chunks.length ? (
-                <div className="py-20 text-center text-sm text-stone-400">正在读取分段...</div>
+                <div className="py-20 text-center text-sm text-faint">正在读取分段...</div>
               ) : null}
             </div>
           </div>

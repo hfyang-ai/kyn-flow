@@ -58,13 +58,13 @@ export function DirectoryPicker({
         role="dialog"
         aria-modal="true"
         aria-label="选择本地目录"
-        className="flex max-h-[80vh] w-full max-w-lg flex-col overflow-hidden rounded-lg border border-line bg-[#134e4a] shadow-2xl"
+        className="flex max-h-[80vh] w-full max-w-lg flex-col overflow-hidden rounded-lg border border-line bg-panel shadow-2xl"
       >
-        <div className="flex items-center justify-between gap-4 border-b border-sage-800 px-4 py-3">
+        <div className="flex items-center justify-between gap-4 border-b border-sage-700 px-4 py-3">
           <div className="text-sm font-semibold text-ink">选择本地目录</div>
           <button
             onClick={onClose}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-panel text-stone-300 transition hover:bg-sage-900"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-panel text-muted transition hover:bg-sage-100"
             title="关闭"
           >
             <X className="h-4 w-4" />
@@ -75,7 +75,7 @@ export function DirectoryPicker({
           <button
             onClick={() => load(parent ?? "")}
             disabled={!parent || loading}
-            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-line bg-panel text-stone-300 transition hover:bg-sage-900 disabled:opacity-40"
+            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-line bg-panel text-muted transition hover:bg-sage-100 disabled:opacity-40"
             title="返回上级"
           >
             <ChevronLeft className="h-4 w-4" />
@@ -83,13 +83,13 @@ export function DirectoryPicker({
           <button
             onClick={() => load("")}
             disabled={loading}
-            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-line bg-panel text-stone-300 transition hover:bg-sage-900 disabled:opacity-40"
+            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-line bg-panel text-muted transition hover:bg-sage-100 disabled:opacity-40"
             title="主目录"
           >
             <Home className="h-4 w-4" />
           </button>
           <div
-            className="min-w-0 flex-1 truncate rounded-md border border-line bg-panel px-3 py-1.5 font-mono text-xs text-stone-300"
+            className="min-w-0 flex-1 truncate rounded-md border border-line bg-panel px-3 py-1.5 font-mono text-xs text-muted"
             title={current}
           >
             {current || "…"}
@@ -98,22 +98,22 @@ export function DirectoryPicker({
 
         <div className="min-h-0 flex-1 overflow-y-auto p-2">
           {loading ? (
-            <div className="flex items-center justify-center gap-2 py-10 text-sm text-stone-400">
+            <div className="flex items-center justify-center gap-2 py-10 text-sm text-faint">
               <Loader2 className="h-4 w-4 animate-spin" /> 加载中…
             </div>
           ) : error ? (
-            <div className="px-3 py-8 text-center text-sm text-rose-300">{error}</div>
+            <div className="px-3 py-8 text-center text-sm text-rose-600">{error}</div>
           ) : dirs.length === 0 ? (
-            <div className="px-3 py-8 text-center text-sm text-stone-400">该目录下没有子目录</div>
+            <div className="px-3 py-8 text-center text-sm text-faint">该目录下没有子目录</div>
           ) : (
             <div className="space-y-0.5">
               {dirs.map((dir) => (
                 <button
                   key={dir.path}
                   onClick={() => load(dir.path)}
-                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-stone-200 transition hover:bg-sage-900"
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-ink transition hover:bg-sage-100"
                 >
-                  <Folder className="h-4 w-4 shrink-0 text-sage-300" />
+                  <Folder className="h-4 w-4 shrink-0 text-accent" />
                   <span className="truncate">{dir.name}</span>
                 </button>
               ))}
@@ -124,14 +124,14 @@ export function DirectoryPicker({
         <div className="flex items-center justify-end gap-2 border-t border-line px-4 py-3">
           <button
             onClick={onClose}
-            className="inline-flex h-9 items-center justify-center rounded-md border border-line bg-panel px-4 text-sm font-medium text-stone-200 transition hover:bg-panel"
+            className="inline-flex h-9 items-center justify-center rounded-md border border-line bg-panel px-4 text-sm font-medium text-ink transition hover:bg-panel"
           >
             取消
           </button>
           <button
             onClick={() => onSelect(current)}
             disabled={!current || loading}
-            className="inline-flex h-9 items-center justify-center rounded-md bg-accent px-4 text-sm font-medium text-[#062a1d] transition hover:bg-sage-400 disabled:opacity-60"
+            className="inline-flex h-9 items-center justify-center rounded-md bg-accent px-4 text-sm font-medium text-accent-ink transition hover:bg-accent-bright disabled:opacity-60"
           >
             选择此目录
           </button>
@@ -200,9 +200,9 @@ export function AddProjectOverlay({
         role="dialog"
         aria-modal="true"
         aria-labelledby="add-project-title"
-        className="flex max-h-[calc(100%-24px)] w-full max-w-5xl flex-col overflow-hidden rounded-lg border border-line bg-[#134e4a] shadow-2xl"
+        className="flex max-h-[calc(100%-24px)] w-full max-w-5xl flex-col overflow-hidden rounded-lg border border-line bg-panel shadow-2xl"
       >
-        <div className="flex items-start justify-between gap-4 border-b border-sage-800 bg-[#134e4a] px-5 py-4">
+        <div className="flex items-start justify-between gap-4 border-b border-sage-700 bg-panel px-5 py-4">
           <div className="min-w-0">
             <div className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
               Add Project
@@ -214,7 +214,7 @@ export function AddProjectOverlay({
           <button
             onClick={onClose}
             disabled={loading}
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-line bg-panel text-stone-300 transition hover:bg-sage-900 disabled:opacity-60"
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-line bg-panel text-muted transition hover:bg-sage-100 disabled:opacity-60"
             title="关闭"
           >
             <X className="h-4 w-4" />
@@ -225,14 +225,14 @@ export function AddProjectOverlay({
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(280px,0.9fr)]">
             <section className="rounded-md border border-line bg-panel p-4 shadow-sm">
               <div className="grid gap-4">
-                <div className="grid grid-cols-2 overflow-hidden rounded-md border border-line bg-stone-900 p-1">
+                <div className="grid grid-cols-2 overflow-hidden rounded-md border border-line bg-stone-100 p-1">
                   <button
                     type="button"
                     onClick={() => onSourceChange("remote")}
                     className={`h-9 rounded px-3 text-sm font-medium transition ${
                       source === "remote"
                         ? "bg-panel text-ink shadow-sm"
-                        : "text-stone-300 hover:text-ink"
+                        : "text-muted hover:text-ink"
                     }`}
                   >
                     GitHub 地址
@@ -243,7 +243,7 @@ export function AddProjectOverlay({
                     className={`h-9 rounded px-3 text-sm font-medium transition ${
                       source === "local"
                         ? "bg-panel text-ink shadow-sm"
-                        : "text-stone-300 hover:text-ink"
+                        : "text-muted hover:text-ink"
                     }`}
                   >
                     本地仓库
@@ -252,7 +252,7 @@ export function AddProjectOverlay({
 
                 {source === "remote" ? (
                   <div className="grid gap-4">
-                    <label className="text-sm font-medium text-stone-200">
+                    <label className="text-sm font-medium text-ink">
                       GitHub 地址
                       <input
                         value={repoUrl}
@@ -264,23 +264,23 @@ export function AddProjectOverlay({
                           }
                         }}
                         placeholder="https://github.com/owner/repository 或 owner/repository"
-                        className="mt-2 h-11 w-full rounded-md border border-line bg-panel px-3 text-sm outline-none transition focus:border-sage-500 focus:ring-2 focus:ring-sage-100"
+                        className="mt-2 h-11 w-full rounded-md border border-line bg-panel px-3 text-sm outline-none transition focus:border-sage-600 focus:ring-2 focus:ring-sage-100"
                       />
                     </label>
 
-                    <label className="text-sm font-medium text-stone-200">
+                    <label className="text-sm font-medium text-ink">
                       下载到
                       <div className="mt-2 flex items-center gap-2">
                         <input
                           value={cloneParentDir}
                           onChange={(event) => onCloneParentDirChange(event.target.value)}
                           placeholder={cloneParentPlaceholder}
-                          className="h-11 min-w-0 flex-1 rounded-md border border-line bg-panel px-3 text-sm outline-none transition focus:border-sage-500 focus:ring-2 focus:ring-sage-100"
+                          className="h-11 min-w-0 flex-1 rounded-md border border-line bg-panel px-3 text-sm outline-none transition focus:border-sage-600 focus:ring-2 focus:ring-sage-100"
                         />
                         <button
                           type="button"
                           onClick={() => setDirPickerOpen(true)}
-                          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-line bg-panel text-stone-400 transition hover:bg-sage-900 hover:text-ink"
+                          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-line bg-panel text-faint transition hover:bg-sage-100 hover:text-ink"
                           title="选择目录"
                         >
                           <Folder className="h-4 w-4" />
@@ -289,7 +289,7 @@ export function AddProjectOverlay({
                     </label>
                   </div>
                 ) : (
-                  <label className="text-sm font-medium text-stone-200">
+                  <label className="text-sm font-medium text-ink">
                     本地仓库路径
                     <div className="mt-2 flex gap-2">
                       <input
@@ -302,12 +302,12 @@ export function AddProjectOverlay({
                           }
                         }}
                         placeholder={localPathPlaceholder}
-                        className="h-11 min-w-0 flex-1 rounded-md border border-line bg-panel px-3 text-sm outline-none transition focus:border-sage-500 focus:ring-2 focus:ring-sage-100"
+                        className="h-11 min-w-0 flex-1 rounded-md border border-line bg-panel px-3 text-sm outline-none transition focus:border-sage-600 focus:ring-2 focus:ring-sage-100"
                       />
                       <button
                         type="button"
                         onClick={() => setDirPickerOpen(true)}
-                        className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-line bg-panel text-stone-400 transition hover:bg-sage-900 hover:text-ink"
+                        className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-line bg-panel text-faint transition hover:bg-sage-100 hover:text-ink"
                         title="选择目录"
                       >
                         <Folder className="h-4 w-4" />
@@ -317,37 +317,37 @@ export function AddProjectOverlay({
                 )}
 
                 <div className="grid gap-3 md:grid-cols-2">
-                  <label className="text-sm font-medium text-stone-200">
+                  <label className="text-sm font-medium text-ink">
                     托管平台
                     <select
                       value={provider}
                       onChange={(event) => onProviderChange(event.target.value)}
-                      className="mt-2 h-10 w-full rounded-md border border-line bg-panel px-3 text-sm outline-none transition focus:border-sage-500 focus:ring-2 focus:ring-sage-100"
+                      className="mt-2 h-10 w-full rounded-md border border-line bg-panel px-3 text-sm outline-none transition focus:border-sage-600 focus:ring-2 focus:ring-sage-100"
                     >
                       <option value="github">GitHub</option>
                       <option value="github_compatible">GitHub-compatible API</option>
                     </select>
                   </label>
 
-                  <label className="text-sm font-medium text-stone-200">
+                  <label className="text-sm font-medium text-ink">
                     API Base URL
                     <input
                       value={apiBaseUrl}
                       disabled={provider === "github"}
                       onChange={(event) => onApiBaseUrlChange(event.target.value)}
-                      className="mt-2 h-10 w-full rounded-md border border-line bg-panel px-3 text-sm outline-none transition focus:border-sage-500 focus:ring-2 focus:ring-sage-100 disabled:bg-stone-800 disabled:text-stone-400"
+                      className="mt-2 h-10 w-full rounded-md border border-line bg-panel px-3 text-sm outline-none transition focus:border-sage-600 focus:ring-2 focus:ring-sage-100 disabled:bg-stone-100 disabled:text-faint"
                     />
                   </label>
                 </div>
 
-                <label className="text-sm font-medium text-stone-200">
+                <label className="text-sm font-medium text-ink">
                   Access Token
                   <input
                     type="password"
                     value={token}
                     onChange={(event) => onTokenChange(event.target.value)}
                     placeholder="public repo 可留空，私有仓库需要 token"
-                    className="mt-2 h-10 w-full rounded-md border border-line bg-panel px-3 text-sm outline-none transition focus:border-sage-500 focus:ring-2 focus:ring-sage-100"
+                    className="mt-2 h-10 w-full rounded-md border border-line bg-panel px-3 text-sm outline-none transition focus:border-sage-600 focus:ring-2 focus:ring-sage-100"
                   />
                 </label>
 
@@ -355,8 +355,8 @@ export function AddProjectOverlay({
                   <div
                     className={`rounded-md border px-3 py-2 text-sm leading-6 ${
                       status.type === "success"
-                        ? "border-emerald-800/60 bg-emerald-900/40 text-emerald-200"
-                        : "border-rose-800/60 bg-rose-900/40 text-rose-200"
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-600"
+                        : "border-rose-200 bg-rose-50 text-rose-600"
                     }`}
                   >
                     <div className="font-semibold">{status.title}</div>
@@ -368,14 +368,14 @@ export function AddProjectOverlay({
                   <button
                     onClick={onConnect}
                     disabled={loading || !canConnect}
-                    className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-4 text-sm font-medium text-[#062a1d] transition hover:bg-sage-400 disabled:opacity-60"
+                    className="inline-flex h-10 items-center justify-center rounded-md bg-accent px-4 text-sm font-medium text-accent-ink transition hover:bg-accent-bright disabled:opacity-60"
                   >
                     {loading ? "连接并同步中..." : "连接并同步"}
                   </button>
                   <button
                     onClick={onClose}
                     disabled={loading}
-                    className="inline-flex h-10 items-center justify-center rounded-md border border-line bg-panel px-4 text-sm font-medium text-stone-200 transition hover:bg-panel disabled:opacity-60"
+                    className="inline-flex h-10 items-center justify-center rounded-md border border-line bg-panel px-4 text-sm font-medium text-ink transition hover:bg-panel disabled:opacity-60"
                   >
                     关闭
                   </button>
@@ -385,7 +385,7 @@ export function AddProjectOverlay({
 
             <section className="rounded-md border border-line bg-panel p-4 shadow-sm">
               <h3 className="text-sm font-semibold text-ink">识别结果</h3>
-              <div className="mt-3 rounded-md bg-[#0e1a16] p-3 text-sm leading-7 text-stone-300">
+              <div className="mt-3 rounded-md bg-panel-2 p-3 text-sm leading-7 text-muted">
                 {source === "remote" ? (
                   <>
                     <div>
@@ -417,7 +417,7 @@ export function AddProjectOverlay({
                   </>
                 )}
               </div>
-              <div className="mt-4 space-y-2 text-xs leading-6 text-stone-400">
+              <div className="mt-4 space-y-2 text-xs leading-6 text-faint">
                 {source === "remote" ? (
                   <div>
                     支持

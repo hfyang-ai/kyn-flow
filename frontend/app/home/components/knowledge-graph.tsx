@@ -88,7 +88,7 @@ export function KnowledgeGraphWorkspace({
               <Network className="h-4 w-4 text-accent" />
               <h3 className="text-sm font-semibold text-ink">项目知识图谱</h3>
             </div>
-            <p className="mt-1 text-xs leading-5 text-stone-400">
+            <p className="mt-1 text-xs leading-5 text-faint">
               把 Issue、PR、CI、成员、文档、记忆和代码文件按可追溯关系串起来。
             </p>
           </div>
@@ -98,7 +98,7 @@ export function KnowledgeGraphWorkspace({
               onClick={onRefresh}
               disabled={loading}
               title="刷新图谱"
-              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line text-stone-400 transition hover:bg-panel disabled:opacity-50"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line text-faint transition hover:bg-panel disabled:opacity-50"
             >
               <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
             </button>
@@ -107,21 +107,21 @@ export function KnowledgeGraphWorkspace({
               onClick={onRebuild}
               disabled={loading}
               title="重建关系边"
-              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line text-stone-400 transition hover:bg-panel disabled:opacity-50"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line text-faint transition hover:bg-panel disabled:opacity-50"
             >
               <Database className="h-3.5 w-3.5" />
             </button>
           </div>
         </div>
 
-        <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-stone-300">
+        <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-muted">
           <div className="rounded-md bg-panel px-3 py-2">节点 {visibleNodeCount}</div>
           <div className="rounded-md bg-panel px-3 py-2">关系 {visibleEdgeCount}</div>
           <div className="rounded-md bg-panel px-3 py-2">总边 {totalEdgeCount}</div>
         </div>
 
         <div className="mt-3 flex items-center gap-2 rounded-md border border-line bg-panel px-3">
-          <Search className="h-4 w-4 shrink-0 text-stone-500" />
+          <Search className="h-4 w-4 shrink-0 text-faint" />
           <input
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
@@ -132,7 +132,7 @@ export function KnowledgeGraphWorkspace({
             <button
               type="button"
               onClick={() => onQueryChange("")}
-              className="text-stone-500 hover:text-stone-300"
+              className="text-faint hover:text-muted"
               title="清空搜索"
             >
               <X className="h-3.5 w-3.5" />
@@ -149,8 +149,8 @@ export function KnowledgeGraphWorkspace({
                 onClick={() => onToggleNodeType(type)}
                 className={`rounded-md border px-2 py-1 text-[11px] font-medium transition ${
                   hiddenNodeTypes[type]
-                    ? "border-line bg-panel text-stone-500"
-                    : "border-transparent bg-panel text-stone-200"
+                    ? "border-line bg-panel text-faint"
+                    : "border-transparent bg-panel text-ink"
                 }`}
               >
                 {graphNodeTypeLabel(type)}
@@ -168,8 +168,8 @@ export function KnowledgeGraphWorkspace({
                 onClick={() => onToggleRelation(relation)}
                 className={`rounded-md border px-2 py-1 text-[11px] font-medium transition ${
                   hiddenRelations[relation]
-                    ? "border-line bg-panel text-stone-500"
-                    : "border-transparent bg-panel text-stone-200"
+                    ? "border-line bg-panel text-faint"
+                    : "border-transparent bg-panel text-ink"
                 }`}
               >
                 {graphRelationLabel(relation)}
@@ -180,25 +180,25 @@ export function KnowledgeGraphWorkspace({
       </section>
 
       {error && (
-        <div className="rounded-md border border-red-800/60 bg-red-900/40 p-3 text-sm text-red-300">
+        <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-600">
           {error}
         </div>
       )}
 
       {!error && !loading && (!graph || graph.nodes.length === 0) && (
-        <div className="rounded-md border border-line bg-panel p-4 text-sm text-stone-400">
+        <div className="rounded-md border border-line bg-panel p-4 text-sm text-faint">
           还没有可展示的项目关系。同步 Issue/PR/CI，或添加项目记忆后再重建图谱。
         </div>
       )}
 
       {loading && !graph && (
-        <div className="rounded-md border border-line bg-panel p-4 text-sm text-stone-400">
+        <div className="rounded-md border border-line bg-panel p-4 text-sm text-faint">
           正在加载项目知识图谱...
         </div>
       )}
 
       {graph && filtered.nodes.length === 0 && (
-        <div className="rounded-md border border-line bg-panel p-4 text-sm text-stone-400">
+        <div className="rounded-md border border-line bg-panel p-4 text-sm text-faint">
           当前搜索或过滤条件下没有匹配节点。
         </div>
       )}
@@ -262,8 +262,8 @@ export function KnowledgeGraphWorkspace({
                       cx={pos.x}
                       cy={pos.y}
                       r={selected ? 19 : 15}
-                      fill={node.highlighted ? "#3a2410" : style.fill}
-                      stroke={node.highlighted ? "#fb923c" : selected ? "#060a08" : style.stroke}
+                      fill={node.highlighted ? "#fef3c7" : style.fill}
+                      stroke={node.highlighted ? "#ea580c" : selected ? "#166534" : style.stroke}
                       strokeWidth={node.highlighted || selected ? 2.6 : 1.6}
                     />
                     <text
@@ -272,11 +272,11 @@ export function KnowledgeGraphWorkspace({
                       textAnchor="middle"
                       fontSize="11"
                       fontWeight={selected ? "700" : "600"}
-                      fill="#a8d9cb"
+                      fill="#5f6b63"
                     >
                       {clipGraphLabel(node.title, 18)}
                     </text>
-                    <text x={pos.x} y={pos.y + 48} textAnchor="middle" fontSize="9" fill="#7fa89a">
+                    <text x={pos.x} y={pos.y + 48} textAnchor="middle" fontSize="9" fill="#7a857d">
                       {graphNodeTypeLabel(node.type)}
                     </text>
                   </g>
@@ -296,21 +296,21 @@ export function KnowledgeGraphWorkspace({
                     {selectedNode.title}
                   </div>
                   {selectedNode.subtitle && (
-                    <div className="mt-1 text-xs text-stone-400">{selectedNode.subtitle}</div>
+                    <div className="mt-1 text-xs text-faint">{selectedNode.subtitle}</div>
                   )}
                 </div>
                 <div className="flex shrink-0 gap-1">
                   <button
                     type="button"
                     onClick={() => onFocusNode(selectedNode)}
-                    className="rounded-md border border-line px-2 py-1 text-xs text-stone-300 transition hover:bg-panel"
+                    className="rounded-md border border-line px-2 py-1 text-xs text-muted transition hover:bg-panel"
                   >
                     聚焦
                   </button>
                   <button
                     type="button"
                     onClick={() => onOpenNode(selectedNode)}
-                    className="rounded-md bg-accent px-2 py-1 text-xs font-medium text-[#062a1d] transition hover:bg-sage-400"
+                    className="rounded-md bg-accent px-2 py-1 text-xs font-medium text-accent-ink transition hover:bg-accent-bright"
                   >
                     打开
                   </button>
@@ -319,7 +319,7 @@ export function KnowledgeGraphWorkspace({
 
               <div className="mt-3 space-y-1.5">
                 {selectedEdges.length === 0 && (
-                  <div className="text-xs text-stone-400">这个节点暂时没有可见关系。</div>
+                  <div className="text-xs text-faint">这个节点暂时没有可见关系。</div>
                 )}
                 {selectedEdges.slice(0, 8).map((edge) => {
                   const isOutgoing =
@@ -332,7 +332,7 @@ export function KnowledgeGraphWorkspace({
                   return (
                     <div
                       key={edge.id}
-                      className="rounded-md bg-panel px-3 py-2 text-xs text-stone-300"
+                      className="rounded-md bg-panel px-3 py-2 text-xs text-muted"
                     >
                       <span className="font-medium text-ink">
                         {isOutgoing ? "→" : "←"} {graphRelationLabel(edge.relation)}
@@ -539,32 +539,32 @@ export function graphRelationLabel(relation: string) {
 
 export function graphNodeStyle(type: string) {
   const styles: Record<string, { fill: string; stroke: string }> = {
-    issue: { fill: "#3a2e0a", stroke: "#f59e0b" },
-    pull_request: { fill: "#0d2e26", stroke: "#2dd4a7" },
-    ci_run: { fill: "#3a1418", stroke: "#f87171" },
-    team_member: { fill: "#1a2040", stroke: "#818cf8" },
-    memory_note: { fill: "#3a1526", stroke: "#f472b6" },
-    document: { fill: "#122238", stroke: "#60a5fa" },
-    code_file: { fill: "#12281e", stroke: "#34d399" },
-    session_decision: { fill: "#2a1a3a", stroke: "#c084fc" },
+    issue: { fill: "#fef3c7", stroke: "#d97706" },
+    pull_request: { fill: "#d1fae5", stroke: "#16a34a" },
+    ci_run: { fill: "#fee2e2", stroke: "#dc2626" },
+    team_member: { fill: "#e0e7ff", stroke: "#6366f1" },
+    memory_note: { fill: "#fce7f3", stroke: "#db2777" },
+    document: { fill: "#dbeafe", stroke: "#2563eb" },
+    code_file: { fill: "#dcfce7", stroke: "#16a34a" },
+    session_decision: { fill: "#f3e8ff", stroke: "#9333ea" },
   };
-  return styles[type] ?? { fill: "#0e1a16", stroke: "#7fa89a" };
+  return styles[type] ?? { fill: "#f3f5f3", stroke: "#7a857d" };
 }
 
 export function graphRelationColor(relation: string) {
   const colors: Record<string, string> = {
-    resolves: "#34d399",
-    mentions: "#7fa89a",
-    assigned_to: "#818cf8",
-    blocked_by: "#f87171",
-    failed_in_ci: "#f87171",
-    touches_file: "#2dd4a7",
-    documents: "#60a5fa",
-    cites: "#f472b6",
-    produced_from_session: "#c084fc",
-    used_as_evidence: "#fb923c",
+    resolves: "#16a34a",
+    mentions: "#7a857d",
+    assigned_to: "#6366f1",
+    blocked_by: "#dc2626",
+    failed_in_ci: "#dc2626",
+    touches_file: "#16a34a",
+    documents: "#2563eb",
+    cites: "#db2777",
+    produced_from_session: "#9333ea",
+    used_as_evidence: "#ea580c",
   };
-  return colors[relation] ?? "#7fa89a";
+  return colors[relation] ?? "#7a857d";
 }
 
 export function graphStatNumber(

@@ -51,7 +51,7 @@ export default function CIPage() {
         <Card>
           <div className="flex items-center justify-between">
             <h2 className="font-semibold text-ink">Workflow Runs</h2>
-            <span className="rounded-full bg-panel px-2.5 py-1 text-xs text-stone-400">
+            <span className="rounded-full bg-panel px-2.5 py-1 text-xs text-faint">
               {runs.length} 次
             </span>
           </div>
@@ -61,13 +61,13 @@ export default function CIPage() {
                 key={run.id}
                 onClick={() => setSelected(run)}
                 className={
-                  selected?.id === run.id ? "border-sage-600 bg-sage-900 text-sage-100" : ""
+                  selected?.id === run.id ? "border-sage-700 bg-sage-100 text-accent" : ""
                 }
               >
                 <div className="flex items-center justify-between gap-3">
                   <span>{run.name}</span>
                   <span
-                    className={run.conclusion === "failure" ? "text-amber-300" : "text-emerald-300"}
+                    className={run.conclusion === "failure" ? "text-amber-600" : "text-emerald-600"}
                   >
                     {run.conclusion ?? run.status}
                   </span>
@@ -80,7 +80,7 @@ export default function CIPage() {
         <Card>
           <h2 className="font-semibold text-ink">排查建议</h2>
           {(selected?.jobs?.length ?? 0) > 0 && (
-            <div className="mt-3 rounded-md border border-line bg-panel p-3 text-xs leading-5 text-stone-200">
+            <div className="mt-3 rounded-md border border-line bg-panel p-3 text-xs leading-5 text-ink">
               <div className="font-medium text-ink">失败 Job</div>
               {(selected?.jobs ?? [])
                 .filter((job) => job.conclusion === "failure")
@@ -92,7 +92,7 @@ export default function CIPage() {
                       .map((step) => (
                         <span
                           key={step.name}
-                          className="ml-2 rounded-full bg-amber-900/40 px-2 py-0.5 text-amber-200"
+                          className="ml-2 rounded-full bg-amber-50 px-2 py-0.5 text-amber-600"
                         >
                           {step.name}
                         </span>
@@ -102,7 +102,7 @@ export default function CIPage() {
             </div>
           )}
           {selected?.logs_text && (
-            <pre className="mt-3 max-h-44 overflow-auto rounded-md border border-line bg-panel p-3 text-xs text-stone-200">
+            <pre className="mt-3 max-h-44 overflow-auto rounded-md border border-line bg-panel p-3 text-xs text-ink">
               {selected.logs_text}
             </pre>
           )}
@@ -110,7 +110,7 @@ export default function CIPage() {
             分析失败原因
           </PrimaryButton>
           {analysis && (
-            <pre className="mt-4 max-h-[520px] overflow-auto rounded-md border border-stone-700 bg-stone-950 p-4 text-xs text-stone-100">
+            <pre className="mt-4 max-h-[520px] overflow-auto rounded-md border border-stone-200 bg-stone-100 p-4 text-xs text-ink">
               {analysis}
             </pre>
           )}

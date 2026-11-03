@@ -1,0 +1,88 @@
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./lib/**/*.{ts,tsx}"],
+  theme: {
+    extend: {
+      colors: {
+        // 基础语义 token —— 极简浅色（Light）森林绿主题
+        ink: "#17201a",
+        muted: "#5f6b63",
+        faint: "#7a857d",
+        paper: "#f7f8f6",
+        panel: "#ffffff",
+        "panel-2": "#f3f5f3",
+        "panel-3": "#e9ede9",
+        line: "#e6ebe6",
+        "line-strong": "#d6ddd6",
+        accent: "#166534",
+        "accent-deep": "#14532d",
+        "accent-bright": "#15803d",
+        "accent-ink": "#ffffff",
+        warn: "#b45309",
+
+        sage: {
+          50: "#f0fdf4",
+          100: "#dcfce7",
+          200: "#bbf7d0",
+          300: "#86efac",
+          400: "#4ade80",
+          500: "#22c55e",
+          600: "#16a34a",
+          700: "#166534",
+          800: "#14532d",
+          900: "#14532d",
+        },
+
+        stone: {
+          50: "#fafafa",
+          100: "#f4f4f5",
+          200: "#e4e4e7",
+          300: "#d4d4d8",
+          400: "#a1a1aa",
+          500: "#71717a",
+          600: "#52525b",
+          700: "#3f3f46",
+          800: "#27272a",
+          900: "#18181b",
+          950: "#09090b",
+        },
+      },
+      fontFamily: {
+        sans: [
+          "-apple-system",
+          "BlinkMacSystemFont",
+          '"Segoe UI"',
+          "Roboto",
+          '"Helvetica Neue"',
+          "Arial",
+          '"PingFang SC"',
+          '"Hiragino Sans GB"',
+          '"Microsoft YaHei"',
+          "sans-serif",
+        ],
+        mono: [
+          "ui-monospace",
+          '"SF Mono"',
+          "SFMono-Regular",
+          "Menlo",
+          "Consolas",
+          '"Liberation Mono"',
+          "monospace",
+        ],
+      },
+      boxShadow: {
+        sm: "none",
+        md: "0 2px 8px rgba(23, 32, 26, 0.06)",
+        xl: "0 8px 24px rgba(23, 32, 26, 0.10)",
+        "2xl": "0 16px 48px rgba(23, 32, 26, 0.16)",
+        popover: "0 2px 8px rgba(23, 32, 26, 0.08), 0 12px 32px rgba(23, 32, 26, 0.12)",
+      },
+      borderRadius: {
+        sm: "6px",
+        md: "8px",
+        lg: "12px",
+      },
+    },
+  },
+  plugins: [],
+};
