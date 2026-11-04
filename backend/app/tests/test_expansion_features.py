@@ -179,6 +179,59 @@ async def test_code_graph_indexes_symbols_and_relations(tmp_path) -> None:
     assert any(item["relation_type"] == "calls" for item in result["relations"])
 
 
+def test_shell_builtin_calls_are_denoised(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(settings, "code_parser", "tree_sitter")
+    db = _db_session()
+    repo = _repo(db)
+    project = tmp_path / "repo"
+    project.mkdir()
+    (project / "run.sh").write_text(
+        "#!/bin/bash\n"
+        "helper() { true; }\n"
+        "echo hello\n"
+        "ls -l\n"
+        "helper\n",
+        encoding="utf-8",
+    )
+
+    _sync_code_graph(db, repo, project, branch="main", commit_sha="abc123")
+    db.commit()
+
+    calls = [
+        r.target_name
+        for r in db.query(CodeRelation)
+        .filter(CodeRelation.relation_type == "calls")
+        .all()
+    ]
+    # echo/ls/true are shell builtins / external commands — filtered out.
+    assert set(calls) == {"helper"}
+
+
+def test_shell_noise_does_not_affect_other_languages(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(settings, "code_parser", "tree_sitter")
+    db = _db_session()
+    repo = _repo(db)
+    project = tmp_path / "repo"
+    project.mkdir()
+    (project / "main.c").write_text(
+        "#include <stdio.h>\n"
+        "void f() { printf(\"x\"); }\n",
+        encoding="utf-8",
+    )
+
+    _sync_code_graph(db, repo, project, branch="main", commit_sha="abc123")
+    db.commit()
+
+    calls = [
+        r.target_name
+        for r in db.query(CodeRelation)
+        .filter(CodeRelation.relation_type == "calls")
+        .all()
+    ]
+    # `printf` is in SHELL_CALL_NOISE but .c is not a shell file, so it must stay.
+    assert "printf" in calls
+
+
 def test_pr_snapshot_live_search_is_pr_scoped(tmp_path) -> None:
     db = _db_session()
     repo = _repo(db)

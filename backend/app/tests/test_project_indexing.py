@@ -33,7 +33,7 @@ project_docs:
     - README.md
     - docs/architecture/**
   exclude:
-    - docs/course/**
+    - docs/test/**
     - "docs/demo code/**"
 include_manifests: true
 """,
@@ -144,24 +144,24 @@ def test_project_index_state_reports_stale_when_files_change(tmp_path) -> None:
     assert get_project_index_state(db, repo)["status"] == "stale"
 
 
-def test_allowlist_rescan_removes_course_docs_from_rag_evidence_and_graph(
+def test_allowlist_rescan_removes_test_docs_from_rag_evidence_and_graph(
     tmp_path,
 ) -> None:
     project = tmp_path / "demo"
     (project / "docs" / "architecture").mkdir(parents=True)
-    (project / "docs" / "course").mkdir(parents=True)
+    (project / "docs" / "test").mkdir(parents=True)
     (project / "docs" / "demo code").mkdir(parents=True)
     (project / ".data" / "runtime-checkout").mkdir(parents=True)
     (project / "README.md").write_text("# Demo\n\nProject overview.", encoding="utf-8")
     (project / "docs" / "architecture" / "system.md").write_text(
         "# System architecture\n\nFastAPI service boundary.", encoding="utf-8"
     )
-    (project / "docs" / "course" / "lesson.md").write_text(
-        "# Course lesson\n\nCOURSE_ONLY_MARKER should never reach project retrieval.",
+    (project / "docs" / "test" / "lesson.md").write_text(
+        "# test lesson\n\ntest_ONLY_MARKER should never reach project retrieval.",
         encoding="utf-8",
     )
     (project / "docs" / "demo code" / "README.md").write_text(
-        "# Course demo\n\nDEMO_ONLY_MARKER is teaching material.", encoding="utf-8"
+        "# test demo\n\nDEMO_ONLY_MARKER is teaching material.", encoding="utf-8"
     )
     (project / "package.json").write_text(
         '{"name":"demo","version":"1.0.0"}', encoding="utf-8"
@@ -183,7 +183,7 @@ def test_allowlist_rescan_removes_course_docs_from_rag_evidence_and_graph(
 
     assert scan_project_index(db, repo)["status"] == "ready"
     assert any(
-        str((doc.meta or {}).get("path") or "").startswith("docs/course/")
+        str((doc.meta or {}).get("path") or "").startswith("docs/test/")
         for doc in db.query(Document)
         .filter(Document.repo_id == repo.id, Document.source_type == "project_doc")
         .all()
@@ -205,17 +205,17 @@ def test_allowlist_rescan_removes_course_docs_from_rag_evidence_and_graph(
     assert "README.md" in indexed_paths
     assert "docs/architecture/system.md" in indexed_paths
     assert not any(
-        path.startswith(("docs/course/", "docs/demo code/")) for path in indexed_paths
+        path.startswith(("docs/test/", "docs/demo code/")) for path in indexed_paths
     )
     assert not any(path.startswith(".data/") for path in indexed_paths)
     assert not any(
-        "COURSE_ONLY_MARKER" in item.content or "DEMO_ONLY_MARKER" in item.content
+        "test_ONLY_MARKER" in item.content or "DEMO_ONLY_MARKER" in item.content
         for item in db.query(EvidenceItem).filter(EvidenceItem.repo_id == repo.id).all()
     )
     assert not search_similar_documents(
         db,
         repo.id,
-        "COURSE_ONLY_MARKER",
+        "test_ONLY_MARKER",
         retrieval_method="fulltext",
         apply_rerank=False,
     )
@@ -232,7 +232,7 @@ def test_allowlist_rescan_removes_course_docs_from_rag_evidence_and_graph(
     graph_nodes = _collect_nodes(db, repo.id).values()
     assert not any(
         str((node.get("metadata") or {}).get("path") or "").startswith(
-            ("docs/course/", "docs/demo code/")
+            ("docs/test/", "docs/demo code/")
         )
         for node in graph_nodes
     )
@@ -241,12 +241,12 @@ def test_allowlist_rescan_removes_course_docs_from_rag_evidence_and_graph(
 def test_excluded_files_do_not_make_project_index_stale(tmp_path) -> None:
     project = tmp_path / "demo"
     (project / "docs" / "architecture").mkdir(parents=True)
-    (project / "docs" / "course").mkdir(parents=True)
+    (project / "docs" / "test").mkdir(parents=True)
     (project / "README.md").write_text("# Demo\n\nProject overview.", encoding="utf-8")
     architecture = project / "docs" / "architecture" / "system.md"
     architecture.write_text("# Architecture\n\nVersion one.", encoding="utf-8")
-    course = project / "docs" / "course" / "lesson.md"
-    course.write_text("# Lesson\n\nVersion one.", encoding="utf-8")
+    test = project / "docs" / "test" / "lesson.md"
+    test.write_text("# Lesson\n\nVersion one.", encoding="utf-8")
     _write_allowlist_config(project)
 
     db = _db_session()
@@ -261,8 +261,8 @@ def test_excluded_files_do_not_make_project_index_stale(tmp_path) -> None:
     db.flush()
 
     assert scan_project_index(db, repo)["status"] == "ready"
-    course.write_text(
-        "# Lesson\n\nA much longer excluded course revision.", encoding="utf-8"
+    test.write_text(
+        "# Lesson\n\nA much longer excluded test revision.", encoding="utf-8"
     )
     assert get_project_index_state(db, repo)["status"] == "ready"
 
@@ -276,14 +276,14 @@ def test_discover_project_docs_defaults_to_automatic_mode_without_config(
     tmp_path,
 ) -> None:
     project = tmp_path / "demo"
-    (project / "docs" / "course").mkdir(parents=True)
-    lesson = project / "docs" / "course" / "lesson.md"
+    (project / "docs" / "test").mkdir(parents=True)
+    lesson = project / "docs" / "test" / "lesson.md"
     lesson.write_text(
         "# Lesson\n\nLegacy automatic discovery remains compatible.", encoding="utf-8"
     )
 
     assert [item.relative_path for item in discover_project_docs(project)] == [
-        "docs/course/lesson.md"
+        "docs/test/lesson.md"
     ]
 
 

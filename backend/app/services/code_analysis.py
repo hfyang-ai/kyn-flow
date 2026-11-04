@@ -3,7 +3,6 @@
 import asyncio
 import logging
 import os
-import re
 import shutil
 import subprocess
 import uuid
@@ -16,6 +15,7 @@ from app.core.config import settings
 from app.core.security import decrypt_token
 from app.db.models import CodeRelation, CodeSymbol, Document, Repository
 from app.db.session import SessionLocal
+from app.services.code_parsing import build_parser
 
 logger = logging.getLogger(__name__)
 
@@ -88,16 +88,42 @@ TEXT_FILENAMES = {
     "pyproject.toml",
 }
 
-PY_SYMBOL_RE = re.compile(r"^\s*(def|class)\s+([A-Za-z_][A-Za-z0-9_]*)", re.MULTILINE)
-TS_SYMBOL_RE = re.compile(
-    r"^\s*(?:export\s+)?(?:async\s+)?(?:function|class|interface|type|const|let)\s+([A-Za-z_$][A-Za-z0-9_$]*)",
-    re.MULTILINE,
-)
-CALL_RE = re.compile(r"\b([A-Za-z_][$A-Za-z0-9_]*)\s*\(")
-IMPORT_RE = re.compile(
-    r"^\s*(?:from\s+([\w.\/-]+)\s+import|import\s+([\w.\/-]+)|import\s+.*?\s+from\s+['\"]([^'\"]+)['\"])",
-    re.MULTILINE,
-)
+# Call-target names that should never surface as cross-symbol `calls` edges
+# (keywords / builtins the regex backend can't distinguish from real symbols).
+CALL_NOISE = {
+    "if",
+    "for",
+    "while",
+    "return",
+    "print",
+    "len",
+    "str",
+    "int",
+    # import-semantics method calls (Ruby / CommonJS) — not symbol references.
+    "require",
+    "require_relative",
+}
+
+# Shell / PowerShell builtins and ubiquitous system commands that never resolve
+# to project symbols. Applied only to shell-family files (not globally, since
+# e.g. `printf` is a real symbol in C and `test` in many languages).
+SHELL_CALL_NOISE = {
+    # bash builtins
+    "echo", "cd", "pwd", "export", "unset", "set", "local", "declare",
+    "read", "readarray", "mapfile", "source", "eval", "exec", "shift",
+    "trap", "wait", "kill", "printf", "test", "let", "type", "alias",
+    "unalias", "ulimit", "umask", "pushd", "popd", "dirs", "exit",
+    "command", "builtin", "getopts", "hash", "help", "break", "continue",
+    "true", "false",
+    # ubiquitous external commands
+    "ls", "cat", "grep", "sed", "awk", "cp", "mv", "rm", "mkdir", "rmdir",
+    "touch", "chmod", "chown", "find", "tar", "gzip", "gunzip", "curl",
+    "wget", "git", "ssh", "scp", "make", "docker", "node", "npm", "pip",
+    "python", "python3", "go", "cargo", "kubectl", "systemctl",
+}
+
+# File suffixes whose call targets are filtered against SHELL_CALL_NOISE.
+SHELL_FILE_SUFFIXES = {".sh", ".ps1", ".bat", ".cmd"}
 
 
 def _checkout_root() -> Path:
@@ -235,11 +261,6 @@ def _read_text(path: Path, max_bytes: int = 300_000) -> str | None:
     return None
 
 
-def _language_for(path: Path) -> str:
-    suffix = path.suffix.lower().lstrip(".")
-    return suffix or path.name
-
-
 def _git_text(args: list[str], cwd: Path) -> str | None:
     try:
         result = subprocess.run(
@@ -256,46 +277,6 @@ def _git_text(args: list[str], cwd: Path) -> str | None:
         return None
 
 
-def _line_for_offset(text: str, offset: int) -> int:
-    return text.count("\n", 0, offset) + 1
-
-
-def _symbol_matches(path: Path, text: str) -> list[dict[str, object]]:
-    language = _language_for(path)
-    matches = []
-    if path.suffix.lower() == ".py":
-        for match in PY_SYMBOL_RE.finditer(text):
-            matches.append(
-                {
-                    "name": match.group(2),
-                    "kind": match.group(1),
-                    "language": language,
-                    "start_line": _line_for_offset(text, match.start()),
-                }
-            )
-    elif path.suffix.lower() in {".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"}:
-        for match in TS_SYMBOL_RE.finditer(text):
-            declaration = match.group(0)
-            kind = (
-                "class"
-                if "class " in declaration
-                else "interface"
-                if "interface " in declaration
-                else "type"
-                if "type " in declaration
-                else "function"
-            )
-            matches.append(
-                {
-                    "name": match.group(1),
-                    "kind": kind,
-                    "language": language,
-                    "start_line": _line_for_offset(text, match.start()),
-                }
-            )
-    return matches
-
-
 def _sync_code_graph(
     db: Session,
     repo: Repository,
@@ -307,6 +288,7 @@ def _sync_code_graph(
     pr_number: int | None = None,
     max_files: int = 500,
 ) -> int:
+    parser = build_parser(settings.code_parser)
     db.query(CodeRelation).filter(
         CodeRelation.repo_id == repo.id,
         CodeRelation.branch == branch,
@@ -333,20 +315,20 @@ def _sync_code_graph(
         text = _read_text(path, max_bytes=180_000)
         if not text:
             continue
-        symbols = _symbol_matches(path, text)
+        symbols = parser.parse(path, text).symbols
         if not symbols:
             continue
         relative_path = path.relative_to(checkout_path).as_posix()
         files_seen += 1
-        for item in symbols:
+        for sym in symbols:
             row = CodeSymbol(
                 repo_id=repo.id,
                 path=relative_path,
-                name=str(item["name"]),
-                kind=str(item["kind"]),
-                language=str(item["language"]),
-                start_line=int(item["start_line"]),
-                end_line=None,
+                name=sym.name,
+                kind=sym.kind,
+                language=sym.language,
+                start_line=sym.start_line,
+                end_line=sym.end_line,
                 branch=branch,
                 commit_sha=commit_sha,
                 pr_id=pr_id,
@@ -368,11 +350,8 @@ def _sync_code_graph(
         if not text:
             continue
         relative_path = path.relative_to(checkout_path).as_posix()
-        import_targets = [
-            next((part for part in match.groups() if part), "")
-            for match in IMPORT_RE.finditer(text)
-        ]
-        for target in [item for item in import_targets if item]:
+        result = parser.parse(path, text)
+        for target in result.imports:
             db.add(
                 CodeRelation(
                     repo_id=repo.id,
@@ -388,19 +367,11 @@ def _sync_code_graph(
             )
         local_symbols = [row for row in symbol_rows if row.path == relative_path]
         source = local_symbols[0] if local_symbols else None
+        noise = CALL_NOISE | SHELL_CALL_NOISE if path.suffix.lower() in SHELL_FILE_SUFFIXES else CALL_NOISE
         seen_calls: set[str] = set()
-        for match in CALL_RE.finditer(text):
-            target_name = match.group(1)
-            if target_name in seen_calls or target_name in {
-                "if",
-                "for",
-                "while",
-                "return",
-                "print",
-                "len",
-                "str",
-                "int",
-            }:
+        for call in result.calls:
+            target_name = call.name
+            if target_name in seen_calls or target_name in noise:
                 continue
             seen_calls.add(target_name)
             target = by_name.get(target_name)
@@ -416,7 +387,7 @@ def _sync_code_graph(
                     branch=branch,
                     pr_id=pr_id,
                     pr_number=pr_number,
-                    meta={"line": _line_for_offset(text, match.start())},
+                    meta={"line": call.line},
                 )
             )
     return len(symbol_rows)

@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -86,6 +88,7 @@ class Settings(BaseSettings):
     prompt_cache_retention: str | None = None
     repo_checkout_dir: str = ".data/repos"
     upload_dir: str = ".data/uploads"
+    code_parser: Literal["tree_sitter", "regex"] = "tree_sitter"
 
     token_encryption_key: str = "change-me-in-local-dev"
     demo_mode: bool = True
