@@ -72,3 +72,5 @@ class RepoSyncResponse(BaseModel):
     sources: dict[str, dict] = Field(default_factory=dict)
     errors: list[str] = Field(default_factory=list)
     message: str = ""
+    rate_limited: bool = False
+    retry_after_seconds: int | None = None

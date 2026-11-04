@@ -415,8 +415,13 @@ async def sync_repo(
     if repo is None:
         raise HTTPException(status_code=404, detail="未找到仓库")
     result = await sync_repository(db, repo, payload)
-    if result.status == "failed":
-        response.status_code = 502
+    # 同步失败不等于网关故障，语义上仍是一次被正常处理的请求：
+    # 非限流失败返回 200，由正文的 status/errors 表达结果，避免前端把业务失败当成 502 网关错误。
+    # 只有 GitHub 限流属于「稍后重试」语义，用 429 + Retry-After 让调用方可退避。
+    if result.status == "failed" and result.rate_limited:
+        response.status_code = 429
+        if result.retry_after_seconds:
+            response.headers["Retry-After"] = str(result.retry_after_seconds)
     background_tasks.add_task(sync_repository_code_analysis_by_id, repo.id)
     return result
 

@@ -37,7 +37,11 @@ from app.schemas.repos import RepoSyncRequest
 from app.schemas.workflow import WorkflowClaim, WorkflowSpec, WorkflowTask
 from app.services.agents.workflow_orchestrator import WorkflowOrchestrator
 from app.services.github.actions import list_workflow_runs
-from app.services.github.client import GitHubClient
+from app.services.github.client import (
+    GitHubClient,
+    GitHubRateLimitError,
+    _is_rate_limited,
+)
 from app.services.github.issues import list_issues
 from app.services.github.pull_requests import list_pull_requests
 from app.services.repos_sync import sync_repository
@@ -48,6 +52,7 @@ def github_server():
     state = {
         "data": {},
         "errors": {},
+        "headers": {},
         "requests": [],
         "bad_shape": False,
         "repeat_link": False,
@@ -85,6 +90,8 @@ def github_server():
             self.send_response(status)
             self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(body)))
+            for name, value in state["headers"].items():
+                self.send_header(name, str(value))
             if page * per_page < len(items) or state["repeat_link"]:
                 params = {key: values[0] for key, values in query.items()}
                 params["page"] = page if state["repeat_link"] else page + 1
@@ -299,8 +306,64 @@ async def test_failed_source_is_not_reported_as_empty(github_server, database, s
     assert result.status == "partial"
     assert result.sources["workflow_runs"]["status"] == "failed"
     assert result.errors == [f"workflow_runs: HTTP {status}"]
+    assert result.rate_limited is False
     assert repo.last_sync_at.replace(tzinfo=UTC) == previous
     assert db.query(Issue).count() == 205
+
+
+@pytest.mark.asyncio
+async def test_rate_limit_is_separated_from_permission_denied(github_server, database):
+    github_server["errors"]["/repos/acme/demo/issues"] = 403
+    github_server["errors"]["/repos/acme/demo/pulls"] = 403
+    github_server["errors"]["/repos/acme/demo/actions/runs"] = 403
+    reset_at = int(datetime.now(UTC).timestamp()) + 600
+    github_server["headers"] = {
+        "x-ratelimit-limit": "60",
+        "x-ratelimit-remaining": "0",
+        "x-ratelimit-reset": str(reset_at),
+    }
+    db, repo = database
+    result = await sync_repository(db, repo, RepoSyncRequest())
+    assert result.status == "failed"
+    assert result.rate_limited is True
+    assert result.retry_after_seconds is not None
+    assert 540 <= result.retry_after_seconds <= 600
+    assert "GitHub 限流" in result.message
+    assert "0/60" in result.message
+    assert all("GitHub 限流" in error for error in result.errors)
+    assert repo.sync_metadata["rate_limited"] is True
+
+
+def test_rate_limit_message_hints_token_for_anonymous_calls():
+    request = httpx.Request("GET", "https://api.github.com/repos/acme/demo")
+    response = httpx.Response(
+        403,
+        request=request,
+        headers={"x-ratelimit-limit": "60", "x-ratelimit-remaining": "0"},
+    )
+    anonymous = GitHubRateLimitError(response, authenticated=False)
+    assert "0/60" in str(anonymous)
+    assert "GITHUB_TOKEN" in str(anonymous)
+    assert "匿名" in str(anonymous)
+
+    authenticated = GitHubRateLimitError(response, authenticated=True)
+    assert "GITHUB_TOKEN" not in str(authenticated)
+
+
+def test_permission_denied_is_not_mistaken_for_rate_limit():
+    request = httpx.Request("GET", "https://api.github.com/repos/acme/demo")
+    rate_limited = httpx.Response(
+        403,
+        request=request,
+        headers={"x-ratelimit-remaining": "0"},
+    )
+    denied = httpx.Response(
+        403,
+        request=request,
+        json={"message": "Resource not accessible by integration"},
+    )
+    assert _is_rate_limited(rate_limited) is True
+    assert _is_rate_limited(denied) is False
 
 
 @pytest.mark.asyncio
@@ -472,8 +535,11 @@ def test_sync_api_exposes_persisted_failure_and_complete_pagination(
         for path in ("issues", "pulls", "actions/runs"):
             github_server["errors"][f"/repos/acme/demo/{path}"] = 403
         failed = client.post(f"/api/repos/{repo.id}/sync", json={})
-        assert failed.status_code == 502
+        # 业务失败不再伪装成 502 网关错误，正文自带 status/errors。
+        assert failed.status_code == 200
         assert failed.json()["status"] == "failed"
+        assert failed.json()["rate_limited"] is False
+        assert failed.json()["errors"]
         assert (
             client.get(f"/api/repos/{repo.id}/sync-status").json()["status"] == "failed"
         )
@@ -489,6 +555,36 @@ def test_sync_api_exposes_persisted_failure_and_complete_pagination(
         )
         listing = client.get("/api/repos").json()
         assert listing[0]["sync_metadata"]["status"] == "completed"
+
+
+def test_sync_api_returns_429_with_retry_after_when_rate_limited(
+    github_server, database, monkeypatch
+):
+    db, repo = database
+    app = FastAPI()
+    app.include_router(repos.router, prefix="/api/repos")
+    app.dependency_overrides[get_db] = lambda: db
+
+    async def no_code_analysis(*_args):
+        pass
+
+    monkeypatch.setattr(repos, "sync_repository_code_analysis_by_id", no_code_analysis)
+    reset_at = int(datetime.now(UTC).timestamp()) + 300
+    github_server["headers"] = {
+        "x-ratelimit-limit": "60",
+        "x-ratelimit-remaining": "0",
+        "x-ratelimit-reset": str(reset_at),
+    }
+    for path in ("issues", "pulls", "actions/runs"):
+        github_server["errors"][f"/repos/acme/demo/{path}"] = 403
+    with TestClient(app) as client:
+        throttled = client.post(f"/api/repos/{repo.id}/sync", json={})
+        assert throttled.status_code == 429
+        assert int(throttled.headers["Retry-After"]) > 0
+        body = throttled.json()
+        assert body["rate_limited"] is True
+        assert body["status"] == "failed"
+        assert "GitHub 限流" in body["message"]
 
 
 @pytest.mark.asyncio

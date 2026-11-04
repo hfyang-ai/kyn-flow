@@ -1,9 +1,87 @@
 from collections.abc import Callable
+from datetime import UTC, datetime, timedelta
+from math import ceil
 from typing import Any
 
 import httpx
 
 from app.core.config import settings
+
+RATE_LIMIT_STATUSES = {403, 429}
+
+
+def _reset_at(response: httpx.Response) -> datetime | None:
+    """Return the UTC instant at which the rate limit window resets."""
+    reset = response.headers.get("x-ratelimit-reset", "")
+    if reset.isdigit():
+        try:
+            return datetime.fromtimestamp(int(reset), tz=UTC)
+        except (OverflowError, OSError, ValueError):
+            return None
+    retry_after = response.headers.get("retry-after", "")
+    if retry_after.isdigit():
+        return datetime.now(UTC) + timedelta(seconds=int(retry_after))
+    return None
+
+
+def _is_rate_limited(response: httpx.Response) -> bool:
+    """Tell a real rate limit apart from a plain 403 permission denial."""
+    if response.status_code not in RATE_LIMIT_STATUSES:
+        return False
+    if response.headers.get("x-ratelimit-remaining") == "0":
+        return True
+    if response.headers.get("retry-after"):
+        return True
+    try:
+        payload = response.json()
+    except ValueError:
+        return False
+    message = payload.get("message") if isinstance(payload, dict) else None
+    return isinstance(message, str) and "rate limit" in message.lower()
+
+
+class GitHubRateLimitError(httpx.HTTPStatusError):
+    """GitHub rejected the call because the API quota is exhausted.
+
+    Subclasses ``httpx.HTTPStatusError`` so existing ``except httpx.HTTPError``
+    call sites keep working while the message stays actionable.
+    """
+
+    def __init__(self, response: httpx.Response, *, authenticated: bool) -> None:
+        self.status_code = response.status_code
+        self.limit = response.headers.get("x-ratelimit-limit")
+        self.remaining = response.headers.get("x-ratelimit-remaining")
+        self.reset_at = _reset_at(response)
+        self.authenticated = authenticated
+        self.retry_after_seconds = (
+            max(0, ceil((self.reset_at - datetime.now(UTC)).total_seconds()))
+            if self.reset_at is not None
+            else None
+        )
+        super().__init__(self._describe(), request=response.request, response=response)
+
+    def _describe(self) -> str:
+        quota = (
+            f"{self.remaining}/{self.limit}"
+            if self.remaining is not None and self.limit is not None
+            else "已耗尽"
+        )
+        if self.retry_after_seconds is not None:
+            minutes = max(1, ceil(self.retry_after_seconds / 60))
+            clock = (
+                self.reset_at.astimezone().strftime("%H:%M") if self.reset_at else ""
+            )
+            when = (
+                f"约 {minutes} 分钟后（{clock}）" if clock else f"约 {minutes} 分钟后"
+            )
+        else:
+            when = "稍后"
+        hint = (
+            ""
+            if self.authenticated
+            else "；当前为匿名访问（60 次/小时），配置 GITHUB_TOKEN 可提升至 5000 次/小时"
+        )
+        return f"GitHub 限流：剩余额度 {quota}，请{when}再试{hint}"
 
 
 class PaginatedItems(list[dict]):
@@ -29,12 +107,18 @@ class GitHubClient:
             headers["Authorization"] = f"Bearer {self.token}"
         return headers
 
+    def _raise_for_status(self, response: httpx.Response) -> None:
+        """Raise with an actionable message when GitHub throttles the request."""
+        if _is_rate_limited(response):
+            raise GitHubRateLimitError(response, authenticated=bool(self.token))
+        response.raise_for_status()
+
     async def get(self, path: str, params: dict[str, Any] | None = None) -> Any:
         async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
             response = await client.get(
                 f"{self.base_url}{path}", headers=self._headers(), params=params
             )
-            response.raise_for_status()
+            self._raise_for_status(response)
             return response.json()
 
     async def get_paginated(
@@ -68,7 +152,7 @@ class GitHubClient:
                     )
                 visited.add(url)
                 response = await client.get(url, headers=self._headers(), params=query)
-                response.raise_for_status()
+                self._raise_for_status(response)
                 payload = response.json()
                 batch = (
                     payload.get(item_key)
@@ -100,7 +184,7 @@ class GitHubClient:
             response = await client.get(
                 f"{self.base_url}{path}", headers=self._headers(), params=params
             )
-            response.raise_for_status()
+            self._raise_for_status(response)
             return response.content
 
     async def post(self, path: str, payload: dict[str, Any]) -> Any:
@@ -108,7 +192,7 @@ class GitHubClient:
             response = await client.post(
                 f"{self.base_url}{path}", headers=self._headers(), json=payload
             )
-            response.raise_for_status()
+            self._raise_for_status(response)
             return response.json()
 
     async def patch(self, path: str, payload: dict[str, Any]) -> Any:
@@ -116,7 +200,7 @@ class GitHubClient:
             response = await client.patch(
                 f"{self.base_url}{path}", headers=self._headers(), json=payload
             )
-            response.raise_for_status()
+            self._raise_for_status(response)
             return response.json()
 
     async def get_repo(self, owner: str, repo: str) -> dict[str, Any]:

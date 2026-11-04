@@ -4,9 +4,44 @@ import type {
   ChatTraceItem,
   Issue,
   PullRequest,
+  RepoSyncResult,
+  SyncNotice,
 } from "./types";
 
 const DRAFT_CONVERSATION_PREFIX = "draft:";
+
+const SYNC_ERROR_PREVIEW = 3;
+
+function summarizeSyncErrors(result: RepoSyncResult) {
+  const errors = result.errors ?? [];
+  if (!errors.length) return result.message || undefined;
+  const preview = errors.slice(0, SYNC_ERROR_PREVIEW).join("；");
+  const suffix = errors.length > SYNC_ERROR_PREVIEW ? ` 等 ${errors.length} 项` : "";
+  return `${result.message}${result.message ? " · " : ""}${preview}${suffix}`;
+}
+
+/**
+ * 把同步响应翻译成一条可见提示：成功不打扰，限流单独说清楚，
+ * 失败/不完整把后端 errors 原文带出来，避免出现"点了没反应"。
+ */
+export function syncNoticeFor(result: RepoSyncResult): SyncNotice | null {
+  if (result.status === "failed") {
+    return {
+      tone: "error",
+      title: result.rate_limited ? "GitHub 限流，本次没有取到新数据" : "同步失败",
+      // 限流时 message 本身就是完整说明，errors 只是同一句话按数据源重复三遍。
+      detail: result.rate_limited ? result.message : summarizeSyncErrors(result),
+    };
+  }
+  if (result.status === "partial") {
+    return {
+      tone: "warn",
+      title: result.rate_limited ? "同步不完整（GitHub 限流）" : "同步不完整",
+      detail: result.rate_limited ? result.message : summarizeSyncErrors(result),
+    };
+  }
+  return null;
+}
 
 export function makeDraftConversationId(repoId: string) {
   return `${DRAFT_CONVERSATION_PREFIX}${repoId}:${crypto.randomUUID()}`;

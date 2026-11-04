@@ -263,6 +263,23 @@ export type RepoConnectResult = {
   synced?: Record<string, number>;
 };
 
+export type RepoSyncResult = {
+  repo_id: string;
+  status: string;
+  synced: Record<string, number>;
+  sources?: Record<string, { status: string; count: number; complete: boolean; pages: number }>;
+  errors: string[];
+  message: string;
+  rate_limited: boolean;
+  retry_after_seconds?: number | null;
+};
+
+export type SyncNotice = {
+  tone: "warn" | "error";
+  title: string;
+  detail?: string;
+};
+
 export type ProjectConversation = {
   id: string;
   repo_id: string;

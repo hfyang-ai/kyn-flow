@@ -51,7 +51,9 @@ import type {
   PromptSuggestionState,
   PullRequest,
   RepoConnectResult,
+  RepoSyncResult,
   SkillResponse,
+  SyncNotice,
   TeamMember,
   TeamMemberDraft,
   WorkspaceSelection,
@@ -74,6 +76,7 @@ import {
   matchesTime,
   parseRepositoryInput,
   summarizeConversationTitle,
+  syncNoticeFor,
   traceItemsFromAgentEvents,
   wait,
 } from "./utils";
@@ -198,6 +201,7 @@ export default function DashboardPage() {
   const [analyzingRunId, setAnalyzingRunId] = useState<string | null>(null);
   const [ciAnalysisError, setCiAnalysisError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [syncNotice, setSyncNotice] = useState<SyncNotice | null>(null);
   const skipHistoryLoadRef = useRef(false);
   const preserveWorkspaceSelectionRef = useRef(false);
   const streamAbortRef = useRef<AbortController | null>(null);
@@ -1099,6 +1103,7 @@ export default function DashboardPage() {
 
   async function selectProject(repo: Repository) {
     setSelectedRepoId(repo.id);
+    setSyncNotice(null);
     setExpandedRepoIds((items) => ({ ...items, [repo.id]: !items[repo.id] }));
     const conversations = conversationMap[repo.id]?.length
       ? conversationMap[repo.id]
@@ -1205,13 +1210,20 @@ export default function DashboardPage() {
   async function refreshSelectedRepo() {
     if (!selectedRepo) return;
     setSyncing(true);
+    setSyncNotice(null);
     try {
-      await apiPost(`/api/repos/${selectedRepo.id}/sync`, {
+      const result = await apiPost<RepoSyncResult>(`/api/repos/${selectedRepo.id}/sync`, {
         sync_issues: true,
         sync_pull_requests: true,
         sync_workflow_runs: true,
         limit: 50,
       });
+      setSyncNotice(syncNoticeFor(result));
+    } catch (error) {
+      // 限流回 429，其它失败回 200 + status；网络错误/5xx 走到这里，不能静默吞掉。
+      setSyncNotice({ tone: "error", title: "同步请求失败", detail: getFriendlyError(error) });
+    }
+    try {
       await Promise.all([
         loadRepos(),
         loadRepoData(selectedRepo.id),
@@ -2235,6 +2247,31 @@ export default function DashboardPage() {
                 </button>
               </div>
             </div>
+            {syncNotice && (
+              <div
+                className={`mt-3 flex items-start gap-2 rounded-md border px-3 py-2 text-xs leading-5 ${
+                  syncNotice.tone === "error"
+                    ? "border-rose-200 bg-rose-50 text-rose-600"
+                    : "border-amber-200 bg-amber-50 text-amber-700"
+                }`}
+                role="status"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="font-semibold">{syncNotice.title}</div>
+                  {syncNotice.detail && (
+                    <div className="mt-0.5 break-words">{syncNotice.detail}</div>
+                  )}
+                </div>
+                <button
+                  onClick={() => setSyncNotice(null)}
+                  className="shrink-0 opacity-60 transition hover:opacity-100"
+                  aria-label="关闭同步提示"
+                  title="关闭"
+                >
+                  <XCircle className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
             <div className="mt-3 flex gap-1 overflow-x-auto">
               {workspaceTabs.map((tab) => (
                 <button

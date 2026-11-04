@@ -21,6 +21,7 @@ from app.services.github.actions import (
     list_workflow_run_jobs,
     list_workflow_runs,
 )
+from app.services.github.client import GitHubRateLimitError
 from app.services.github.issues import list_issues
 from app.services.github.pull_requests import (
     list_pull_request_files,
@@ -59,10 +60,23 @@ async def sync_repository(
         for key in synced
     }
     errors: list[str] = []
+    rate_limit_hint: str | None = None
+    retry_after_seconds: int | None = None
 
     async def fetch(source: str, loader, *args, detail: str | None = None, **kwargs):
+        nonlocal rate_limit_hint, retry_after_seconds
         try:
             items = await loader(*args, **kwargs)
+        except GitHubRateLimitError as exc:
+            # 限流是可重试的容量问题，单独记录，避免和权限/网络失败混为一谈。
+            errors.append(f"{source}{'/' + detail if detail else ''}: {exc}")
+            sources[source]["status"] = "partial" if detail else "failed"
+            sources[source]["complete"] = False
+            if rate_limit_hint is None:
+                rate_limit_hint = str(exc)
+            if retry_after_seconds is None:
+                retry_after_seconds = exc.retry_after_seconds
+            return None
         except (httpx.HTTPError, ValueError) as exc:
             reason = (
                 f"HTTP {exc.response.status_code}"
@@ -325,13 +339,18 @@ async def sync_repository(
     }
     if status in {"completed", "empty"}:
         repo.last_sync_at = now
+    message = messages[status]
+    if rate_limit_hint is not None:
+        message = f"{rate_limit_hint}（本次未取到新数据，已保留本地已有记录）"
     result = RepoSyncResponse(
         repo_id=repo.id,
         status=status,
         synced=synced,
         sources=sources,
         errors=errors,
-        message=messages[status],
+        message=message,
+        rate_limited=rate_limit_hint is not None,
+        retry_after_seconds=retry_after_seconds,
     )
     repo.sync_metadata = {
         **result.model_dump(mode="json"),
