@@ -15,6 +15,7 @@ from app.api.routes import (
     feedback,
     issues,
     knowledge,
+    logs,
     project_index,
     pull_requests,
     rag,
@@ -90,6 +91,7 @@ def create_app() -> FastAPI:
     app.include_router(rag.router, prefix="/api/rag", tags=["rag"])
     app.include_router(code_graph.router, prefix="/api", tags=["code_graph"])
     app.include_router(evaluations.router, prefix="/api/evals", tags=["evaluations"])
+    app.include_router(logs.router, prefix="/api/logs", tags=["logs"])
     app.include_router(webhooks.router, prefix="/api/webhooks", tags=["webhooks"])
 
     @app.get("/health")

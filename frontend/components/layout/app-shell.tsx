@@ -14,6 +14,7 @@ const navItems = [
   { href: "/reports", label: "研发周报" },
   { href: "/code-graph", label: "Code Graph" },
   { href: "/evals", label: "Evals" },
+  { href: "/logs", label: "日志" },
 ];
 
 function BrandMark() {
