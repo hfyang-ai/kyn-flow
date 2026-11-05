@@ -6,6 +6,7 @@ import { AlertTriangle, CheckCircle2, Clock3, Database, GitBranch, Workflow } fr
 import { apiGet } from "@/lib/api";
 import type { Repository } from "@/lib/types";
 import { PageTitle } from "@/components/ui/card";
+import { MarkdownMessage } from "../home/components/chat";
 
 type WorkflowTask = {
   id: string;
@@ -198,7 +199,7 @@ export default function WorkflowRunsPage() {
                     <Workflow className="h-4 w-4" />
                     Synthesis 最终结论
                   </div>
-                  <p className="mt-3 text-sm leading-7 text-ink">{selected.final_answer}</p>
+                  <MarkdownMessage content={selected.final_answer} />
                 </div>
                 <div className="rounded-md border border-amber-200 bg-amber-50/70 p-4">
                   <div className="flex items-center justify-between gap-2 text-sm font-semibold text-amber-600">
