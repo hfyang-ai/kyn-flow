@@ -1090,20 +1090,20 @@ async def test_read_workspace_file_reports_remaining_lines(
     checkout = _repo_checkout_path(repo)
     checkout.mkdir(parents=True, exist_ok=True)
     (checkout / "demo.py").write_text(
-        "\n".join(f"line{i}" for i in range(1, 501)) + "\n", encoding="utf-8"
+        "\n".join(f"line{i}" for i in range(1, 1201)) + "\n", encoding="utf-8"
     )
     tools = _build_conversation_tools(repo, None, object())
     read_file = tools["workspace.read_file"]
 
     first = await read_file({"path": "demo.py", "start_line": 1, "line_count": 200}, {})
     assert first["answer"].splitlines()[0] == (
-        "demo.py:1-200（共 500 行，还有 300 行未读，续读请用 start_line=201）"
+        "demo.py:1-200（共 1200 行，还有 1000 行未读，续读请用 start_line=201）"
     )
     assert first["read_range"] == {
         "path": "demo.py",
         "start_line": 1,
         "end_line": 200,
-        "total_lines": 500,
+        "total_lines": 1200,
         "truncated": True,
         "next_start_line": 201,
     }
@@ -1112,20 +1112,20 @@ async def test_read_workspace_file_reports_remaining_lines(
         {"path": "demo.py", "start_line": 1, "line_count": 900}, {}
     )
     capped_header = capped["answer"].splitlines()[0]
-    assert "单次最多返回 400 行" in capped_header
-    assert capped["read_range"]["end_line"] == 400
+    assert "单次最多返回 800 行" in capped_header
+    assert capped["read_range"]["end_line"] == 800
 
     tail = await read_file(
-        {"path": "demo.py", "start_line": 401, "line_count": 400}, {}
+        {"path": "demo.py", "start_line": 801, "line_count": 800}, {}
     )
     assert tail["answer"].splitlines()[0].endswith("已读到文件末尾）")
     assert tail["read_range"]["truncated"] is False
     assert tail["read_range"]["next_start_line"] is None
 
     out_of_range = await read_file(
-        {"path": "demo.py", "start_line": 900, "line_count": 100}, {}
+        {"path": "demo.py", "start_line": 1300, "line_count": 100}, {}
     )
-    assert "start_line=900 超出范围" in out_of_range["answer"]
+    assert "start_line=1300 超出范围" in out_of_range["answer"]
 
 
 class AdvancingReadModel:
@@ -1430,3 +1430,311 @@ def test_runtime_tool_context_preserves_read_file_content() -> None:
     )
     assert read_preview, "read_file 结果不应被投影省略"
     assert "92: line92" in read_preview
+
+
+class RepeatedSearchQueryModel:
+    """同一 query 换 path 反复搜：第 2 次应被 guard 拦截，模型换路后作答。"""
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def bind_tools(self, tools: list[Any]) -> "RepeatedSearchQueryModel":
+        self.tools = tools
+        return self
+
+    async def ainvoke(self, messages: list[Any]) -> AIMessage:
+        self.calls += 1
+        if self.calls == 1:
+            return AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "name": "workspace__search_code",
+                        "args": {
+                            "query": "MAX_OUTPUT_TOKENS",
+                            "path": "kyncode",
+                            "limit": 20,
+                        },
+                        "id": "call_search_1",
+                    },
+                ],
+            )
+        if self.calls == 2:
+            return AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "name": "workspace__search_code",
+                        "args": {
+                            "query": "MAX_OUTPUT_TOKENS",
+                            "path": "kyncode/tools/runtime.py",
+                            "limit": 20,
+                        },
+                        "id": "call_search_2",
+                    },
+                ],
+            )
+        return AIMessage(content="I will answer from the first search results.")
+
+
+@pytest.mark.asyncio
+async def test_chat_agent_guards_repeated_search_query() -> None:
+    """换 path 重搜同一个 query 是纯浪费，第 2 次就应被 guard 拦截。"""
+    invocations = 0
+
+    async def search_code(
+        input_data: dict[str, Any], context: dict[str, Any]
+    ) -> dict[str, Any]:
+        nonlocal invocations
+        invocations += 1
+        return {
+            "route": "workspace_search_code",
+            "tool_calls": [
+                {
+                    "tool_name": "workspace.search_code",
+                    "arguments": input_data,
+                    "status": "success",
+                }
+            ],
+            "answer": "runtime.py:15: MAX_OUTPUT_TOKENS = 15000",
+            "citations": [],
+        }
+
+    agent = ChatAgent(model=RepeatedSearchQueryModel())  # type: ignore[arg-type]
+    events = [
+        event
+        async for event in agent.run_stream(
+            {"message": "Where is MAX_OUTPUT_TOKENS defined?"},
+            {"tools": {"workspace.search_code": search_code}},
+        )
+    ]
+
+    final = [event for event in events if event["event"] == "final"][-1]["data"]
+    assert invocations == 1
+    assert final["completion"]["status"] == "completed"
+    assert final["answer"] == "I will answer from the first search results."
+    assert any(
+        event["type"] == "tool_loop_guard"
+        and event["guard"] == "repeated_search_query"
+        for event in final["agent_events"]
+    )
+
+
+class OverlapRereadModel:
+    """从头反复读同一文件并扩大 line_count：第 2 次重叠重读应被 guard 拦截。"""
+
+    def __init__(self) -> None:
+        self.calls = 0
+        self.plan = [
+            {"path": "grep.py", "start_line": 1, "line_count": 200},
+            {"path": "grep.py", "start_line": 1, "line_count": 220},
+            {"path": "grep.py", "start_line": 1, "line_count": 240},
+        ]
+
+    def bind_tools(self, tools: list[Any]) -> "OverlapRereadModel":
+        self.tools = tools
+        return self
+
+    async def ainvoke(self, messages: list[Any]) -> AIMessage:
+        self.calls += 1
+        if self.calls <= len(self.plan):
+            return AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "name": "workspace__read_file",
+                        "args": dict(self.plan[self.calls - 1]),
+                        "id": f"call_read_{self.calls}",
+                    },
+                ],
+            )
+        return AIMessage(content="I have read enough.")
+
+
+@pytest.mark.asyncio
+async def test_chat_agent_guards_overlap_rereads() -> None:
+    """从已读区间内反复重读（只是把 line_count 调大）应被 guard 引导续读。"""
+    invocations = 0
+
+    async def read_file(
+        input_data: dict[str, Any], context: dict[str, Any]
+    ) -> dict[str, Any]:
+        nonlocal invocations
+        invocations += 1
+        start = int(input_data.get("start_line") or 1)
+        end = min(start + int(input_data.get("line_count") or 160) - 1, 400)
+        return {
+            "route": "workspace_read_file",
+            "tool_calls": [
+                {
+                    "tool_name": "workspace.read_file",
+                    "arguments": input_data,
+                    "status": "success",
+                }
+            ],
+            "answer": f"grep.py:{start}-{end}\n{start}: # code",
+            "citations": [],
+            "read_range": {
+                "path": "grep.py",
+                "start_line": start,
+                "end_line": end,
+                "total_lines": 400,
+                "truncated": end < 400,
+                "next_start_line": end + 1 if end < 400 else None,
+            },
+        }
+
+    agent = ChatAgent(model=OverlapRereadModel())  # type: ignore[arg-type]
+    events = [
+        event
+        async for event in agent.run_stream(
+            {"message": "Read grep.py."},
+            {"tools": {"workspace.read_file": read_file}},
+        )
+    ]
+
+    final = [event for event in events if event["event"] == "final"][-1]["data"]
+    assert invocations == 2
+    assert final["completion"]["status"] == "completed"
+    assert final["answer"] == "I have read enough."
+    assert any(
+        event["type"] == "tool_loop_guard" and event["guard"] == "overlap_reread"
+        for event in final["agent_events"]
+    )
+
+
+def test_normalize_search_query_merges_variants() -> None:
+    """大小写 / 尾随运算符差异应归并为同一 query 指纹。"""
+    assert (
+        ChatAgent._normalize_search_query("MAX_OUTPUT_TOKENS")
+        == "max_output_tokens"
+    )
+    assert (
+        ChatAgent._normalize_search_query("MAX_OUTPUT_TOKENS =")
+        == "max_output_tokens"
+    )
+    assert ChatAgent._normalize_search_query("  Grep( ") == "grep"
+    assert ChatAgent._normalize_search_query("Grep") == "grep"
+
+
+@pytest.mark.asyncio
+async def test_search_workspace_code_empty_result_hint(tmp_path, monkeypatch) -> None:
+    """搜索空结果必须显式提示换策略，避免模型换 path 重搜同一个词。"""
+    repo = SimpleNamespace(id=uuid.uuid4(), full_name="acme/demo")
+    monkeypatch.setattr(settings, "repo_checkout_dir", str(tmp_path))
+    checkout = _repo_checkout_path(repo)
+    checkout.mkdir(parents=True, exist_ok=True)
+    (checkout / "demo.py").write_text("print('hello')\n", encoding="utf-8")
+    tools = _build_conversation_tools(repo, None, object())
+    search_code = tools["workspace.search_code"]
+
+    result = await search_code({"query": "nonexistent_symbol_xyz", "path": "."}, {})
+    assert "没有找到匹配" in result["answer"]
+    assert "不要换 path 重复搜索" in result["answer"]
+
+
+def test_is_symbol_lookup_query() -> None:
+    """符号名猜测应被识别，自然语言检索不应误伤。"""
+    for q in [
+        "class Bash",
+        "class Sandbox",
+        "def create_sandbox",
+        "def is_safe_command",
+        "async def",
+        "Bash(",
+        "sandbox=",
+        "_exit_code_hint",
+        "_interpret_exit_code",
+        "MAX_TIMEOUT",
+        "truncated",
+    ]:
+        assert ChatAgent._is_symbol_lookup_query(q), q
+
+    for q in [
+        "how does sandbox work",
+        "output truncation strategy",
+        "",
+        " ",
+    ]:
+        assert not ChatAgent._is_symbol_lookup_query(q), q
+
+
+def test_step_budget_warning() -> None:
+    """预算充足不提示，接近上限时注入收敛提示。"""
+    agent = ChatAgent.__new__(ChatAgent)
+    assert agent._step_budget_warning({"step": 0}) == ""
+    assert agent._step_budget_warning({"step": 20}) == ""
+    warning = agent._step_budget_warning({"step": agent.max_steps - 1})
+    assert "步骤预算预警" in warning
+    assert "不要再发起新的探索性工具调用" in warning
+
+
+class SymbolExhaustionModel:
+    """连续用不同符号名搜索代码（穷举符号）：第 4 次应被 guard 拦截。"""
+
+    def __init__(self) -> None:
+        self.calls = 0
+        self.plan = ["class Bash", "class Sandbox", "def create_sandbox", "sandbox="]
+
+    def bind_tools(self, tools: list[Any]) -> "SymbolExhaustionModel":
+        self.tools = tools
+        return self
+
+    async def ainvoke(self, messages: list[Any]) -> AIMessage:
+        self.calls += 1
+        if self.calls <= len(self.plan):
+            return AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "name": "workspace__search_code",
+                        "args": {"query": self.plan[self.calls - 1], "path": "kyncode"},
+                        "id": f"call_search_{self.calls}",
+                    },
+                ],
+            )
+        return AIMessage(content="I will open the file directly instead.")
+
+
+@pytest.mark.asyncio
+async def test_chat_agent_guards_symbol_search_exhaustion() -> None:
+    """连续穷举符号名（即使每个 query 都不同）应被 guard 引导改读文件。"""
+    invocations = 0
+
+    async def search_code(
+        input_data: dict[str, Any], context: dict[str, Any]
+    ) -> dict[str, Any]:
+        nonlocal invocations
+        invocations += 1
+        return {
+            "route": "workspace_search_code",
+            "tool_calls": [
+                {
+                    "tool_name": "workspace.search_code",
+                    "arguments": input_data,
+                    "status": "success",
+                }
+            ],
+            "answer": "bash.py:12: class Bash",
+            "citations": [],
+        }
+
+    agent = ChatAgent(model=SymbolExhaustionModel())  # type: ignore[arg-type]
+    events = [
+        event
+        async for event in agent.run_stream(
+            {"message": "How does the bash tool sandbox work?"},
+            {"tools": {"workspace.search_code": search_code}},
+        )
+    ]
+
+    final = [event for event in events if event["event"] == "final"][-1]["data"]
+    # 前 3 次符号搜索执行，第 4 次被 guard 拦，之后模型改读文件作答。
+    assert invocations == 3
+    assert final["completion"]["status"] == "completed"
+    assert final["answer"] == "I will open the file directly instead."
+    assert any(
+        event["type"] == "tool_loop_guard"
+        and event["guard"] == "symbol_search_exhaustion"
+        for event in final["agent_events"]
+    )

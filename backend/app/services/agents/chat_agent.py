@@ -175,6 +175,9 @@ class ConversationState(TypedDict, total=False):
     tool_call_counts: dict[str, int]
     read_coverage: dict[str, list[list[int]]]
     redundant_read_counts: dict[str, int]
+    search_query_counts: dict[str, int]
+    overlap_reread_counts: dict[str, int]
+    symbol_search_streak: int
     evaluation_trace: dict[str, Any]
     model_usage: list[dict[str, Any]]
     prompt_diagnostics: list[dict[str, Any]]
@@ -212,6 +215,17 @@ class ChatAgent(BaseAgent):
     # 只是想确认），第 2 次仍无新行才触发 guard。guard 不再终止 Loop，只注入
     # 指引让模型换路继续。合法续读哪怕只带来 1 个新行都不算重复。
     max_redundant_reads = 1
+    # 同一 query（忽略 path/limit）第 2 次搜索就拦截。换 path 重搜同一个词几乎
+    # 一定是在做无用功：path 默认 "." 的全库搜索已覆盖所有子目录，收窄只会得到
+    # 子集。guard 注入"已搜过该词、请换关键词或改读文件"的引导。
+    max_repeated_search_queries = 1
+    # read_file 从已覆盖区间内重新开始读（而非从「已读末尾+1」续读）时，最多容忍
+    # 1 次，第 2 次仍重叠重读才拦截。拦截后引导用 start_line=已读末尾+1 续读。
+    max_overlap_rereads = 1
+    # 连续用「符号名」做代码搜索（class X / def x / X( / X =）的次数上限。模型在
+    # 猜某个功能的实现符号名时会穷举多个 query，正确做法是直接 read_file 打开已
+    # 定位到的文件。中间一旦穿插 read_file/list_files 等其它动作就重置计数。
+    max_symbol_search_streak = 3
     # 仅用于 prompt 投影折叠：旧读取被后续读取覆盖超过该比例才折叠。
     read_coverage_ratio = 0.9
     tool_retry_attempts = 1
@@ -297,6 +311,9 @@ class ChatAgent(BaseAgent):
             "tool_call_counts": {},
             "read_coverage": {},
             "redundant_read_counts": {},
+            "search_query_counts": {},
+            "overlap_reread_counts": {},
+            "symbol_search_streak": 0,
             "model_usage": [],
             "prompt_diagnostics": [],
             "runtime_context_stats": {},
@@ -678,14 +695,36 @@ class ChatAgent(BaseAgent):
                 # 由 max_steps 兜底防无限重试。
                 next_state["pending_tool_calls"] = []
                 next_state["route"] = "tool_loop_guard"
-                redundant_read = repeated.get("reason") == "redundant_read"
-                if redundant_read:
+                reason = str(repeated.get("reason") or "")
+                if reason == "redundant_read":
                     guard_hint = (
                         f"这次 {repeated['tool_name']} 请求的 "
                         f"{repeated['arguments'].get('path')} 这一段之前已经完整读过，"
                         f"没有新增内容，因此本次没有执行。请不要重复读取同一段；"
                         f"需要后续内容请从 start_line={repeated.get('next_start_line')} 续读，"
                         f"或改读其他文件，或直接基于已读到的内容回答。"
+                    )
+                elif reason == "overlap_reread":
+                    guard_hint = (
+                        f"这次 {repeated['tool_name']} 从 start_line="
+                        f"{repeated['arguments'].get('start_line')} 重新读取了 "
+                        f"{repeated['arguments'].get('path')} 已经读过的内容，"
+                        f"只新增了尾部少量行，因此本次没有执行。请改用 "
+                        f"start_line={repeated.get('next_start_line')} 续读未读部分，"
+                        f"不要从头或从已读位置重读；也可以改读其他文件或直接回答。"
+                    )
+                elif reason == "repeated_search_query":
+                    guard_hint = (
+                        f"你已经多次用 query='{repeated.get('query')}' 搜索代码，"
+                        f"只是换了 path 参数，结果已在之前的搜索结果里，因此本次没有执行。"
+                        f"请不要换 path 重复搜同一个词；若没找到需要的内容，请换一个更精确"
+                        f"或不同的关键词，或改用 read_file 直接读文件。"
+                    )
+                elif reason == "symbol_search_exhaustion":
+                    guard_hint = (
+                        f"你已经连续多次用符号名（如 '{repeated.get('query')}'）搜索代码，"
+                        f"看起来在逐个猜测实现符号。与其继续穷举符号名，不如用 read_file "
+                        f"直接打开已定位到的相关文件查看完整内容，效率更高。本次搜索没有执行。"
                     )
                 else:
                     guard_hint = (
@@ -798,6 +837,9 @@ class ChatAgent(BaseAgent):
             "tool_call_counts",
             "read_coverage",
             "redundant_read_counts",
+            "search_query_counts",
+            "overlap_reread_counts",
+            "symbol_search_streak",
             "evaluation_trace",
             "model_usage",
             "prompt_diagnostics",
@@ -828,16 +870,68 @@ class ChatAgent(BaseAgent):
     ) -> dict[str, Any] | None:
         counts = dict(state.get("tool_call_counts") or {})
         redundant_counts = dict(state.get("redundant_read_counts") or {})
+        search_counts = dict(state.get("search_query_counts") or {})
+        overlap_counts = dict(state.get("overlap_reread_counts") or {})
+        symbol_streak = int(state.get("symbol_search_streak") or 0)
+
+        def _persist() -> None:
+            state["tool_call_counts"] = counts
+            state["redundant_read_counts"] = redundant_counts
+            state["search_query_counts"] = search_counts
+            state["overlap_reread_counts"] = overlap_counts
+            state["symbol_search_streak"] = symbol_streak
+
         for tool_call in tool_calls:
             safe_action, public_action, _tool_use_id, action_input = (
                 self._tool_call_parts(tool_call, state)
             )
+
+            # 方向 1：workspace.search_code 按 query 归一化判重（忽略 path/limit）。
+            # 换 path 重搜同一个词只会得到子集，直接拦截并引导换关键词 / 改读文件。
+            query = ""
+            if public_action == "workspace.search_code":
+                query = str(action_input.get("query") or "")
+                query_key = self._normalize_search_query(query)
+                if query_key:
+                    search_repeat = search_counts.get(query_key, 0) + 1
+                    search_counts[query_key] = search_repeat
+                    if search_repeat > self.max_repeated_search_queries:
+                        _persist()
+                        return {
+                            "reason": "repeated_search_query",
+                            "tool_name": public_action,
+                            "arguments": action_input,
+                            "fingerprint": f"search:{query_key}",
+                            "repeat_count": search_repeat,
+                            "query": query,
+                        }
+                # 方向 4：符号穷举检测。模型在猜某个功能的实现符号名时，会连续用
+                # class X / def x / X( 这类 query 穷举；正确做法是 read_file 打开已
+                # 定位到的文件。连续 N 次即拦，穿插 read_file/list_files 则重置。
+                if self._is_symbol_lookup_query(query):
+                    symbol_streak += 1
+                else:
+                    symbol_streak = 0
+            else:
+                # 读文件 / 列目录打断符号穷举，重置 streak。
+                symbol_streak = 0
+
+            if symbol_streak > self.max_symbol_search_streak:
+                _persist()
+                return {
+                    "reason": "symbol_search_exhaustion",
+                    "tool_name": public_action,
+                    "arguments": action_input,
+                    "fingerprint": f"symbol:{self._normalize_search_query(query)}",
+                    "repeat_count": symbol_streak,
+                    "query": query,
+                }
+
             fingerprint = self._tool_call_fingerprint(safe_action, action_input)
             repeat_count = counts.get(fingerprint, 0) + 1
             counts[fingerprint] = repeat_count
             if repeat_count > self.max_repeated_tool_calls:
-                state["tool_call_counts"] = counts
-                state["redundant_read_counts"] = redundant_counts
+                _persist()
                 return {
                     "reason": "identical_tool_call",
                     "tool_name": public_action,
@@ -846,16 +940,15 @@ class ChatAgent(BaseAgent):
                     "repeat_count": repeat_count,
                 }
             uncovered = self._uncovered_read_lines(state, public_action, action_input)
+            path = str(action_input.get("path") or "").strip()
             if uncovered is not None and uncovered <= 0:
                 # 参数/区间都换过，但本次请求的行全部在之前读到过（0 个新行），
                 # 指纹判定抓不到，这里按"是否还有未读行"单独计数。合法续读只要
                 # 带来哪怕 1 个新行都不算重复，避免把"读完文件最后一小段"误杀。
-                path = str(action_input.get("path") or "").strip()
                 redundant = redundant_counts.get(path, 0) + 1
                 redundant_counts[path] = redundant
                 if redundant > self.max_redundant_reads:
-                    state["tool_call_counts"] = counts
-                    state["redundant_read_counts"] = redundant_counts
+                    _persist()
                     return {
                         "reason": "redundant_read",
                         "tool_name": public_action,
@@ -865,8 +958,30 @@ class ChatAgent(BaseAgent):
                         "uncovered_lines": uncovered,
                         "next_start_line": self._read_coverage_end(state, path) + 1,
                     }
-        state["tool_call_counts"] = counts
-        state["redundant_read_counts"] = redundant_counts
+            elif uncovered is not None and uncovered > 0 and path:
+                # 方向 2：read_file 从已覆盖区间的最早起点或更早重新开始读（start
+                # 回退到已读内容），只是把 line_count 调大带来尾部少量新行。这不是
+                # "推进式续读"，而是从头/前缀重读，累计超过阈值后引导续读。
+                # 注意用 covered_start 而非 covered_end 判定：start 递增的滑动窗口
+                # （如 1-160 → 101-200 → 191-250）是合法推进，不应被误伤。
+                span = self._read_request_span(action_input)
+                covered_start = self._read_coverage_start(state, path)
+                covered_end = self._read_coverage_end(state, path)
+                if span is not None and covered_start > 0 and span[0] <= covered_start:
+                    overlap = overlap_counts.get(path, 0) + 1
+                    overlap_counts[path] = overlap
+                    if overlap > self.max_overlap_rereads:
+                        _persist()
+                        return {
+                            "reason": "overlap_reread",
+                            "tool_name": public_action,
+                            "arguments": action_input,
+                            "fingerprint": fingerprint,
+                            "repeat_count": overlap,
+                            "uncovered_lines": uncovered,
+                            "next_start_line": covered_end + 1,
+                        }
+        _persist()
         return None
 
     @staticmethod
@@ -927,6 +1042,11 @@ class ChatAgent(BaseAgent):
         return max((int(item[1]) for item in ranges), default=0)
 
     @staticmethod
+    def _read_coverage_start(state: ConversationState, path: str) -> int:
+        ranges = (state.get("read_coverage") or {}).get(path) or []
+        return min((int(item[0]) for item in ranges), default=0)
+
+    @staticmethod
     def _merge_read_ranges(
         ranges: list[list[int]], start: int, end: int
     ) -> list[list[int]]:
@@ -973,6 +1093,33 @@ class ChatAgent(BaseAgent):
         self, safe_action: str, action_input: dict[str, Any]
     ) -> str:
         return f"{safe_action}:{json.dumps(action_input, ensure_ascii=False, sort_keys=True, default=str)}"
+
+    @staticmethod
+    def _normalize_search_query(query: str) -> str:
+        """把搜索 query 归一化，用于"换 path 重搜同一词"的判重。
+
+        只保留核心检索词，去掉大小写 / 空白 / 尾随运算符差异，使
+        "MAX_OUTPUT_TOKENS" 与 "MAX_OUTPUT_TOKENS =" 归并为同一指纹。
+        """
+        normalized = " ".join(str(query or "").lower().split())
+        if not normalized:
+            return ""
+        return re.sub(r"[\s=:()<>]+$", "", normalized).strip()
+
+    @staticmethod
+    def _is_symbol_lookup_query(query: str) -> bool:
+        """判断一次 search_code 是否在「猜符号名」而非自然语言检索。
+
+        命中「class/def 声明」或「单个标识符（可带 . 或尾随 ( = :）」即视为
+        符号查找。模型围绕某个功能穷举符号名（class Bash → def create_sandbox
+        → sandbox= …）时，正确做法是 read_file 打开已定位到的文件看内容。
+        """
+        q = " ".join(str(query or "").strip().split())
+        if not q:
+            return False
+        if re.match(r"^(?:class|def|async def)\b", q):
+            return True
+        return bool(re.match(r"^[A-Za-z_][\w]*(?:\.[A-Za-z_][\w]*)*\s*[\(=\:]?$", q))
 
     def _completion_summary(self, state: ConversationState) -> dict[str, Any]:
         tool_calls = [
@@ -1427,6 +1574,7 @@ class ChatAgent(BaseAgent):
             history = self._compress_history_for_retry(
                 history, max(512, budget.recent_tokens // 2)
             )
+        budget_warning = self._step_budget_warning(state)
         return (
             "上下文使用规则：如果服务端提供的最近消息已经包含回答所需的完整原文，直接基于这些消息回答，"
             "不要为了展示工具调用而重复读取记忆。只有目标消息不在最近窗口、内容被截断或压缩、用户明确要求"
@@ -1463,6 +1611,19 @@ class ChatAgent(BaseAgent):
             f"已有观察结果（已按总预算投影，完整结果保存在会话转录）：\n{json.dumps(prompt_observations, ensure_ascii=False)}\n\n"
             f"工具调用/结果索引：\n{json.dumps(prompt_events, ensure_ascii=False)}\n\n"
             f"用户消息：{state.get('message') or ''}"
+            f"{budget_warning}"
+        )
+
+    def _step_budget_warning(self, state: ConversationState) -> str:
+        """步骤预算接近上限时，向模型注入收敛提示，让它主动作答而非被硬 cut。"""
+        step = int(state.get("step") or 0)
+        remaining = self.max_steps - step
+        if remaining > 3:
+            return ""
+        return (
+            "\n\n【步骤预算预警】当前剩余决策回合已不足 "
+            f"{max(remaining, 0)} 步。请基于已经收集到的工具结果直接给出结论，"
+            "不要再发起新的探索性工具调用；确有必要也只做一次最小验证。"
         )
 
     def _normalize_action_input(
@@ -2147,10 +2308,10 @@ class ChatAgent(BaseAgent):
             tool_name = str(item.get("tool_name") or "")
             # 读文件结果是「答案原材料」，不能随观测条数被均分预算摊薄到只剩几十
             # token——否则模型看不到已读内容，会反复重读同一文件把步数耗光。
-            # 这里给读文件一个固定的 1400 上限（与 per_item 上限一致），其余
-            # 工具仍按均分预算压缩。
+            # 这里给读文件一个固定的 4000 上限（约 200+ 行代码），让模型一次
+            # 读文件能看更多，从根源减少「分页反复读」；其余工具仍按均分预算压缩。
             item_budget = (
-                1400 if tool_name == "workspace.read_file" else per_item_budget
+                4000 if tool_name == "workspace.read_file" else per_item_budget
             )
             next_item = dict(item)
             observation = next_item.get("observation")

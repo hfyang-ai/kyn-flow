@@ -1257,7 +1257,7 @@ def _build_conversation_tools(
         total_lines = len(lines)
         requested_start = max(int(input_data.get("start_line") or 1), 1)
         requested_count = max(int(input_data.get("line_count") or 160), 1)
-        max_lines = 400
+        max_lines = 800
         line_count = min(requested_count, max_lines)
         relative = _workspace_relative(path, workspace_root)
         if total_lines == 0:
@@ -1337,6 +1337,22 @@ def _build_conversation_tools(
             {"type": "workspace_file", "id": item["source_id"], "title": item["title"]}
             for item in matches
         ]
+        # 空/少结果时显式提示换策略，避免模型换 path 重搜同一个词陷入死循环。
+        if not rows:
+            answer = (
+                f"没有找到匹配「{query}」的工作区代码。"
+                "请不要换 path 重复搜索同一个词；请换一个更精确或不同的关键词，"
+                "或改用 read_file 直接读文件。"
+            )
+        elif len(rows) < 2:
+            answer = (
+                f"只找到 {len(rows)} 条匹配「{query}」的结果：\n"
+                + "\n".join(rows)
+                + "\n若结果不足以回答问题，请换关键词或改用 read_file 读文件，"
+                "不要换 path 重复搜索同一个词。"
+            )
+        else:
+            answer = "\n".join(rows)
         return {
             "route": "workspace_search_code",
             "tool_calls": [
@@ -1350,7 +1366,7 @@ def _build_conversation_tools(
                     "status": "success",
                 }
             ],
-            "answer": "\n".join(rows) if rows else "没有找到匹配的工作区代码。",
+            "answer": answer,
             "citations": citations,
         }
 
