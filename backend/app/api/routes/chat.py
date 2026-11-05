@@ -1254,14 +1254,44 @@ def _build_conversation_tools(
         path = _workspace_path(workspace_root, raw_path)
         text = _read_workspace_text(path)
         lines = text.splitlines()
-        start_line = max(int(input_data.get("start_line") or 1), 1)
-        line_count = min(max(int(input_data.get("line_count") or 160), 1), 400)
-        end_line = min(start_line + line_count - 1, len(lines))
-        numbered = [
-            f"{line_number}: {lines[line_number - 1]}"
-            for line_number in range(start_line, end_line + 1)
-        ]
+        total_lines = len(lines)
+        requested_start = max(int(input_data.get("start_line") or 1), 1)
+        requested_count = max(int(input_data.get("line_count") or 160), 1)
+        max_lines = 400
+        line_count = min(requested_count, max_lines)
         relative = _workspace_relative(path, workspace_root)
+        if total_lines == 0:
+            start_line = 0
+            end_line = 0
+            answer = f"{relative}: 空文件（0 行）"
+        elif requested_start > total_lines:
+            start_line = total_lines
+            end_line = total_lines
+            answer = (
+                f"{relative} 共 {total_lines} 行，start_line={requested_start} 超出范围；"
+                f"可用范围是 1-{total_lines}。"
+            )
+        else:
+            start_line = requested_start
+            end_line = min(start_line + line_count - 1, total_lines)
+            numbered = [
+                f"{line_number}: {lines[line_number - 1]}"
+                for line_number in range(start_line, end_line + 1)
+            ]
+            # 头部一次交代「读到哪、还剩多少、下一步从哪读」。这段位于 answer 开头，
+            # 即使后续被 token 预算从尾部截断也一定保留，模型不需要靠换 start_line /
+            # line_count 反复试探才能把文件读完。
+            header = f"{relative}:{start_line}-{end_line}（共 {total_lines} 行"
+            if requested_count > max_lines:
+                header += f"，单次最多返回 {max_lines} 行"
+            remaining = total_lines - end_line
+            if remaining > 0:
+                header += (
+                    f"，还有 {remaining} 行未读，续读请用 start_line={end_line + 1}"
+                )
+            else:
+                header += "，已读到文件末尾"
+            answer = f"{header}）\n" + "\n".join(numbered)
         return {
             "route": "workspace_read_file",
             "tool_calls": [
@@ -1275,10 +1305,18 @@ def _build_conversation_tools(
                     "status": "success",
                 }
             ],
-            "answer": f"{relative}:{start_line}-{end_line}\n" + "\n".join(numbered),
+            "answer": answer,
             "citations": [
                 {"type": "workspace_file", "id": relative, "title": relative}
             ],
+            "read_range": {
+                "path": relative,
+                "start_line": start_line,
+                "end_line": end_line,
+                "total_lines": total_lines,
+                "truncated": end_line < total_lines,
+                "next_start_line": end_line + 1 if end_line < total_lines else None,
+            },
         }
 
     async def search_workspace_code(

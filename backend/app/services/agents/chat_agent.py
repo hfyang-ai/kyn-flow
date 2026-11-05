@@ -39,6 +39,14 @@ ToolErrorKind = Literal[
 ]
 
 
+def _as_positive_int(value: Any, default: int) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return default
+    return parsed if parsed >= 1 else default
+
+
 class GenericToolArgs(BaseModel):
     model_config = ConfigDict(extra="allow")
 
@@ -73,6 +81,81 @@ class GenericToolArgs(BaseModel):
     line_count: int | None = Field(default=None, description="最多读取多少行")
 
 
+class _EmptyArgs(BaseModel):
+    """无参数工具：内部自行读取仓库数据，不接受输入参数。"""
+
+    model_config = ConfigDict(extra="allow")
+
+
+class _ReadFileArgs(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    path: str = Field(default="", description="相对工作区的文件路径")
+    start_line: int = Field(default=1, description="起始行号，从 1 开始")
+    line_count: int = Field(default=160, description="最多读取多少行")
+
+
+class _ListFilesArgs(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    path: str = Field(default=".", description="相对工作区的目录路径")
+    pattern: str = Field(default="", description="文件名子串过滤")
+    limit: int = Field(default=80, description="最多返回条数")
+
+
+class _SearchCodeArgs(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    query: str = Field(default="", description="搜索关键词或代码片段")
+    path: str = Field(default=".", description="限定搜索目录")
+    pattern: str = Field(default="", description="正则或 glob 模式")
+    limit: int = Field(default=12, description="最多返回条数")
+
+
+class _QueryArgs(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    query: str = Field(default="", description="检索查询")
+    limit: int = Field(default=5, description="最多返回条数")
+
+
+class _MemoryArgs(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    query: str = Field(default="", description="检索查询或关键词")
+    keyword: str = Field(default="", description="关键词过滤")
+    limit: int = Field(default=20, description="最多返回条数")
+    max_chars: int = Field(default=12000, description="最多返回字符数")
+    message_id: str = Field(default="", description="精确读取的消息 UUID")
+    session_id: str = Field(default="", description="会话片段 UUID")
+    include_transcript: bool = Field(
+        default=False, description="是否包含原始 transcript"
+    )
+
+
+# 工具名 -> 精确参数 schema。不再给每个工具塞 2633 字符的万能 GenericToolArgs，
+# 否则 14 个工具会把 tool schema 顶到 ~20k token、挤爆上下文窗口，反过来把
+# 读文件结果压缩到模型看不到内容、陷入反复重读。extra="allow" 兜底：模型即便
+# 传了 schema 外的字段也不会报错。
+_TOOL_ARG_SCHEMAS: dict[str, type[BaseModel]] = {
+    "workspace.read_file": _ReadFileArgs,
+    "workspace.list_files": _ListFilesArgs,
+    "workspace.search_code": _SearchCodeArgs,
+    "kynflow_search_evidence": _QueryArgs,
+    "kynflow_get_thread_context": _MemoryArgs,
+    "kynflow_read_session_events": _MemoryArgs,
+    "rag.search_similar_documents": _QueryArgs,
+    # 分析类工具内部自行读取仓库数据，不接受输入参数。
+    "repo_health.generate_summary": _EmptyArgs,
+    "issue_agent.analyze_issue": _EmptyArgs,
+    "pr_review_agent.analyze_pr": _EmptyArgs,
+    "ci_debug_agent.analyze_workflow_run": _EmptyArgs,
+    "report_agent.generate_weekly_report": _EmptyArgs,
+    "safety_agent.classify_action_risk": _EmptyArgs,
+    "workflow.run_engineering_review": _EmptyArgs,
+}
+
+
 class ConversationState(TypedDict, total=False):
     message: str
     context: dict[str, Any]
@@ -90,6 +173,8 @@ class ConversationState(TypedDict, total=False):
     stop_reason: str
     completion_status: str
     tool_call_counts: dict[str, int]
+    read_coverage: dict[str, list[list[int]]]
+    redundant_read_counts: dict[str, int]
     evaluation_trace: dict[str, Any]
     model_usage: list[dict[str, Any]]
     prompt_diagnostics: list[dict[str, Any]]
@@ -119,8 +204,16 @@ class ChatAgent(BaseAgent):
         "workflow.run_engineering_review",
     ]
 
-    max_steps = 12
+    # 单个模型决策回合的上限（非工具调用次数）。每回合可并行多个工具调用，
+    # guard 拦截后的重决策也计入。由 AGENT_MAX_STEPS 配置，默认 24。
+    max_steps = settings.agent_max_steps
     max_repeated_tool_calls = 2
+    # 同一文件请求的区间没有任何新行（完全重复）时，最多容忍 1 次（模型可能
+    # 只是想确认），第 2 次仍无新行才触发 guard。guard 不再终止 Loop，只注入
+    # 指引让模型换路继续。合法续读哪怕只带来 1 个新行都不算重复。
+    max_redundant_reads = 1
+    # 仅用于 prompt 投影折叠：旧读取被后续读取覆盖超过该比例才折叠。
+    read_coverage_ratio = 0.9
     tool_retry_attempts = 1
 
     def __init__(self, model: ChatOpenAI | None = None) -> None:
@@ -202,6 +295,8 @@ class ChatAgent(BaseAgent):
             "stop_reason": "",
             "completion_status": "running",
             "tool_call_counts": {},
+            "read_coverage": {},
+            "redundant_read_counts": {},
             "model_usage": [],
             "prompt_diagnostics": [],
             "runtime_context_stats": {},
@@ -451,7 +546,12 @@ class ChatAgent(BaseAgent):
         graph.add_conditional_edges(
             "model_decision",
             self._route_after_model_decision,
-            {"tools": "tool_action", "end": END},
+            {
+                "tools": "tool_action",
+                "end": END,
+                "model": "model_decision",
+                "limit": "max_steps_stop",
+            },
         )
         graph.add_conditional_edges(
             "tool_action",
@@ -573,12 +673,25 @@ class ChatAgent(BaseAgent):
         else:
             repeated = self._repeated_tool_call(tool_calls, next_state)
             if repeated:
+                # 拦截本次重复调用，但不终止整个 Loop：注入一条 guard 观察，
+                # 让模型换一条路继续（续读未读部分 / 读其他文件 / 直接回答），
+                # 由 max_steps 兜底防无限重试。
                 next_state["pending_tool_calls"] = []
                 next_state["route"] = "tool_loop_guard"
-                next_state["final_answer"] = (
-                    "我停止了这轮 Agent Loop，因为模型连续请求相同工具和参数，"
-                    "继续执行只会重复消耗预算。请根据已有工具结果调整问题，或让我换一种检索/分析路径。"
-                )
+                redundant_read = repeated.get("reason") == "redundant_read"
+                if redundant_read:
+                    guard_hint = (
+                        f"这次 {repeated['tool_name']} 请求的 "
+                        f"{repeated['arguments'].get('path')} 这一段之前已经完整读过，"
+                        f"没有新增内容，因此本次没有执行。请不要重复读取同一段；"
+                        f"需要后续内容请从 start_line={repeated.get('next_start_line')} 续读，"
+                        f"或改读其他文件，或直接基于已读到的内容回答。"
+                    )
+                else:
+                    guard_hint = (
+                        "刚才请求的工具和参数与此前完全相同，本次没有执行。"
+                        "请更换检索/分析路径，或基于已有结果回答。"
+                    )
                 next_state["observations"] = [
                     *(next_state.get("observations") or []),
                     {
@@ -586,19 +699,20 @@ class ChatAgent(BaseAgent):
                         "arguments": repeated["arguments"],
                         "observation": {
                             "route": "tool_loop_guard",
-                            "answer_preview": "Detected repeated identical tool call and stopped the loop.",
+                            "reason": repeated.get("reason"),
+                            "answer_preview": guard_hint,
                             "repeat_count": repeated["repeat_count"],
                             "fingerprint": repeated["fingerprint"],
                         },
                     },
                 ]
-                self._stop_loop(
+                self._append_agent_event(
                     next_state,
-                    "repeated_tool_call",
-                    "blocked",
+                    "tool_loop_guard",
                     {
                         "tool_name": repeated["tool_name"],
                         "arguments": repeated["arguments"],
+                        "guard": repeated.get("reason"),
                         "repeat_count": repeated["repeat_count"],
                     },
                 )
@@ -648,7 +762,14 @@ class ChatAgent(BaseAgent):
         return self._graph_state_update(next_state, [])
 
     def _route_after_model_decision(self, state: ConversationState) -> str:
-        return "tools" if state.get("pending_tool_calls") else "end"
+        if state.get("pending_tool_calls"):
+            return "tools"
+        if str(state.get("final_answer") or "").strip():
+            return "end"
+        # guard 拦截后回模型重新决策；仍有步骤预算就继续，否则交 max_steps 收尾。
+        if int(state.get("step") or 0) >= self.max_steps:
+            return "limit"
+        return "model"
 
     def _route_after_tool_action(self, state: ConversationState) -> str:
         if state.get("pending_tool_calls"):
@@ -675,6 +796,8 @@ class ChatAgent(BaseAgent):
             "stop_reason",
             "completion_status",
             "tool_call_counts",
+            "read_coverage",
+            "redundant_read_counts",
             "evaluation_trace",
             "model_usage",
             "prompt_diagnostics",
@@ -704,6 +827,7 @@ class ChatAgent(BaseAgent):
         self, tool_calls: list[dict[str, Any]], state: ConversationState
     ) -> dict[str, Any] | None:
         counts = dict(state.get("tool_call_counts") or {})
+        redundant_counts = dict(state.get("redundant_read_counts") or {})
         for tool_call in tool_calls:
             safe_action, public_action, _tool_use_id, action_input = (
                 self._tool_call_parts(tool_call, state)
@@ -713,14 +837,137 @@ class ChatAgent(BaseAgent):
             counts[fingerprint] = repeat_count
             if repeat_count > self.max_repeated_tool_calls:
                 state["tool_call_counts"] = counts
+                state["redundant_read_counts"] = redundant_counts
                 return {
+                    "reason": "identical_tool_call",
                     "tool_name": public_action,
                     "arguments": action_input,
                     "fingerprint": fingerprint,
                     "repeat_count": repeat_count,
                 }
+            uncovered = self._uncovered_read_lines(state, public_action, action_input)
+            if uncovered is not None and uncovered <= 0:
+                # 参数/区间都换过，但本次请求的行全部在之前读到过（0 个新行），
+                # 指纹判定抓不到，这里按"是否还有未读行"单独计数。合法续读只要
+                # 带来哪怕 1 个新行都不算重复，避免把"读完文件最后一小段"误杀。
+                path = str(action_input.get("path") or "").strip()
+                redundant = redundant_counts.get(path, 0) + 1
+                redundant_counts[path] = redundant
+                if redundant > self.max_redundant_reads:
+                    state["tool_call_counts"] = counts
+                    state["redundant_read_counts"] = redundant_counts
+                    return {
+                        "reason": "redundant_read",
+                        "tool_name": public_action,
+                        "arguments": action_input,
+                        "fingerprint": fingerprint,
+                        "repeat_count": redundant,
+                        "uncovered_lines": uncovered,
+                        "next_start_line": self._read_coverage_end(state, path) + 1,
+                    }
         state["tool_call_counts"] = counts
+        state["redundant_read_counts"] = redundant_counts
         return None
+
+    @staticmethod
+    def _read_request_span(action_input: dict[str, Any]) -> tuple[int, int] | None:
+        """把一次读取请求换算成闭区间行号（与工具侧默认值保持一致）。"""
+        if not str(action_input.get("path") or "").strip():
+            return None
+        start = _as_positive_int(action_input.get("start_line"), 1)
+        count = _as_positive_int(action_input.get("line_count"), 160)
+        return start, start + count - 1
+
+    @staticmethod
+    def _range_covered_ratio(ranges: list[list[int]], start: int, end: int) -> float:
+        if not ranges:
+            return 0.0
+        covered = 0
+        for item_start, item_end in ranges:
+            low = max(start, int(item_start))
+            high = min(end, int(item_end))
+            if high >= low:
+                covered += high - low + 1
+        return covered / max(1, end - start + 1)
+
+    @staticmethod
+    def _uncovered_line_count(ranges: list[list[int]], start: int, end: int) -> int:
+        """区间内尚未被 ranges 覆盖的行数（0 表示本次请求没有任何新行）。"""
+        covered = 0
+        for item_start, item_end in ranges:
+            low = max(start, int(item_start))
+            high = min(end, int(item_end))
+            if high >= low:
+                covered += high - low + 1
+        return max(0, (end - start + 1) - covered)
+
+    def _uncovered_read_lines(
+        self,
+        state: ConversationState,
+        public_action: str,
+        action_input: dict[str, Any],
+    ) -> int | None:
+        """本次读取请求里还有多少行是之前没读到过的。
+
+        返回 None 表示该调用不是 workspace.read_file，不参与区间判定。
+        """
+        if public_action != "workspace.read_file":
+            return None
+        path = str(action_input.get("path") or "").strip()
+        span = self._read_request_span(action_input)
+        if not path or span is None:
+            return None
+        ranges = (state.get("read_coverage") or {}).get(path) or []
+        start, end = span
+        return self._uncovered_line_count(ranges, start, end)
+
+    @staticmethod
+    def _read_coverage_end(state: ConversationState, path: str) -> int:
+        ranges = (state.get("read_coverage") or {}).get(path) or []
+        return max((int(item[1]) for item in ranges), default=0)
+
+    @staticmethod
+    def _merge_read_ranges(
+        ranges: list[list[int]], start: int, end: int
+    ) -> list[list[int]]:
+        merged: list[list[int]] = []
+        for item_start, item_end in sorted([*ranges, [start, end]]):
+            if merged and int(item_start) <= merged[-1][1] + 1:
+                merged[-1][1] = max(merged[-1][1], int(item_end))
+            else:
+                merged.append([int(item_start), int(item_end)])
+        return merged
+
+    def _record_read_coverage(
+        self,
+        state: ConversationState,
+        public_action: str,
+        action_input: dict[str, Any],
+        observation: dict[str, Any],
+    ) -> None:
+        """记录成功读到的行区间，供后续判定"重复读取"使用。"""
+        if public_action != "workspace.read_file":
+            return
+        read_range = observation.get("read_range")
+        if isinstance(read_range, dict):
+            path = str(read_range.get("path") or action_input.get("path") or "").strip()
+            start = int(read_range.get("start_line") or 0)
+            end = int(read_range.get("end_line") or 0)
+        else:
+            # 工具未回传区间（自定义/测试替身）时按请求区间计。
+            path = str(action_input.get("path") or "").strip()
+            span = self._read_request_span(action_input)
+            if span is None:
+                return
+            start, end = span
+        if not path or start < 1 or end < start:
+            return
+        coverage = {
+            key: [list(item) for item in value]
+            for key, value in (state.get("read_coverage") or {}).items()
+        }
+        coverage[path] = self._merge_read_ranges(coverage.get(path) or [], start, end)
+        state["read_coverage"] = coverage
 
     def _tool_call_fingerprint(
         self, safe_action: str, action_input: dict[str, Any]
@@ -968,6 +1215,8 @@ class ChatAgent(BaseAgent):
             )
             else "success"
         )
+        if status == "success":
+            self._record_read_coverage(state, public_action, action_input, observation)
         tool_result_event = self._append_agent_event(
             state,
             "tool_result",
@@ -1245,6 +1494,13 @@ class ChatAgent(BaseAgent):
             and self._asks_project_overview(message)
         ):
             normalized["path"] = "README.md"
+        if action == "workspace.read_file":
+            # 把工具默认值显式化：指纹与读区间判定都依赖这两个值，
+            # 否则"省略参数"与"显式传默认值"会被当成两次不同的调用。
+            normalized["start_line"] = _as_positive_int(normalized.get("start_line"), 1)
+            normalized["line_count"] = _as_positive_int(
+                normalized.get("line_count"), 160
+            )
         if action == "kynflow_search_evidence":
             normalized.setdefault("query", message)
         if action == "kynflow_get_thread_context":
@@ -1584,7 +1840,7 @@ class ChatAgent(BaseAgent):
                 coroutine=call_tool,
                 name=safe_name,
                 description=self._tool_description(name, context),
-                args_schema=GenericToolArgs,
+                args_schema=_TOOL_ARG_SCHEMAS.get(name, GenericToolArgs),
                 infer_schema=False,
             )
         return wrapped
@@ -1804,6 +2060,66 @@ class ChatAgent(BaseAgent):
             }
         ]
 
+    @staticmethod
+    def _observation_read_key(item: dict[str, Any]) -> tuple[str, str] | None:
+        if str(item.get("tool_name") or "") != "workspace.read_file":
+            return None
+        arguments = item.get("arguments")
+        if not isinstance(arguments, dict):
+            return None
+        path = str(arguments.get("path") or "").strip()
+        return ("workspace.read_file", path) if path else None
+
+    @staticmethod
+    def _observation_span(item: dict[str, Any]) -> tuple[int, int] | None:
+        observation = item.get("observation")
+        read_range = (
+            observation.get("read_range") if isinstance(observation, dict) else None
+        )
+        if isinstance(read_range, dict):
+            start = int(read_range.get("start_line") or 0)
+            end = int(read_range.get("end_line") or 0)
+            if start >= 1 and end >= start:
+                return start, end
+        arguments = item.get("arguments")
+        if isinstance(arguments, dict):
+            return ChatAgent._read_request_span(arguments)
+        return None
+
+    def _drop_superseded_reads(
+        self, observations: list[dict[str, Any]]
+    ) -> tuple[list[dict[str, Any]], list[str]]:
+        """同一文件的旧读取若已被后续读取完整覆盖，就不再进 prompt。
+
+        读取结果被逐次截断时，模型会反复重读同一文件，观测条数随之膨胀；
+        而每条观察的预算按「总预算 ÷ 条数」均分，于是越读每条能看到的越少，
+        反过来又促使它继续重读——形成正反馈。这里只折叠「区间已被后面的读取
+        完整覆盖」的旧条目，同一文件的不同区间仍然各自保留。
+        """
+        later_ranges: dict[str, list[list[int]]] = {}
+        keep_flags = [True] * len(observations)
+        superseded_paths: list[str] = []
+        for index in range(len(observations) - 1, -1, -1):
+            item = observations[index]
+            key = self._observation_read_key(item)
+            span = self._observation_span(item)
+            if key is None or span is None:
+                continue
+            path = key[1]
+            start, end = span
+            covered = self._range_covered_ratio(
+                later_ranges.get(path) or [], start, end
+            )
+            if covered >= self.read_coverage_ratio:
+                keep_flags[index] = False
+                if path not in superseded_paths:
+                    superseded_paths.append(path)
+            later_ranges[path] = self._merge_read_ranges(
+                later_ranges.get(path) or [], start, end
+            )
+        kept = [item for index, item in enumerate(observations) if keep_flags[index]]
+        return kept, superseded_paths
+
     def _runtime_tool_context(
         self,
         state: ConversationState,
@@ -1817,9 +2133,9 @@ class ChatAgent(BaseAgent):
         call, matching Claude Code's separation between durable transcript and
         active context.
         """
-        raw_observations = [
-            item for item in state.get("observations") or [] if isinstance(item, dict)
-        ]
+        raw_observations, superseded_reads = self._drop_superseded_reads(
+            [item for item in state.get("observations") or [] if isinstance(item, dict)]
+        )
         budget = default_context_budget().tool_observation_tokens
         if aggressive:
             budget = max(512, budget // 4)
@@ -1828,6 +2144,14 @@ class ChatAgent(BaseAgent):
         kept_reversed: list[dict[str, Any]] = []
         omitted = 0
         for item in reversed(raw_observations):
+            tool_name = str(item.get("tool_name") or "")
+            # 读文件结果是「答案原材料」，不能随观测条数被均分预算摊薄到只剩几十
+            # token——否则模型看不到已读内容，会反复重读同一文件把步数耗光。
+            # 这里给读文件一个固定的 1400 上限（与 per_item 上限一致），其余
+            # 工具仍按均分预算压缩。
+            item_budget = (
+                1400 if tool_name == "workspace.read_file" else per_item_budget
+            )
             next_item = dict(item)
             observation = next_item.get("observation")
             if isinstance(observation, dict):
@@ -1840,14 +2164,14 @@ class ChatAgent(BaseAgent):
                 )
                 if preview:
                     next_observation["answer_preview"] = clip_to_token_budget(
-                        preview, per_item_budget
+                        preview, item_budget
                     )
                     next_observation.pop("answer", None)
                     next_observation.pop("content", None)
                 next_item["observation"] = next_observation
             else:
                 next_item["observation"] = clip_to_token_budget(
-                    str(observation or ""), per_item_budget
+                    str(observation or ""), item_budget
                 )
 
             serialized = json.dumps(next_item, ensure_ascii=False, default=str)
@@ -1871,6 +2195,18 @@ class ChatAgent(BaseAgent):
                 break
 
         prompt_observations = list(reversed(kept_reversed))
+        if superseded_reads:
+            prompt_observations.insert(
+                0,
+                {
+                    "compacted": True,
+                    "superseded_reads": superseded_reads[:8],
+                    "recovery": (
+                        "同一文件的更早读取已被最后一次读取取代，请以最后一次为准，"
+                        "不要重复读取同一段；需要后续内容请按工具返回的 start_line 续读。"
+                    ),
+                },
+            )
         if omitted:
             prompt_observations.insert(
                 0,
@@ -1927,6 +2263,7 @@ class ChatAgent(BaseAgent):
                 "estimated_tokens_saved": max(0, original_tokens - prompt_tokens),
                 "source_observations": len(raw_observations),
                 "prompt_observations": len(prompt_observations),
+                "superseded_read_observations": len(superseded_reads),
                 "omitted_observations": omitted,
                 "tool_event_index_entries": len(prompt_events),
             },
@@ -2336,7 +2673,7 @@ class ChatAgent(BaseAgent):
             else max(300, budget.tool_observation_tokens // 3)
         )
         compressed = clip_to_token_budget(answer, limit)
-        return {
+        summary = {
             "route": observation.get("route"),
             "answer_preview": compressed,
             "compression": {
@@ -2347,6 +2684,11 @@ class ChatAgent(BaseAgent):
             },
             "citations_count": len(observation.get("citations", [])),
         }
+        read_range = observation.get("read_range")
+        if isinstance(read_range, dict):
+            # 保留结构化区间，供读覆盖判定与日志排障使用；体积远小于正文。
+            summary["read_range"] = read_range
+        return summary
 
     def _initial_evaluation_trace(
         self, message: str, context: dict[str, Any]

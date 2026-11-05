@@ -71,11 +71,14 @@ class Settings(BaseSettings):
     context_microcompact_keep_recent_messages: int = 8
     context_compact_keep_recent_messages: int = 8
     context_compact_summary_tokens: int = 1800
+    # 五段预算比例之和保持 1.0。工具观察是代码类 Agent 的主工作集，
+    # 从 evidence（预取证据，可被工具按需重取）让出 0.10 给它。
     context_system_ratio: float = 0.12
     context_memory_ratio: float = 0.22
-    context_evidence_ratio: float = 0.34
+    context_evidence_ratio: float = 0.24
     context_recent_ratio: float = 0.22
-    context_tool_ratio: float = 0.10
+    context_tool_ratio: float = 0.20
+    agent_max_steps: int = 24
     workflow_task_timeout_seconds: float = 90.0
     workflow_model_timeout_seconds: float = 60.0
     workflow_model_max_input_chars: int = 60000

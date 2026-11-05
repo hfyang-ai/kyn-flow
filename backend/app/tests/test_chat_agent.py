@@ -114,16 +114,20 @@ class RepeatingToolModel:
 
     async def ainvoke(self, messages: list[Any]) -> AIMessage:
         self.calls += 1
-        return AIMessage(
-            content="",
-            tool_calls=[
-                {
-                    "name": "workspace__read_file",
-                    "args": {"path": "README.md"},
-                    "id": f"call_read_{self.calls}",
-                },
-            ],
-        )
+        if self.calls <= 3:
+            # 前三次都请求相同的工具与参数；第三次应被 guard 拦截而非执行。
+            return AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "name": "workspace__read_file",
+                        "args": {"path": "README.md"},
+                        "id": f"call_read_{self.calls}",
+                    },
+                ],
+            )
+        # guard 提示后模型换路，直接基于已读内容作答。
+        return AIMessage(content="I will answer from what I already read.")
 
 
 class RewrittenRagModel:
@@ -1060,10 +1064,369 @@ async def test_chat_agent_stops_repeated_identical_tool_calls() -> None:
     ]
 
     final = [event for event in events if event["event"] == "final"][-1]["data"]
+    # 前两次真正执行，第三次被 guard 拦截不执行，之后模型换路直接作答。
     assert invocations == agent.max_repeated_tool_calls
-    assert final["route"] == "tool_loop_guard"
-    assert final["completion"]["reason"] == "repeated_tool_call"
+    assert final["completion"]["status"] == "completed"
+    assert final["completion"]["reason"] == "model_final_answer"
+    assert final["answer"] == "I will answer from what I already read."
     assert any(
+        event["type"] == "tool_loop_guard" and event["guard"] == "identical_tool_call"
+        for event in final["agent_events"]
+    )
+    # guard 只拦截本次调用，不再终止整个 Loop。
+    assert not any(
         event["type"] == "agent_loop_stop" and event["reason"] == "repeated_tool_call"
         for event in final["agent_events"]
     )
+
+
+@pytest.mark.asyncio
+async def test_read_workspace_file_reports_remaining_lines(
+    tmp_path, monkeypatch
+) -> None:
+    """工具输出必须自带"读到哪、还剩多少、下一步从哪读"，模型不靠试参数。"""
+    repo = SimpleNamespace(id=uuid.uuid4(), full_name="acme/demo")
+    monkeypatch.setattr(settings, "repo_checkout_dir", str(tmp_path))
+    checkout = _repo_checkout_path(repo)
+    checkout.mkdir(parents=True, exist_ok=True)
+    (checkout / "demo.py").write_text(
+        "\n".join(f"line{i}" for i in range(1, 501)) + "\n", encoding="utf-8"
+    )
+    tools = _build_conversation_tools(repo, None, object())
+    read_file = tools["workspace.read_file"]
+
+    first = await read_file({"path": "demo.py", "start_line": 1, "line_count": 200}, {})
+    assert first["answer"].splitlines()[0] == (
+        "demo.py:1-200（共 500 行，还有 300 行未读，续读请用 start_line=201）"
+    )
+    assert first["read_range"] == {
+        "path": "demo.py",
+        "start_line": 1,
+        "end_line": 200,
+        "total_lines": 500,
+        "truncated": True,
+        "next_start_line": 201,
+    }
+
+    capped = await read_file(
+        {"path": "demo.py", "start_line": 1, "line_count": 900}, {}
+    )
+    capped_header = capped["answer"].splitlines()[0]
+    assert "单次最多返回 400 行" in capped_header
+    assert capped["read_range"]["end_line"] == 400
+
+    tail = await read_file(
+        {"path": "demo.py", "start_line": 401, "line_count": 400}, {}
+    )
+    assert tail["answer"].splitlines()[0].endswith("已读到文件末尾）")
+    assert tail["read_range"]["truncated"] is False
+    assert tail["read_range"]["next_start_line"] is None
+
+    out_of_range = await read_file(
+        {"path": "demo.py", "start_line": 900, "line_count": 100}, {}
+    )
+    assert "start_line=900 超出范围" in out_of_range["answer"]
+
+
+class AdvancingReadModel:
+    """合法续读：每次都有新行（与上次部分重叠但持续推进），不应触发 guard。"""
+
+    def __init__(self) -> None:
+        self.calls = 0
+        self.plan = [
+            {"path": "README.md", "start_line": 1, "line_count": 160},
+            {"path": "README.md", "start_line": 101, "line_count": 100},
+            {"path": "README.md", "start_line": 191, "line_count": 60},
+        ]
+
+    def bind_tools(self, tools: list[Any]) -> "AdvancingReadModel":
+        self.tools = tools
+        return self
+
+    async def ainvoke(self, messages: list[Any]) -> AIMessage:
+        self.calls += 1
+        if self.calls <= len(self.plan):
+            return AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "name": "workspace__read_file",
+                        "args": dict(self.plan[self.calls - 1]),
+                        "id": f"call_read_{self.calls}",
+                    },
+                ],
+            )
+        return AIMessage(content="Finished reading the file.")
+
+
+class FullyCoveredSubsetModel:
+    """读完一整段后又反复请求其子集（0 个新行）：应触发 guard，但 Loop 不终止。"""
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def bind_tools(self, tools: list[Any]) -> "FullyCoveredSubsetModel":
+        self.tools = tools
+        return self
+
+    async def ainvoke(self, messages: list[Any]) -> AIMessage:
+        self.calls += 1
+        if self.calls == 1:
+            args = {"path": "README.md", "start_line": 1, "line_count": 200}
+        elif self.calls <= 4:
+            args = {"path": "README.md", "start_line": 1, "line_count": 100}
+        else:
+            return AIMessage(content="I will answer from what I already read.")
+        return AIMessage(
+            content="",
+            tool_calls=[
+                {
+                    "name": "workspace__read_file",
+                    "args": args,
+                    "id": f"call_read_{self.calls}",
+                },
+            ],
+        )
+
+
+@pytest.mark.asyncio
+async def test_chat_agent_allows_advancing_reads() -> None:
+    """合法续读（每次都有新行）不应被 guard 拦截，任务完整执行到给出答案。"""
+    invocations = 0
+
+    async def read_file(
+        input_data: dict[str, Any], context: dict[str, Any]
+    ) -> dict[str, Any]:
+        nonlocal invocations
+        invocations += 1
+        start = int(input_data.get("start_line") or 1)
+        end = min(start + int(input_data.get("line_count") or 160) - 1, 400)
+        return {
+            "route": "workspace_read_file",
+            "tool_calls": [
+                {
+                    "tool_name": "workspace.read_file",
+                    "arguments": input_data,
+                    "status": "success",
+                }
+            ],
+            "answer": f"README.md:{start}-{end}\n1: # Project",
+            "citations": [],
+            "read_range": {
+                "path": "README.md",
+                "start_line": start,
+                "end_line": end,
+                "total_lines": 400,
+                "truncated": end < 400,
+                "next_start_line": end + 1 if end < 400 else None,
+            },
+        }
+
+    agent = ChatAgent(model=AdvancingReadModel())  # type: ignore[arg-type]
+    events = [
+        event
+        async for event in agent.run_stream(
+            {"message": "Read README.md."},
+            {"tools": {"workspace.read_file": read_file}},
+        )
+    ]
+
+    final = [event for event in events if event["event"] == "final"][-1]["data"]
+    assert invocations == 3
+    assert final["completion"]["status"] == "completed"
+    assert final["answer"] == "Finished reading the file."
+    assert not any(
+        event["type"] == "tool_loop_guard" for event in final["agent_events"]
+    )
+
+
+@pytest.mark.asyncio
+async def test_chat_agent_guards_fully_covered_reads_without_stopping() -> None:
+    """0 个新行的重复读触发 guard，但只拦截本次、不终止 Loop，模型换路后完成。"""
+    invocations = 0
+
+    async def read_file(
+        input_data: dict[str, Any], context: dict[str, Any]
+    ) -> dict[str, Any]:
+        nonlocal invocations
+        invocations += 1
+        start = int(input_data.get("start_line") or 1)
+        end = min(start + int(input_data.get("line_count") or 160) - 1, 400)
+        return {
+            "route": "workspace_read_file",
+            "tool_calls": [
+                {
+                    "tool_name": "workspace.read_file",
+                    "arguments": input_data,
+                    "status": "success",
+                }
+            ],
+            "answer": f"README.md:{start}-{end}\n1: # Project",
+            "citations": [],
+            "read_range": {
+                "path": "README.md",
+                "start_line": start,
+                "end_line": end,
+                "total_lines": 400,
+                "truncated": end < 400,
+                "next_start_line": end + 1 if end < 400 else None,
+            },
+        }
+
+    agent = ChatAgent(model=FullyCoveredSubsetModel())  # type: ignore[arg-type]
+    events = [
+        event
+        async for event in agent.run_stream(
+            {"message": "Read README.md."},
+            {"tools": {"workspace.read_file": read_file}},
+        )
+    ]
+
+    final = [event for event in events if event["event"] == "final"][-1]["data"]
+    # 1-200 执行一次，第一次 1-100（redundant=1）放行执行；后续子集读被 guard 拦截。
+    assert invocations == 2
+    assert final["completion"]["status"] == "completed"
+    assert final["answer"] == "I will answer from what I already read."
+    assert any(
+        event["type"] == "tool_loop_guard" and event["guard"] == "redundant_read"
+        for event in final["agent_events"]
+    )
+    # guard 只拦截本次调用，不再终止整个 Loop。
+    assert not any(
+        event["type"] == "agent_loop_stop" and event["reason"] == "redundant_tool_read"
+        for event in final["agent_events"]
+    )
+
+
+def test_runtime_tool_context_keeps_distinct_read_ranges_of_same_file() -> None:
+    """同一文件的不同区间都要保留：续读拼起来的上下文不能被折叠成一条。"""
+    agent = ChatAgent(model=ScriptedToolModel())  # type: ignore[arg-type]
+    state: dict[str, Any] = {
+        "observations": [
+            {
+                "tool_name": "workspace.read_file",
+                "arguments": {"path": "a.py", "start_line": 1, "line_count": 160},
+                "observation": {
+                    "route": "workspace_read_file",
+                    "answer_preview": "A-first",
+                },
+            },
+            {
+                "tool_name": "workspace.read_file",
+                "arguments": {"path": "b.py", "start_line": 1, "line_count": 160},
+                "observation": {
+                    "route": "workspace_read_file",
+                    "answer_preview": "B-only",
+                },
+            },
+            {
+                "tool_name": "workspace.read_file",
+                "arguments": {"path": "a.py", "start_line": 161, "line_count": 160},
+                "observation": {
+                    "route": "workspace_read_file",
+                    "answer_preview": "A-second",
+                },
+            },
+        ],
+        "agent_events": [],
+    }
+
+    prompt_observations, _events, stats = agent._runtime_tool_context(state)
+    previews = [
+        item["observation"].get("answer_preview")
+        for item in prompt_observations
+        if isinstance(item.get("observation"), dict)
+    ]
+    # 1-160 与 161-320 是相邻但不重叠的两段，都属于有效内容，不能互相取代。
+    assert "A-first" in previews
+    assert "A-second" in previews
+    assert "B-only" in previews
+    assert stats["superseded_read_observations"] == 0
+
+
+def test_runtime_tool_context_drops_reads_covered_by_later_reads() -> None:
+    """旧读取被后续更大区间完整覆盖时才折叠，避免 prompt 里叠同一段内容。"""
+    agent = ChatAgent(model=ScriptedToolModel())  # type: ignore[arg-type]
+    state: dict[str, Any] = {
+        "observations": [
+            {
+                "tool_name": "workspace.read_file",
+                "arguments": {"path": "a.py", "start_line": 1, "line_count": 100},
+                "observation": {
+                    "route": "workspace_read_file",
+                    "answer_preview": "A-narrow",
+                },
+            },
+            {
+                "tool_name": "workspace.read_file",
+                "arguments": {"path": "a.py", "start_line": 1, "line_count": 200},
+                "observation": {
+                    "route": "workspace_read_file",
+                    "answer_preview": "A-wide",
+                },
+            },
+        ],
+        "agent_events": [],
+    }
+
+    prompt_observations, _events, stats = agent._runtime_tool_context(state)
+    previews = [
+        item["observation"].get("answer_preview")
+        for item in prompt_observations
+        if isinstance(item.get("observation"), dict)
+    ]
+    assert "A-narrow" not in previews
+    assert "A-wide" in previews
+    assert stats["superseded_read_observations"] == 1
+    assert any(item.get("superseded_reads") == ["a.py"] for item in prompt_observations)
+
+
+def test_read_coverage_merges_adjacent_ranges() -> None:
+    merged = ChatAgent._merge_read_ranges([], 1, 100)
+    merged = ChatAgent._merge_read_ranges(merged, 101, 200)
+    merged = ChatAgent._merge_read_ranges(merged, 400, 420)
+    merged = ChatAgent._merge_read_ranges(merged, 150, 180)
+    assert merged == [[1, 200], [400, 420]]
+
+
+def test_runtime_tool_context_preserves_read_file_content() -> None:
+    """读文件结果是答案原材料，不能被观测条数摊薄到看不到内容。
+
+    回归场景：模型读一个 92 行文件后，投影里必须仍能看到文件末尾
+    （execute 方法体所在行），否则它会反复重读同一文件耗尽步数。
+    """
+    agent = ChatAgent(model=ScriptedToolModel())  # type: ignore[arg-type]
+    long_file = "\n".join(f"{i}: line{i}" for i in range(1, 93))
+    read_item = {
+        "tool_name": "workspace.read_file",
+        "arguments": {"path": "a.py", "start_line": 1, "line_count": 160},
+        "observation": {
+            "route": "workspace_read_file",
+            "answer_preview": f"a.py:1-92（共 92 行，已读到文件末尾）\n{long_file}",
+        },
+    }
+    others = [
+        {
+            "tool_name": "workspace.search_code",
+            "arguments": {"pattern": "x"},
+            "observation": {
+                "route": "workspace_search_code",
+                "answer_preview": f"result-{i} " + "x" * 800,
+            },
+        }
+        for i in range(19)
+    ]
+    state: dict[str, Any] = {"observations": [*others, read_item], "agent_events": []}
+
+    prompt_observations, _events, _stats = agent._runtime_tool_context(state)
+    read_preview = next(
+        (
+            item["observation"].get("answer_preview", "")
+            for item in prompt_observations
+            if item.get("tool_name") == "workspace.read_file"
+            and isinstance(item.get("observation"), dict)
+        ),
+        "",
+    )
+    assert read_preview, "read_file 结果不应被投影省略"
+    assert "92: line92" in read_preview
