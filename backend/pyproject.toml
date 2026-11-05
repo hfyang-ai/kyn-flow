@@ -40,6 +40,7 @@ dependencies = [
     "tree-sitter-sql>=0.3.11",
     "tree-sitter-bash>=0.25.1",
     "tree-sitter-powershell>=0.26.4",
+    "sentence-transformers>=6.2.0",
 ]
 
 [dependency-groups]
