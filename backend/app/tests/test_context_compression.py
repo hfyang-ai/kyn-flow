@@ -110,7 +110,7 @@ def test_memory_update_merges_structured_sections() -> None:
 
 
 def test_pressure_uses_effective_window_stages() -> None:
-    pressure = calculate_context_pressure(116_000, model="gpt-4o-mini")
+    pressure = calculate_context_pressure(116_000, model="gpt-5.1-mini")
 
     assert pressure.stage in {"auto_compact", "aggressive", "manual_path"}
     assert pressure.effective_window_tokens > 100_000

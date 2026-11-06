@@ -9,46 +9,70 @@ TOKEN_PATTERN = re.compile(r"[\u4e00-\u9fff]|[a-zA-Z0-9_\-]+|[^\s]")
 WORD_PATTERN = re.compile(r"[a-zA-Z0-9_\-\u4e00-\u9fff]+")
 SENTENCE_SPLIT_PATTERN = re.compile(r"(?<=[.!?\n\u3002\uff01\uff1f])\s+")
 
+# 公开规格（2026-11）。_model_lookup 按插入顺序返回首个 startswith 命中，
+# 因此更具体的型号必须排在通用前缀（如 "gpt-5"、"gemini-3"）之前。
+# 规格不确定时取保守值：低估只会提前压缩，高估则可能导致上下文溢出。
+# 未知模型回退到 settings 窗口配置，也可用 CONTEXT_MODEL_WINDOW_TOKENS 覆盖。
 MODEL_CONTEXT_WINDOWS = {
-    "deepseek-v4-pro": 1_000_000,
-    "gpt-4o": 128_000,
-    "gpt-4o-mini": 128_000,
-    "gpt-4.1": 1_000_000,
-    "gpt-4.1-mini": 1_000_000,
-    "gpt-4.1-nano": 1_000_000,
+    # OpenAI GPT-5 系列
+    "gpt-5.5": 1_050_000,
+    "gpt-5.1-codex-max": 400_000,
+    "gpt-5.1-mini": 128_000,
+    "gpt-5.1": 400_000,
     "gpt-5": 400_000,
-    "gpt-5-mini": 400_000,
-    "gpt-5-nano": 400_000,
-    "o1": 200_000,
-    "o1-mini": 128_000,
-    "o3": 200_000,
-    "o3-mini": 200_000,
-    "o4-mini": 200_000,
-    "claude-3-5-sonnet": 200_000,
-    "claude-3-7-sonnet": 200_000,
-    "claude-sonnet-4": 200_000,
-    "claude-opus-4": 200_000,
+    # Anthropic Claude 4.5 / 4.6
+    "claude-opus-4.6": 200_000,
+    "claude-sonnet-4.6": 200_000,
+    "claude-haiku-4.5": 200_000,
+    "claude-opus-4.5": 200_000,
+    "claude-sonnet-4.5": 200_000,
+    # Google Gemini 3
+    "gemini-3.7-flash": 1_048_576,
+    "gemini-3.1-pro": 1_048_576,
+    "gemini-3-pro": 1_048_576,
+    "gemini-3-flash": 1_048_576,
+    "gemini-3": 1_048_576,
+    # DeepSeek V4（本项目默认网关）
+    "deepseek-v4.1-flash": 1_048_576,
+    "deepseek-v4-pro": 1_000_000,
+    "deepseek-v4-flash": 1_000_000,
+    "deepseek-v4": 1_000_000,
+    # 常用国产 / 开源模型
+    "qwen3-max": 256_000,
+    "glm-4.6": 128_000,
+    "kimi-k2": 128_000,
+    "minimax-m2": 128_000,
 }
 
 MODEL_OUTPUT_WINDOWS = {
-    "deepseek-v4-pro": 384_000,
-    "gpt-4o": 16_384,
-    "gpt-4o-mini": 16_384,
-    "gpt-4.1": 32_768,
-    "gpt-4.1-mini": 32_768,
-    "gpt-4.1-nano": 32_768,
+    # OpenAI GPT-5 系列
+    "gpt-5.5": 128_000,
+    "gpt-5.1-codex-max": 128_000,
+    "gpt-5.1-mini": 32_768,
+    "gpt-5.1": 128_000,
     "gpt-5": 128_000,
-    "gpt-5-mini": 128_000,
-    "gpt-5-nano": 128_000,
-    "o1": 100_000,
-    "o1-mini": 65_536,
-    "o3": 100_000,
-    "o3-mini": 100_000,
-    "o4-mini": 100_000,
-    "claude-3-5-sonnet": 8_192,
-    "claude-3-7-sonnet": 64_000,
-    "claude-sonnet-4": 64_000,
-    "claude-opus-4": 64_000,
+    # Anthropic Claude 4.5 / 4.6
+    "claude-opus-4.6": 64_000,
+    "claude-sonnet-4.6": 64_000,
+    "claude-haiku-4.5": 64_000,
+    "claude-opus-4.5": 64_000,
+    "claude-sonnet-4.5": 64_000,
+    # Google Gemini 3
+    "gemini-3.7-flash": 65_536,
+    "gemini-3.1-pro": 65_536,
+    "gemini-3-pro": 65_536,
+    "gemini-3-flash": 65_536,
+    "gemini-3": 65_536,
+    # DeepSeek V4
+    "deepseek-v4.1-flash": 393_216,
+    "deepseek-v4-pro": 384_000,
+    "deepseek-v4-flash": 384_000,
+    "deepseek-v4": 384_000,
+    # 常用国产 / 开源模型（输出上限按保守值）
+    "qwen3-max": 32_768,
+    "glm-4.6": 32_768,
+    "kimi-k2": 32_768,
+    "minimax-m2": 32_768,
 }
 
 COMPACTABLE_TOOL_HINTS = (
