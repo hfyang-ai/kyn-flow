@@ -25,6 +25,7 @@ from app.services.context_compression import (
     prompt_cache_model_kwargs,
 )
 from app.services.skills import SkillRegistry, SkillRegistryError
+from app.tools.schemas import TOOL_PARAMS
 
 ConversationTool = Callable[[dict[str, Any], dict[str, Any]], Awaitable[dict[str, Any]]]
 ToolErrorKind = Literal[
@@ -79,81 +80,6 @@ class GenericToolArgs(BaseModel):
         default=None, description="读取文件时从第几行开始，行号从 1 开始"
     )
     line_count: int | None = Field(default=None, description="最多读取多少行")
-
-
-class _EmptyArgs(BaseModel):
-    """无参数工具：内部自行读取仓库数据，不接受输入参数。"""
-
-    model_config = ConfigDict(extra="allow")
-
-
-class _ReadFileArgs(BaseModel):
-    model_config = ConfigDict(extra="allow")
-
-    path: str = Field(default="", description="相对工作区的文件路径")
-    start_line: int = Field(default=1, description="起始行号，从 1 开始")
-    line_count: int = Field(default=160, description="最多读取多少行")
-
-
-class _ListFilesArgs(BaseModel):
-    model_config = ConfigDict(extra="allow")
-
-    path: str = Field(default=".", description="相对工作区的目录路径")
-    pattern: str = Field(default="", description="文件名子串过滤")
-    limit: int = Field(default=80, description="最多返回条数")
-
-
-class _SearchCodeArgs(BaseModel):
-    model_config = ConfigDict(extra="allow")
-
-    query: str = Field(default="", description="搜索关键词或代码片段")
-    path: str = Field(default=".", description="限定搜索目录")
-    pattern: str = Field(default="", description="正则或 glob 模式")
-    limit: int = Field(default=12, description="最多返回条数")
-
-
-class _QueryArgs(BaseModel):
-    model_config = ConfigDict(extra="allow")
-
-    query: str = Field(default="", description="检索查询")
-    limit: int = Field(default=5, description="最多返回条数")
-
-
-class _MemoryArgs(BaseModel):
-    model_config = ConfigDict(extra="allow")
-
-    query: str = Field(default="", description="检索查询或关键词")
-    keyword: str = Field(default="", description="关键词过滤")
-    limit: int = Field(default=20, description="最多返回条数")
-    max_chars: int = Field(default=12000, description="最多返回字符数")
-    message_id: str = Field(default="", description="精确读取的消息 UUID")
-    session_id: str = Field(default="", description="会话片段 UUID")
-    include_transcript: bool = Field(
-        default=False, description="是否包含原始 transcript"
-    )
-
-
-# 工具名 -> 精确参数 schema。不再给每个工具塞 2633 字符的万能 GenericToolArgs，
-# 否则 14 个工具会把 tool schema 顶到 ~20k token、挤爆上下文窗口，反过来把
-# 读文件结果压缩到模型看不到内容、陷入反复重读。extra="allow" 兜底：模型即便
-# 传了 schema 外的字段也不会报错。
-_TOOL_ARG_SCHEMAS: dict[str, type[BaseModel]] = {
-    "workspace.read_file": _ReadFileArgs,
-    "workspace.list_files": _ListFilesArgs,
-    "workspace.search_code": _SearchCodeArgs,
-    "kynflow_search_evidence": _QueryArgs,
-    "kynflow_get_thread_context": _MemoryArgs,
-    "kynflow_read_session_events": _MemoryArgs,
-    "rag.search_similar_documents": _QueryArgs,
-    # 分析类工具内部自行读取仓库数据，不接受输入参数。
-    "repo_health.generate_summary": _EmptyArgs,
-    "issue_agent.analyze_issue": _EmptyArgs,
-    "pr_review_agent.analyze_pr": _EmptyArgs,
-    "ci_debug_agent.analyze_workflow_run": _EmptyArgs,
-    "report_agent.generate_weekly_report": _EmptyArgs,
-    "safety_agent.classify_action_risk": _EmptyArgs,
-    "workflow.run_engineering_review": _EmptyArgs,
-}
 
 
 class ConversationState(TypedDict, total=False):
@@ -2001,7 +1927,7 @@ class ChatAgent(BaseAgent):
                 coroutine=call_tool,
                 name=safe_name,
                 description=self._tool_description(name, context),
-                args_schema=_TOOL_ARG_SCHEMAS.get(name, GenericToolArgs),
+                args_schema=TOOL_PARAMS.get(name, GenericToolArgs),
                 infer_schema=False,
             )
         return wrapped

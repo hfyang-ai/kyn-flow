@@ -909,9 +909,11 @@ async def test_conversation_rag_tool_prefers_agent_rewritten_query(monkeypatch) 
         captured["recall_query"] = kwargs["query"]
         captured["metadata"] = kwargs["metadata"]
 
-    monkeypatch.setattr("app.api.routes.chat._semantic_search", fake_semantic_search)
     monkeypatch.setattr(
-        "app.api.routes.chat.record_recall_event", fake_record_recall_event
+        "app.tools.semantic_search._semantic_search", fake_semantic_search
+    )
+    monkeypatch.setattr(
+        "app.tools.semantic_search.record_recall_event", fake_record_recall_event
     )
     tools = _build_conversation_tools(repo, conversation, object())
 
