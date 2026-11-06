@@ -21,6 +21,10 @@ from app.services.rag.rerank import rerank_documents
 from app.services.rag.retrieval import expand_parent_context, search_similar_documents
 from app.services.rag.source_policy import normalize_source_types, should_vectorize
 
+# qwen relevance_score 与本地启发式打分不是同一量纲。rerank 回退到 heuristic 时，
+# 把配置的分数门槛压到该上限，避免有效证据被为 qwen 设的高门槛全部过滤。
+HEURISTIC_SCORE_THRESHOLD_CAP = 0.6
+
 
 def as_uuid(value: str | uuid.UUID) -> uuid.UUID:
     return value if isinstance(value, uuid.UUID) else uuid.UUID(str(value))
@@ -322,14 +326,25 @@ async def retrieve_knowledge(
     items, parent_stage = expand_parent_context(db, repo_id, items, neighbor_window=1)
     pipeline_trace["stages"].append(parent_stage)
 
+    rerank_mode = str(rerank_stage.get("mode") or "")
+    effective_threshold = threshold
+    if threshold_on and rerank_mode == "heuristic":
+        effective_threshold = min(threshold, HEURISTIC_SCORE_THRESHOLD_CAP)
+
     before_threshold = len(items)
     if threshold_on:
-        items = [item for item in items if float(item.get("score") or 0.0) >= threshold]
+        items = [
+            item
+            for item in items
+            if float(item.get("score") or 0.0) >= effective_threshold
+        ]
     pipeline_trace["stages"].append(
         {
             "name": "score_threshold",
             "enabled": threshold_on,
             "threshold": threshold if threshold_on else None,
+            "effective_threshold": effective_threshold if threshold_on else None,
+            "rerank_mode": rerank_mode or None,
             "input_count": before_threshold,
             "output_count": len(items),
         }
@@ -359,8 +374,9 @@ async def retrieve_knowledge(
     gate = evaluate_answer_gate(
         query,
         items,
-        score_threshold=threshold,
+        score_threshold=effective_threshold,
         threshold_enabled=threshold_on,
+        repo_scoped=True,
     )
     for item in items:
         retrieval = dict(item.get("retrieval") or {})

@@ -417,3 +417,64 @@ async def test_retrieval_trace_contains_every_selected_pipeline_stage() -> None:
     assert trace["answer_gate"]["decision"] == "answer"
     assert items[0]["retrieval"]["keyword_backend"] == "bm25"
     assert items[0]["retrieval"]["selected_for_context"] is True
+
+
+@pytest.mark.asyncio
+async def test_heuristic_fallback_adapts_threshold_for_repo_scoped_question(
+    monkeypatch,
+) -> None:
+    db = _db_session()
+    repo = _repo(db)
+
+    def fake_search(*_args, **kwargs):
+        kwargs["pipeline_trace"].update({"fusion_method": "weighted", "stages": []})
+        return [
+            {
+                "id": f"doc-{index}",
+                "source_id": f"src-{index}",
+                "source_type": "knowledge_file",
+                "title": "Kynflow 需求文档",
+                "_raw_content": "Kynflow 是面向 GitHub PR 协作的后端服务。",
+                "snippet": "Kynflow 是面向 GitHub PR 协作的后端服务。",
+                "score": 0.72,
+                "metadata": {},
+                "retrieval": {"sources": ["vector", "keyword"]},
+            }
+            for index in range(2)
+        ]
+
+    async def fail_qwen(*_args, **_kwargs):
+        raise RuntimeError("Qwen rerank API is not configured")
+
+    def fake_rerank(query, items, limit):
+        return items[:limit]
+
+    monkeypatch.setattr(
+        "app.services.rag.knowledge_base.search_similar_documents", fake_search
+    )
+    monkeypatch.setattr("app.services.rag.knowledge_base._qwen_rerank", fail_qwen)
+    monkeypatch.setattr("app.services.rag.knowledge_base.rerank_documents", fake_rerank)
+
+    items, trace, _duration = await retrieve_knowledge(
+        db,
+        repo.id,
+        "这个仓库是做什么的",
+        retrieval_method="fulltext",
+        score_threshold_enabled=True,
+        score_threshold=0.8,
+    )
+
+    rerank_stage = next(
+        stage for stage in trace["pipeline"]["stages"] if stage["name"] == "rerank"
+    )
+    assert rerank_stage["mode"] == "heuristic"
+    assert rerank_stage["fallback"] is True
+
+    threshold_stage = next(
+        stage
+        for stage in trace["pipeline"]["stages"]
+        if stage["name"] == "score_threshold"
+    )
+    assert threshold_stage["effective_threshold"] == pytest.approx(0.6)
+    assert items
+    assert trace["answer_gate"]["decision"] == "answer"

@@ -78,13 +78,18 @@ def _detect_conflict(items: list[dict[str, Any]]) -> dict[str, Any] | None:
     return None
 
 
-def _is_ambiguous_query(query: str, items: list[dict[str, Any]]) -> bool:
+def _is_ambiguous_query(
+    query: str, items: list[dict[str, Any]], *, repo_scoped: bool = False
+) -> bool:
     compact = re.sub(r"\s+", "", query)
     if not any(marker in compact for marker in AMBIGUOUS_MARKERS):
         return False
     source_ids = {
         str(item.get("source_id") or "") for item in items if item.get("source_id")
     }
+    # repo 范围已由调用方限定，"这个仓库" 之类的泛指词有可定位证据时无需再追问。
+    if repo_scoped and source_ids:
+        return False
     return len(source_ids) > 1 or len(compact) <= 8
 
 
@@ -94,6 +99,7 @@ def evaluate_answer_gate(
     *,
     score_threshold: float = 0.0,
     threshold_enabled: bool = True,
+    repo_scoped: bool = False,
 ) -> dict[str, Any]:
     top_score = max((float(item.get("score") or 0.0) for item in items), default=0.0)
     base = {
@@ -137,7 +143,7 @@ def evaluate_answer_gate(
             "conflict": conflict,
         }
 
-    if _is_ambiguous_query(query, items):
+    if _is_ambiguous_query(query, items, repo_scoped=repo_scoped):
         return {
             **base,
             "decision": "ask_clarification",
